@@ -179,6 +179,12 @@ flowchart BT
 
 - `AgentAction`: `id`, `mandateId`, `toolInputHash` 제거. 식별자는 `actionKey`(ADR-0008).
   `toolInputHash`는 hook 관측 결합에만 쓰던 값이라 V1에서 쓰지 않는다.
+- `Target.vcs_remote`: 원본 `remoteUrl` 대신 classifier가 소문자 `host/owner/repo`로 정규화한
+  `remoteKey`를 쓴다. I/O 가능한 호출자가 `repoRemotes` 원본 URL을 채우고 classifier가 한 곳에서 정규화한다.
+- `ResolveZone`: Target과 Capability를 따로 받지 않고 Operation 전체를 받는다.
+  Environment Profile pattern은 전체 일치하는 고정 glob 문법이고 production marker만 flag 없는 정규식이다.
+- `ParseTranscript`: 호출자가 transcript 파일 이름의 stem인 `sessionExternalId`와 줄 목록을 함께 넘긴다.
+  줄 안의 session id는 쓰지 않는다.
 - `Decision`: `policyVersionId` 제거. 순수 평가 함수는 문서만 받는다.
 - `DiffGroup`: `id` 대신 `groupKey`. `zone` 대신 `fromZone`, `toZone`.
   `principalCount`, `mandateDependentCount`, `decidingRuleId` 제거.
@@ -486,7 +492,7 @@ invariant test:
 | id | V1 |
 | --- | --- |
 | I1~I3 정책 평가(순서 무관, 단조성, 가장 제한적인 Operation) | 유지. policy |
-| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. 임의의 tool 이름에 대해 명시적 control tool 목록에 없으면 Operation이 1개 이상임. laundering rate 0 | 유지. action |
+| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. 임의의 tool 이름에 대해 명시적 control tool 목록에 없으면 Operation이 1개 이상이고, 잘린 입력은 `none` Operation을 하나 이상 가짐. laundering rate 0 | 유지. action |
 | I5 import 멱등 | 유지. trace |
 | I6 replay 결정성. local과 server의 hash 일치 추가 | 유지, 강화. replay |
 | I7 gate | 유지(blocker 5개). review |

@@ -10,15 +10,15 @@
   },
   "rules": [
     {
-      "ruleId": "ask_writes",
+      "ruleId": "push_policy",
       "match": {
-        "capabilities": ["write"],
-        "zones": ["workspace"],
+        "capabilities": ["push"],
+        "zones": ["unknown_remote", "trusted_remote"],
         "reversibility": null,
         "analyzability": null
       },
       "effect": "ask",
-      "rationale": "Synthetic baseline requires confirmation."
+      "rationale": "Synthetic rule controls remote publication."
     }
   ]
 }

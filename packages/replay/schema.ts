@@ -69,9 +69,8 @@ export type DiffResult = z.infer<typeof DiffResultSchema>;
  *
  * - workspace path: `workspace`
  * - other path: the first two normalized segments, or all available segments
- * - host: lowercase host without its port
- * - VCS remote: lowercase `host/owner/repo`, with `.git` removed, for parsed
- *   SSH or HTTPS URLs; otherwise remoteName, then `unknown`
+ * - host: the classifier-normalized host unchanged
+ * - VCS remote: remoteKey, otherwise remoteName, otherwise `unknown`
  * - package: `ecosystem:source`, or just `ecosystem` without a source
  * - MCP: `mcp:server`
  * - deploy target: label, or `unknown`
@@ -85,6 +84,14 @@ export type DeriveTargetKey = (target: Target) => string;
 
 /**
  * Computes the deterministic diff between two Policy Documents.
+ *
+ * Duplicate actionKeys are an invariant failure; ComputeDiff never silently
+ * merges them. An upstream multi-Session consumer must deduplicate first.
+ *
+ * ReplayStats.totalActions is the input length. excludedActions counts Actions
+ * with no Operations, evaluatedActions equals totalActions minus
+ * excludedActions, and changedActions counts evaluated Actions whose Effects
+ * differ. The sum of all nine transition counts equals evaluatedActions.
  *
  * For each changed Action, the signature Operation is selected among
  * Operations whose baseline and candidate Effects differ. For widening,
@@ -120,9 +127,6 @@ export type DeriveTargetKey = (target: Target) => string;
  * ordered by `allow`, `ask`, `deny` for `from` and then the same order for
  * `to`. Same-Effect cells count unchanged Actions. Groups sort by groupKey
  * and changedActions by actionKey, both ascending UTF-16 code-unit order.
- *
- * Consumers deduplicate actionKey across Sessions before evaluation, keeping
- * the earliest occurredAt, then the ascending sessionExternalId on a tie.
  *
  * `resultHash = sha256Hex(canonicalJson({ stats, groups, changedActions }))`
  * over those sorted values, except each Group's headline is omitted from the

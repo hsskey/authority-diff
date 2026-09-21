@@ -44,6 +44,10 @@ Operation의 효과가 닿는 대상을 runtime에서 읽은 그대로 적은 �
 경로, host, VCS remote, package, MCP tool 등.
 _Avoid_: resource, object
 
+**Remote Key**:
+VCS remote를 `host/owner/repo` 형식으로 정규화한 값.
+scheme, user, port와 끝의 `.git`은 포함하지 않습니다.
+
 **Zone**:
 Target을 조직의 신뢰 경계로 분류한 값.
 고정 enum.

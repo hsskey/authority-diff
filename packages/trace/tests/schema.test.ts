@@ -24,7 +24,12 @@ describe('trace schema', () => {
   });
 
   test('exports transcript contract signatures', () => {
-    expectTypeOf<ParseTranscript>().toEqualTypeOf<(lines: readonly string[]) => ParsedSession>();
+    expectTypeOf<ParseTranscript>().toEqualTypeOf<
+      (input: {
+        readonly sessionExternalId: string;
+        readonly lines: readonly string[];
+      }) => ParsedSession
+    >();
     expectTypeOf<RedactText>().toEqualTypeOf<
       (text: string) => {
         readonly text: string;

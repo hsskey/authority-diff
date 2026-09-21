@@ -56,15 +56,23 @@ export type ActionForReplay = z.infer<typeof ActionForReplaySchema>;
  * `sequence` is the zero-based appearance order of tool_use blocks.
  * `toolInputRedacted` is already redacted.
  *
+ * The caller supplies sessionExternalId as the transcript file name stem.
+ * Session identifiers inside transcript lines are ignored.
+ *
  * Empty optional text becomes null. `runtimeVersion`, `workspaceRoot`, and
  * `gitBranch` use the first observed non-empty value; each ToolCall keeps the
- * workspaceRoot and gitBranch from its own line. Home path prefixes become
- * `~`. Timestamps are normalized to three millisecond digits. `startedAt` and
- * `endedAt` are the minimum and maximum parsed timestamps, or null when no
- * line has a timestamp. `endedAt` is the last observed line time, not a
- * session-end event. Redactions are sorted by kind and zero counts omitted.
+ * workspaceRoot and gitBranch from its own line. repoRemotes is always null
+ * because the parser performs no I/O; an I/O-capable caller enriches it before
+ * classification. Home path prefixes become `~`. Timestamps are normalized to
+ * three millisecond digits. `startedAt` and `endedAt` are the minimum and
+ * maximum parsed timestamps, or null when no line has a timestamp. `endedAt`
+ * is the last observed line time, not a session-end event. Redactions are
+ * sorted by kind and zero counts omitted.
  */
-export type ParseTranscript = (lines: readonly string[]) => ParsedSession;
+export type ParseTranscript = (input: {
+  readonly sessionExternalId: string;
+  readonly lines: readonly string[];
+}) => ParsedSession;
 
 /**
  * Replaces only literal text; it never removes a line or Action.

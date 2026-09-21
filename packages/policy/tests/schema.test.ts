@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, test } from 'vitest';
-import type { Capability, Operation, Target } from '@authority/action/schema';
+import type { Operation } from '@authority/action/schema';
 import {
   PolicyDocumentSchema,
   type Decision,
@@ -47,7 +47,7 @@ describe('policy schema', () => {
 
   test('exports policy contract signatures', () => {
     expectTypeOf<ResolveZone>().toEqualTypeOf<
-      (target: Target, capability: Capability, environment: EnvironmentProfile) => Zone
+      (operation: Operation, environment: EnvironmentProfile) => Zone
     >();
     expectTypeOf<EvaluateAction>().toEqualTypeOf<
       (operations: readonly Operation[], document: PolicyDocument) => Decision | null

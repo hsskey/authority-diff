@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
   CapabilitySchema,
   OperationSchema,
+  TargetSchema,
   type ClassifyToolCall,
   type Operation,
   type ToolCall,
@@ -28,6 +29,28 @@ describe('action schema', () => {
 
   test('rejects an unknown Capability', () => {
     expect(CapabilitySchema.safeParse('administer').success).toBe(false);
+  });
+
+  test('accepts a normalized Remote Key', () => {
+    expect(
+      TargetSchema.safeParse({
+        kind: 'vcs_remote',
+        remoteName: 'origin',
+        remoteKey: 'example.invalid/synthetic/project',
+        branch: 'main',
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects a URL as a Remote Key', () => {
+    expect(
+      TargetSchema.safeParse({
+        kind: 'vcs_remote',
+        remoteName: 'origin',
+        remoteKey: 'https://example.invalid/synthetic/project.git',
+        branch: 'main',
+      }).success,
+    ).toBe(false);
   });
 
   test('exports the classifier signature', () => {

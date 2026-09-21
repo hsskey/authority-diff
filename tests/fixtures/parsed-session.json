@@ -5,7 +5,7 @@
   "workspaceRoot": "~/synthetic-workspace",
   "gitBranch": "feature/synthetic-contract",
   "startedAt": "2026-01-02T03:04:05.006Z",
-  "endedAt": "2026-01-02T03:04:06.007Z",
+  "endedAt": "2026-01-02T03:04:07.008Z",
   "toolCalls": [
     {
       "toolUseId": "synthetic-tool-001",
@@ -14,16 +14,40 @@
       "isInputTruncated": false,
       "workspaceRoot": "~/synthetic-workspace",
       "gitBranch": "feature/synthetic-contract",
-      "repoRemotes": {
-        "origin": "https://example.invalid/synthetic/project.git"
-      },
+      "repoRemotes": null,
       "sequence": 0,
       "isSidechain": false,
       "observedOutcome": "executed",
       "occurredAt": "2026-01-02T03:04:05.006Z"
+    },
+    {
+      "toolUseId": "synthetic-tool-002",
+      "toolName": "SyntheticPublish",
+      "toolInputRedacted": "{\"remote\":\"origin\",\"branch\":\"feature/synthetic-contract\"}",
+      "isInputTruncated": false,
+      "workspaceRoot": "~/synthetic-workspace",
+      "gitBranch": "feature/synthetic-contract",
+      "repoRemotes": null,
+      "sequence": 1,
+      "isSidechain": false,
+      "observedOutcome": "executed",
+      "occurredAt": "2026-01-02T03:04:06.007Z"
+    },
+    {
+      "toolUseId": "synthetic-tool-003",
+      "toolName": "SyntheticUnmapped",
+      "toolInputRedacted": "{\"value\":\"synthetic\"}",
+      "isInputTruncated": false,
+      "workspaceRoot": "~/synthetic-workspace",
+      "gitBranch": "feature/synthetic-contract",
+      "repoRemotes": null,
+      "sequence": 2,
+      "isSidechain": false,
+      "observedOutcome": "unknown",
+      "occurredAt": "2026-01-02T03:04:07.008Z"
     }
   ],
-  "totalLineCount": 2,
+  "totalLineCount": 4,
   "unparsedLineCount": 0,
   "redactions": [
     {

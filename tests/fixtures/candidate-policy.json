@@ -3,22 +3,22 @@
   "environment": {
     "credentialPaths": ["~/.synthetic-credentials/**"],
     "agentConfigPaths": ["~/.synthetic-agent/**"],
-    "trustedRemotes": ["trusted.example.invalid/**"],
+    "trustedRemotes": ["trusted.example.invalid/**", "example.invalid/**"],
     "publicRemotes": ["public.example.invalid/**"],
     "protectedBranches": ["main"],
     "productionMarkers": ["synthetic-production"]
   },
   "rules": [
     {
-      "ruleId": "allow_workspace_writes",
+      "ruleId": "push_policy",
       "match": {
-        "capabilities": ["write"],
-        "zones": ["workspace"],
-        "reversibility": ["reversible"],
-        "analyzability": ["full"]
+        "capabilities": ["push"],
+        "zones": ["unknown_remote", "trusted_remote"],
+        "reversibility": null,
+        "analyzability": null
       },
       "effect": "allow",
-      "rationale": "Synthetic candidate allows known workspace writes."
+      "rationale": "Synthetic rule controls remote publication."
     }
   ]
 }

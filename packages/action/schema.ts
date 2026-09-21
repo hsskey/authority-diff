@@ -21,13 +21,42 @@ export type Capability = z.infer<typeof CapabilitySchema>;
 export const AnalyzabilitySchema = z.enum(['full', 'partial', 'none']);
 export type Analyzability = z.infer<typeof AnalyzabilitySchema>;
 
+const RemoteKeySchema = z.string().refine((value) => {
+  const parts = value.split('/');
+  const host = parts[0];
+  const repo = parts[2];
+  return (
+    parts.length === 3 &&
+    parts.every((part) => part.length > 0) &&
+    value === value.toLowerCase() &&
+    host !== undefined &&
+    !host.includes(':') &&
+    !host.includes('@') &&
+    repo !== undefined &&
+    !repo.endsWith('.git')
+  );
+}, 'must be a lowercase host/owner/repo Remote Key without scheme, user, port, or .git');
+
+/**
+ * Targets contain classifier-normalized values.
+ *
+ * A path is absolute; a home prefix is represented by `~`. The classifier
+ * resolves relative paths against ToolCall.workspaceRoot. A host is lowercase
+ * with its port removed.
+ *
+ * A VCS Remote Key is lowercase `host/owner/repo` with scheme, user, port, and
+ * a trailing `.git` removed. SSH and HTTPS forms of the same remote produce
+ * the same key. The classifier normalizes a URL from the command when present,
+ * otherwise it looks up remoteName in ToolCall.repoRemotes. An unparseable
+ * remote has a null remoteKey.
+ */
 export const TargetSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('path'), path: z.string(), isInsideWorkspace: z.boolean() }),
   z.object({ kind: z.literal('host'), host: z.string(), scheme: z.string().nullable() }),
   z.object({
     kind: z.literal('vcs_remote'),
     remoteName: z.string().nullable(),
-    remoteUrl: z.string().nullable(),
+    remoteKey: RemoteKeySchema.nullable(),
     branch: z.string().nullable(),
   }),
   z.object({
@@ -59,6 +88,12 @@ export const ToolCallSchema = z.object({
   isInputTruncated: z.boolean(),
   workspaceRoot: z.string().nullable(),
   gitBranch: z.string().nullable(),
+  /**
+   * Raw remote name-to-URL values supplied before classification by an
+   * I/O-capable caller, such as the local pipeline or CLI. The caller queries
+   * each workspaceRoot; values approximate import time and may differ from the
+   * historical Session. URLs remain unnormalized for the classifier.
+   */
   repoRemotes: z.record(z.string(), z.string()).nullable(),
 });
 export type ToolCall = z.infer<typeof ToolCallSchema>;
@@ -78,5 +113,13 @@ export type ToolCall = z.infer<typeof ToolCallSchema>;
  * A name matching `mcp__<server>__<tool>` returns an `execute` Operation with
  * target `{ kind: 'mcp', server, tool }` parsed from the name and
  * analyzability `partial`.
+ *
+ * When isInputTruncated is true, classification adds an Operation with
+ * capability `execute`, target `{ kind: 'unknown' }`, analyzability `none`,
+ * and signal `input_truncated` in addition to all analyzed Operations.
+ *
+ * An Operation fragment longer than 2,000 characters is truncated to 2,000
+ * and receives signal `fragment_truncated`. Only the display fragment is
+ * truncated; classification uses the complete input.
  */
 export type ClassifyToolCall = (call: ToolCall) => readonly Operation[];
