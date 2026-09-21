@@ -27,6 +27,8 @@ describe('resolveInsideRoot', () => {
 });
 
 describe('runAllProofs isolation', () => {
+  // runAllProofs spawns depcruise once per boundary proof (8 subprocesses), which
+  // overruns Vitest's 5s default on slower CI runners. Give it a generous budget.
   it('proves every boundary rule without touching real-named entry point files', () => {
     // Place real-named files the old proof used to overwrite and delete. Running the
     // proof must leave them byte-identical, because every fixture lives in a temp tree.
@@ -58,5 +60,5 @@ describe('runAllProofs isolation', () => {
         rmSync(sentinel.path, { force: true });
       }
     }
-  });
+  }, 60_000);
 });
