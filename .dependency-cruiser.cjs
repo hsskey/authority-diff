@@ -62,6 +62,17 @@ module.exports = {
       to: { path: '^packages/[^/]+/tests/' },
     },
     {
+      name: 'schema-imports-schema-only',
+      comment:
+        'schema.ts may import only kernel, another package schema.ts, or its own package lib.',
+      severity: 'error',
+      from: { path: '^packages/([^/]+)/schema\\.ts$' },
+      to: {
+        path: '^packages/',
+        pathNot: ['^packages/kernel/', '^packages/$1/lib/', '^packages/[^/]+/schema\\.ts$'],
+      },
+    },
+    {
       name: 'no-circular',
       comment: 'No circular dependencies.',
       severity: 'error',

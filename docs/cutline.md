@@ -177,13 +177,18 @@ flowchart BT
 
 계약 변경(설계서 24, 25장 대비):
 
-- `AgentAction`: `id` 제거, `actionKey`가 식별자.
-  `mandateId` 제거(Tier 2).
-  `observedOutcome` 유지.
-- `ReplayRun`: `kind`와 `DecisionSource` union을 빼고 `baselineVersionId`, `candidateVersionId`.
-- `DiffGroup`: `zone` 대신 `fromZone`, `toZone`.
-  `targetSummary`(target key 상위 5개와 건수), `headline`(평문 한 문장) 추가.
-  `principalCount`, `mandateDependentCount` 제거.
+- `AgentAction`: `id`, `mandateId`, `toolInputHash` 제거. 식별자는 `actionKey`(ADR-0008).
+  `toolInputHash`는 hook 관측 결합에만 쓰던 값이라 V1에서 쓰지 않는다.
+- `Target.vcs_remote`: 원본 `remoteUrl` 대신 classifier가 소문자 `host/owner/repo`로 정규화한
+  `remoteKey`를 쓴다. I/O 가능한 호출자가 `repoRemotes` 원본 URL을 채우고 classifier가 한 곳에서 정규화한다.
+- `ResolveZone`: Target과 Capability를 따로 받지 않고 Operation 전체를 받는다.
+  Environment Profile pattern은 전체 일치하는 고정 glob 문법이고 production marker만 flag 없는 정규식이다.
+- `ParseTranscript`: 호출자가 transcript 파일 이름의 stem인 `sessionExternalId`와 줄 목록을 함께 넘긴다.
+  줄 안의 session id는 쓰지 않는다.
+- `Decision`: `policyVersionId` 제거. 순수 평가 함수는 문서만 받는다.
+- `DiffGroup`: `id` 대신 `groupKey`. `zone` 대신 `fromZone`, `toZone`.
+  `principalCount`, `mandateDependentCount`, `decidingRuleId` 제거.
+- `ReplayRun`: `kind`와 `DecisionSource` 제거. 저장 계약은 다음 단계에서 정한다.
 - `PolicyVersionStatus`: `draft`, `in_review`, `accepted`, `rejected`.
 - `PolicyRule.mandateException`: schemaVersion 1에서 제거합니다.
   V1 문서에는 V1이 평가하는 개념만 들어갑니다.
@@ -210,6 +215,10 @@ headline 예:
 
 `headline`은 (Capability, Zone 변화, Effect 변화, target 요약)에서 고정 template으로 만듭니다.
 모델을 쓰지 않습니다.
+
+diff 검토 판정 전에는 두 계약을 조정할 수 있습니다. Target 종류별 `targetSummary.key` 생성 규칙과
+Diff Group signature에 `program`을 넣을지 여부입니다. 이 둘은 판정 전 변경에 ACR이 필요 없지만,
+PR 본문에 변경 전후 group 수와 이유를 적습니다. 판정을 통과하면 다른 `schema.ts` 계약과 같이 ACR 대상입니다.
 
 ## 7. Target architecture
 
@@ -464,6 +473,7 @@ dependency-cruiser(전부 `error`):
 | `entrypoint-boundary-from-app` | `apps/*`, `tools/*`는 package의 root 파일만 import |
 | `entrypoint-boundary-across-packages` | package는 다른 package의 root 파일만 import |
 | `tests-through-entrypoints`, `tests-folder-is-private` | test는 entry point로만 접근 |
+| `schema-imports-schema-only` | `schema.ts`는 `zod`, `kernel`, 다른 package의 `schema.ts`, 자기 package의 `lib/`만 import |
 | `no-circular` | 순환 금지 |
 | `package-layering` | 6장의 graph. `kernel: []`, `platform: [kernel]`, `action: [kernel]`, `trace: [kernel, action, platform]`, `policy: [kernel, action, platform]`, `replay: [kernel, action, policy, trace, platform]`, `review: [kernel, policy, replay, platform]`, `contracts: [kernel + 각 schema.ts]` |
 | `domain-is-pure`, `app-has-no-infra` | 설계서 21.1과 동일 |
@@ -482,7 +492,7 @@ invariant test:
 | id | V1 |
 | --- | --- |
 | I1~I3 정책 평가(순서 무관, 단조성, 가장 제한적인 Operation) | 유지. policy |
-| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. laundering rate 0 | 유지. action |
+| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. 임의의 tool 이름에 대해 명시적 control tool 목록에 없으면 Operation이 1개 이상이고, 잘린 입력은 `none` Operation을 하나 이상 가짐. laundering rate 0 | 유지. action |
 | I5 import 멱등 | 유지. trace |
 | I6 replay 결정성. local과 server의 hash 일치 추가 | 유지, 강화. replay |
 | I7 gate | 유지(blocker 5개). review |
@@ -545,6 +555,8 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    - entrypoint-boundary-across-packages: package는 다른 package의 root 파일만 import. 자기 package 안은 자유
    - tests-through-entrypoints: packages/<pkg>/tests/** 는 어떤 package든 root 파일과 자기 tests/ fixture만 import
    - tests-folder-is-private: tests/ 는 test에서만 import
+   - schema-imports-schema-only: packages/<pkg>/schema.ts 는 packages 아래에서 kernel, 다른 package의 schema.ts,
+     자기 package의 lib/ 만 import
    - no-circular
    - package-layering: 아래 허용 목록에 없는 package 간 import 금지
        kernel: []
@@ -581,13 +593,14 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 
 7. scripts/prove-boundaries.ts 와 `pnpm lint:boundaries:prove`.
    위반 파일을 임시로 만들고, depcruise를 실행해 기대한 rule 이름으로 실패하는지 확인하고, 임시 파일을 지운다.
-   7개: (a) kernel의 test가 자기 lib/ 를 직접 import -> tests-through-entrypoints
+   8개: (a) kernel의 test가 자기 lib/ 를 직접 import -> tests-through-entrypoints
         (b) kernel의 lib/domain 파일이 node:fs 를 import -> domain-is-pure
         (c) 임시 package packages/zz-proof 가 packages/kernel/lib/ 를 import -> entrypoint-boundary-across-packages
         (d) 임시 packages/action/lib/domain/x.ts 가 @authority/platform 을 import -> package-layering 또는 domain-is-pure
         (e) 임시 packages/contracts/lib/x.ts 가 packages/policy/evaluate.ts (schema.ts 아닌 root 파일)를 import -> contracts-schema-only
         (f) 임시 packages/trace/client.ts 가 lib/client 경유로 lib/infra 에 전이 도달 -> pure-entry-points
         (g) 임시 tools/ 파일이 packages/kernel/lib/ 를 import -> entrypoint-boundary-from-app
+        (h) 임시 schema.ts가 다른 package의 schema.ts 아닌 root 파일을 import -> schema-imports-schema-only
    하나라도 실패하지 않으면 script가 exit 1. 끝나면 작업 tree가 깨끗해야 한다.
    cruise 대상 목록(packages, apps, tools)은 scripts/boundary-roots.ts 한 곳에 정의하고 lint:boundaries와 이 script가 공유한다.
 

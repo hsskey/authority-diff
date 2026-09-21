@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "credentialPaths": ["~/.synthetic-credentials/**"],
+    "agentConfigPaths": ["~/.synthetic-agent/**"],
+    "trustedRemotes": ["trusted.example.invalid/**", "example.invalid/**"],
+    "publicRemotes": ["public.example.invalid/**"],
+    "protectedBranches": ["main"],
+    "productionMarkers": ["synthetic-production"]
+  },
+  "rules": [
+    {
+      "ruleId": "push_policy",
+      "match": {
+        "capabilities": ["push"],
+        "zones": ["unknown_remote", "trusted_remote"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Synthetic rule controls remote publication."
+    }
+  ]
+}

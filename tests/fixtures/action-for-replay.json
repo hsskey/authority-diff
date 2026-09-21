@@ -1,0 +1,64 @@
+[
+  {
+    "actionKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sessionExternalId": "synthetic-session-001",
+    "operations": [
+      {
+        "index": 0,
+        "capability": "write",
+        "target": {
+          "kind": "path",
+          "path": "~/synthetic-workspace/note.txt",
+          "isInsideWorkspace": true
+        },
+        "analyzability": "full",
+        "program": null,
+        "fragment": "synthetic redacted write",
+        "signals": []
+      }
+    ],
+    "observedOutcome": "executed",
+    "occurredAt": "2026-01-02T03:04:05.006Z"
+  },
+  {
+    "actionKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "sessionExternalId": "synthetic-session-001",
+    "operations": [
+      {
+        "index": 0,
+        "capability": "push",
+        "target": {
+          "kind": "vcs_remote",
+          "remoteName": "origin",
+          "remoteKey": "example.invalid/synthetic/project",
+          "branch": "feature/synthetic-contract"
+        },
+        "analyzability": "full",
+        "program": "git",
+        "fragment": "synthetic redacted publish",
+        "signals": []
+      }
+    ],
+    "observedOutcome": "executed",
+    "occurredAt": "2026-01-02T03:04:06.007Z"
+  },
+  {
+    "actionKey": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "sessionExternalId": "synthetic-session-001",
+    "operations": [
+      {
+        "index": 0,
+        "capability": "execute",
+        "target": {
+          "kind": "unknown"
+        },
+        "analyzability": "none",
+        "program": null,
+        "fragment": "synthetic unmapped tool input",
+        "signals": ["unmapped_tool"]
+      }
+    ],
+    "observedOutcome": "unknown",
+    "occurredAt": "2026-01-02T03:04:07.008Z"
+  }
+]
