@@ -66,7 +66,17 @@ export type ToolCall = z.infer<typeof ToolCallSchema>;
 /**
  * Classifies one ToolCall without failing.
  *
- * Unrecognized input produces an `execute` Operation with `analyzability:
- * 'none'`; it is never classified as `read`.
+ * Zero Operations may be returned only for a tool name in the future exported
+ * `CONTROL_TOOL_NAMES` list. Membership requires official documentation that
+ * the tool changes no external state and controls only Agent progress; an
+ * observed tool name is not sufficient evidence.
+ *
+ * A tool name with neither an explicit mapping nor list membership returns
+ * exactly one Operation with capability `execute`, target `{ kind:
+ * 'unknown' }`, and analyzability `none`. It is never classified as `read`.
+ *
+ * A name matching `mcp__<server>__<tool>` returns an `execute` Operation with
+ * target `{ kind: 'mcp', server, tool }` parsed from the name and
+ * analyzability `partial`.
  */
 export type ClassifyToolCall = (call: ToolCall) => readonly Operation[];

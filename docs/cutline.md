@@ -486,7 +486,7 @@ invariant test:
 | id | V1 |
 | --- | --- |
 | I1~I3 정책 평가(순서 무관, 단조성, 가장 제한적인 Operation) | 유지. policy |
-| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. laundering rate 0 | 유지. action |
+| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. 임의의 tool 이름에 대해 명시적 control tool 목록에 없으면 Operation이 1개 이상임. laundering rate 0 | 유지. action |
 | I5 import 멱등 | 유지. trace |
 | I6 replay 결정성. local과 server의 hash 일치 추가 | 유지, 강화. replay |
 | I7 gate | 유지(blocker 5개). review |
