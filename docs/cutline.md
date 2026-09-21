@@ -471,7 +471,7 @@ dependency-cruiser(전부 `error`):
 | `web-only-contracts`, `cli-narrow`, `tools-narrow` | `apps/web`은 `contracts`와 `kernel/index.ts`만. `apps/cli`는 거기에 `trace/client.ts` 추가. `tools/local-pipeline`은 순수 entry와 `schema.ts`만 |
 | `contracts-schema-only` | `packages/contracts/**`는 다른 package에서 `<pkg>/schema.ts`와 `@authority/kernel`만 import |
 
-Oxlint(`error`, type-aware 규칙은 `--type-aware`로): `any` 금지, `as T` 금지와 불필요한 assertion 금지, `!` 금지, `no-floating-promises`, `require-await`, `switch-exhaustiveness-check`, `no-unsafe-assignment`, default export 금지, `console` 금지(`apps/cli/src/output.ts`, `tools/*` 예외), `process.env` 금지(`node/no-process-env`, config 파일 두 곳 예외), `drizzle-orm`과 `postgres`는 `lib/infra`와 `platform`만(`no-restricted-imports`), `lib/domain`과 `lib/app`에서 `Date` 사용 금지(`no-restricted-globals: Date`, 설계서 23장 "Date는 infra 안에서만")와 `Math.random()` 금지(`no-restricted-properties`). Oxlint에 `no-restricted-syntax`가 없어 그 세 검사를 위 native 규칙으로 표현한다.
+Oxlint(`error`, type-aware 규칙은 `--type-aware`로): `any` 금지, `as T` 금지와 불필요한 assertion 금지, `!` 금지, `no-floating-promises`, `no-misused-promises`, `require-await`, `switch-exhaustiveness-check`, `no-unsafe-assignment`, `no-unsafe-call`, `no-unsafe-member-access`, `no-unsafe-return`, `no-unsafe-argument`, default export 금지, `console` 금지(`apps/cli/src/output.ts`, `tools/*` 예외), `process.env` 금지(`node/no-process-env`, config 파일 두 곳 예외), `drizzle-orm`과 `postgres`는 `lib/infra`와 `platform`만(`no-restricted-imports`), `lib/domain`과 `lib/app`에서 `Date` 사용 금지(`no-restricted-globals: Date`, 설계서 23장 "Date는 infra 안에서만")와 `Math.random()` 금지(`no-restricted-properties`). Oxlint에 `no-restricted-syntax`가 없어 그 세 검사를 위 native 규칙으로 표현한다.
 
 그대로 유지: TypeScript compiler 설정(설계서 23장), `Result` 규칙과 error code 모양(28장), naming(22장 중 파일, symbol, DB, HTTP), 생성물 직접 수정 금지, agent change rule(33.3), 계약 고정 뒤 `schema.ts` 변경은 ACR.
 
@@ -532,7 +532,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
      interface IdGenerator { next(prefix: string): string }
      interface Logger { debug, info, warn, error: (msg: string, fields?: Record<string, unknown>) => void }
    - hash.ts (node 전용)
-     canonicalJson(value): string. object key는 사전순 정렬, 배열 순서는 유지, -0은 0으로 직렬화. undefined, 비유한 number(NaN/Infinity), plain object가 아닌 값(Date, Map, class instance 등), bigint/function/symbol이면 invariant 실패
+     canonicalJson(value): string. object key는 사전순 정렬, 배열 순서는 유지, -0은 0으로 직렬화. undefined, sparse array, 비유한 number(NaN/Infinity), plain object가 아닌 값(Date, Map, class instance 등), bigint/function/symbol이면 invariant 실패
      sha256Hex(input: string): string
    test (tests/ 아래, entry point만 import):
      canonicalJson이 key 순서가 다른 두 object에 같은 문자열을 낸다
@@ -569,9 +569,10 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    아직 없는 package에 대한 rule도 경로 pattern으로 지금 작성한다.
 
 6. .oxlintrc.json (Oxlint. type-aware 규칙은 oxlint-tsgolint로 `--type-aware`에서 동작). 전부 error.
-   no-explicit-any, no-unsafe-assignment, consistent-type-assertions(assertionStyle never, `as const` 허용),
-   no-unnecessary-type-assertion, no-non-null-assertion, no-floating-promises, require-await,
-   switch-exhaustiveness-check, default export 금지(설정 파일과 scripts 예외),
+   no-explicit-any, no-unsafe-assignment, no-unsafe-call, no-unsafe-member-access, no-unsafe-return,
+   no-unsafe-argument, consistent-type-assertions(assertionStyle never, `as const` 허용),
+   no-unnecessary-type-assertion, no-non-null-assertion, no-floating-promises, no-misused-promises,
+   require-await, switch-exhaustiveness-check, default export 금지(설정 파일과 scripts 예외),
    no-console(apps/cli/src/output.ts 와 tools/** 예외),
    process.env 접근 금지(node/no-process-env, packages/platform/lib/infra/config.ts 와 apps/cli/src/config.ts 예외),
    drizzle-orm 과 postgres import 금지(no-restricted-imports, packages/*/lib/infra/** 와 packages/platform/** 예외),
@@ -590,7 +591,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    하나라도 실패하지 않으면 script가 exit 1. 끝나면 작업 tree가 깨끗해야 한다.
    cruise 대상 목록(packages, apps, tools)은 scripts/boundary-roots.ts 한 곳에 정의하고 lint:boundaries와 이 script가 공유한다.
 
-7b. scripts/prove-lint.ts 와 `pnpm lint:prove`. 같은 방식으로 위 lint 규칙 14건 각각이 기대한 Oxlint 규칙으로 실패하는지 증명한다.
+7b. scripts/prove-lint.ts 와 `pnpm lint:prove`. 같은 방식으로 위 lint 규칙 19건 각각이 기대한 Oxlint 규칙으로 실패하는지 증명한다.
 
 8. root script: typecheck, lint, format, format:check, lint:prove, lint:boundaries, lint:boundaries:prove, test,
    check(= typecheck + lint + format:check + lint:boundaries + lint:prove + test).
