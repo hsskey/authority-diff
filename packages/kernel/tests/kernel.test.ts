@@ -27,7 +27,12 @@ describe('canonicalJson', () => {
   test.each([
     ['Date', new Date('2024-01-01T00:00:00.000Z')],
     ['Map', new Map([['a', 1]])],
-    ['class instance', new (class Thing { x = 1; })()],
+    [
+      'class instance',
+      new (class Thing {
+        x = 1;
+      })(),
+    ],
   ] as const)('rejects %s', (_label, value) => {
     expect(() => canonicalJson(value)).toThrow(/invariant failed/);
   });

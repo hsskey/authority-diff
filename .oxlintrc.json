@@ -18,8 +18,14 @@
       "error",
       {
         "paths": [
-          { "name": "drizzle-orm", "message": "drizzle-orm may be imported only from lib/infra and platform." },
-          { "name": "postgres", "message": "postgres may be imported only from lib/infra and platform." }
+          {
+            "name": "drizzle-orm",
+            "message": "drizzle-orm may be imported only from lib/infra and platform."
+          },
+          {
+            "name": "postgres",
+            "message": "postgres may be imported only from lib/infra and platform."
+          }
         ]
       }
     ]
@@ -30,12 +36,23 @@
       "rules": {
         "no-restricted-globals": [
           "error",
-          { "name": "Date", "message": "lib/domain and lib/app must not use the Date global; the Date object belongs in infra. Depend on the Clock port." }
+          {
+            "name": "Date",
+            "message": "lib/domain and lib/app must not use the Date global; the Date object belongs in infra. Depend on the Clock port."
+          }
         ],
         "no-restricted-properties": [
           "error",
-          { "object": "Date", "property": "now", "message": "lib/domain and lib/app must not use Date.now(); depend on the Clock port." },
-          { "object": "Math", "property": "random", "message": "lib/domain and lib/app must not use Math.random()." }
+          {
+            "object": "Date",
+            "property": "now",
+            "message": "lib/domain and lib/app must not use Date.now(); depend on the Clock port."
+          },
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "lib/domain and lib/app must not use Math.random()."
+          }
         ]
       }
     },
@@ -53,7 +70,11 @@
     },
     {
       "files": ["**/*.config.ts", "scripts/**/*.ts"],
-      "rules": { "import/no-default-export": "off", "no-console": "off", "node/no-process-env": "off" }
+      "rules": {
+        "import/no-default-export": "off",
+        "no-console": "off",
+        "node/no-process-env": "off"
+      }
     },
     {
       "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],

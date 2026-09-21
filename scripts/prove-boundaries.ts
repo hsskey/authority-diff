@@ -33,7 +33,8 @@ const PROOFS: readonly Proof[] = [
     files: [
       {
         path: 'packages/kernel/tests/zz_prove_a.ts',
-        content: "import { canonicalJson } from '../lib/hash.ts';\nexport const a = canonicalJson({});\n",
+        content:
+          "import { canonicalJson } from '../lib/hash.ts';\nexport const a = canonicalJson({});\n",
       },
     ],
   },
@@ -53,7 +54,8 @@ const PROOFS: readonly Proof[] = [
     files: [
       {
         path: 'packages/zz-proof/zz_prove_c.ts',
-        content: "import { canonicalJson } from '../kernel/lib/hash.ts';\nexport const c = canonicalJson({});\n",
+        content:
+          "import { canonicalJson } from '../kernel/lib/hash.ts';\nexport const c = canonicalJson({});\n",
       },
     ],
   },
@@ -104,7 +106,8 @@ const PROOFS: readonly Proof[] = [
     files: [
       {
         path: 'tools/zz-proof/zz_prove_g.ts',
-        content: "import { canonicalJson } from '../../packages/kernel/lib/hash.ts';\nexport const g = canonicalJson({});\n",
+        content:
+          "import { canonicalJson } from '../../packages/kernel/lib/hash.ts';\nexport const g = canonicalJson({});\n",
       },
     ],
   },
@@ -152,7 +155,9 @@ for (const proof of PROOFS) {
     writeFileSync(join(root, file.path), file.content);
   }
   const output = runDepcruise();
-  const fired = proof.expected.find((rule) => output.includes(`error ${rule}`) || output.includes(rule));
+  const fired = proof.expected.find(
+    (rule) => output.includes(`error ${rule}`) || output.includes(rule),
+  );
   cleanup(proof);
   if (fired === undefined) {
     allPassed = false;
