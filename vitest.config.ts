@@ -15,6 +15,16 @@ export default defineConfig({
           ],
         },
       },
+      {
+        test: {
+          name: 'arch',
+          include: ['tests/arch/**/*.arch.test.ts'],
+          // archunit's Vitest adapter registers its matcher on import and requires
+          // the global expect to exist.
+          globals: true,
+          testTimeout: 60000,
+        },
+      },
     ],
   },
 });
