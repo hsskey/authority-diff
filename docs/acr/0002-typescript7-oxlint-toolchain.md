@@ -37,7 +37,7 @@ Status: accepted (2026-09-21). ACR-0001을 대체한다.
 
 ## 변경 4: Oxfmt와 pre-commit hook
 
-- pre-commit은 lint-staged로 staged 파일에만 Oxfmt(`--check`)와 Oxlint를 실행한다. typecheck, test, depcruise는 넣지 않는다. hook 설치는 `prepare` script가 `core.hooksPath`를 `.githooks`로 설정한다.
+- pre-commit은 lint-staged로 staged 파일에만 Oxfmt(`--check`)와 Oxlint를 실행한다. typecheck, test, depcruise는 넣지 않는다. hook 설치는 `prepare` script가 `core.hooksPath`를 `.githooks`로 설정하고, Oxfmt 최초 reformat commit이 `git blame`을 가리지 않도록 `blame.ignoreRevsFile`을 `.git-blame-ignore-revs`로 설정한다.
 
 ## 범위 밖
 
