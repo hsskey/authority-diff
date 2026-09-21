@@ -471,7 +471,7 @@ dependency-cruiser(전부 `error`):
 | `web-only-contracts`, `cli-narrow`, `tools-narrow` | `apps/web`은 `contracts`와 `kernel/index.ts`만. `apps/cli`는 거기에 `trace/client.ts` 추가. `tools/local-pipeline`은 순수 entry와 `schema.ts`만 |
 | `contracts-schema-only` | `packages/contracts/**`는 다른 package에서 `<pkg>/schema.ts`와 `@authority/kernel`만 import |
 
-ESLint(`error`): `any` 금지, `as T`와 `!` 금지, `no-floating-promises`, `switch-exhaustiveness-check`, default export 금지, `console` 금지(`apps/cli/src/output.ts`, `tools/*` 예외), `process.env`는 config 파일 두 곳만, `drizzle-orm`과 `postgres`는 `lib/infra`와 `platform`만, `lib/domain`과 `lib/app`에서 `new Date()`, `Date.now()`, `Math.random()` 금지.
+Oxlint(`error`, type-aware 규칙은 `--type-aware`로): `any` 금지, `as T` 금지와 불필요한 assertion 금지, `!` 금지, `no-floating-promises`, `require-await`, `switch-exhaustiveness-check`, `no-unsafe-assignment`, default export 금지, `console` 금지(`apps/cli/src/output.ts`, `tools/*` 예외), `process.env` 금지(`node/no-process-env`, config 파일 두 곳 예외), `drizzle-orm`과 `postgres`는 `lib/infra`와 `platform`만(`no-restricted-imports`), `lib/domain`과 `lib/app`에서 `Date` 사용 금지(`no-restricted-globals: Date`, 설계서 23장 "Date는 infra 안에서만")와 `Math.random()` 금지(`no-restricted-properties`). Oxlint에 `no-restricted-syntax`가 없어 그 세 검사를 위 native 규칙으로 표현한다.
 
 그대로 유지: TypeScript compiler 설정(설계서 23장), `Result` 규칙과 error code 모양(28장), naming(22장 중 파일, symbol, DB, HTTP), 생성물 직접 수정 금지, agent change rule(33.3), 계약 고정 뒤 `schema.ts` 변경은 ACR.
 
@@ -511,7 +511,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 1. pnpm workspace + Turborepo. Node 22, TypeScript, ESM 전용("type": "module").
    workspace glob: apps/*, packages/*, tools/*
 
-2. root 파일: package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, eslint.config.js,
+2. root 파일: package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .oxlintrc.json,
    .dependency-cruiser.cjs, vitest.config.ts, .gitignore, .nvmrc, .github/workflows/ci.yml
 
 3. tsconfig.base.json: strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride,
@@ -568,24 +568,32 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
      다른 package의 schema.ts 아닌 파일을 import하면 위반이다.
    아직 없는 package에 대한 rule도 경로 pattern으로 지금 작성한다.
 
-6. eslint.config.js (flat config, typescript-eslint strictTypeChecked 기반). 전부 error.
-   no-explicit-any, no-unsafe-*, consistent-type-assertions(assertionStyle never, `as const` 허용), no-non-null-assertion,
-   no-floating-promises, no-misused-promises, switch-exhaustiveness-check, default export 금지(설정 파일 예외),
+6. .oxlintrc.json (Oxlint. type-aware 규칙은 oxlint-tsgolint로 `--type-aware`에서 동작). 전부 error.
+   no-explicit-any, no-unsafe-assignment, consistent-type-assertions(assertionStyle never, `as const` 허용),
+   no-unnecessary-type-assertion, no-non-null-assertion, no-floating-promises, require-await,
+   switch-exhaustiveness-check, default export 금지(설정 파일과 scripts 예외),
    no-console(apps/cli/src/output.ts 와 tools/** 예외),
-   process.env 접근 금지(packages/platform/lib/infra/config.ts 와 apps/cli/src/config.ts 예외),
-   drizzle-orm 과 postgres import 금지(packages/*/lib/infra/** 와 packages/platform/** 예외),
-   packages/*/lib/domain/** 과 packages/*/lib/app/** 에서 new Date(), Date.now(), Math.random() 금지.
+   process.env 접근 금지(node/no-process-env, packages/platform/lib/infra/config.ts 와 apps/cli/src/config.ts 예외),
+   drizzle-orm 과 postgres import 금지(no-restricted-imports, packages/*/lib/infra/** 와 packages/platform/** 예외),
+   packages/*/lib/domain/** 과 packages/*/lib/app/** 에서 Date 사용 금지(no-restricted-globals: Date)와
+   Math.random() 금지(no-restricted-properties). Oxlint에 no-restricted-syntax가 없어 그 세 검사를 native 규칙으로 표현한다.
 
 7. scripts/prove-boundaries.ts 와 `pnpm lint:boundaries:prove`.
    위반 파일을 임시로 만들고, depcruise를 실행해 기대한 rule 이름으로 실패하는지 확인하고, 임시 파일을 지운다.
-   최소 5개: (a) kernel의 test가 자기 lib/ 를 직접 import -> tests-through-entrypoints
-             (b) kernel의 lib/domain 파일이 node:fs 를 import -> domain-is-pure
-             (c) 임시 package packages/zz-proof 가 packages/kernel/lib/ 를 import -> entrypoint-boundary-across-packages
-             (d) 임시 packages/action/lib/domain/x.ts 가 @authority/platform 을 import -> package-layering 또는 domain-is-pure
-             (e) 임시 packages/contracts/lib/x.ts 가 packages/policy/evaluate.ts (schema.ts 아닌 root 파일)를 import -> contracts-schema-only
+   7개: (a) kernel의 test가 자기 lib/ 를 직접 import -> tests-through-entrypoints
+        (b) kernel의 lib/domain 파일이 node:fs 를 import -> domain-is-pure
+        (c) 임시 package packages/zz-proof 가 packages/kernel/lib/ 를 import -> entrypoint-boundary-across-packages
+        (d) 임시 packages/action/lib/domain/x.ts 가 @authority/platform 을 import -> package-layering 또는 domain-is-pure
+        (e) 임시 packages/contracts/lib/x.ts 가 packages/policy/evaluate.ts (schema.ts 아닌 root 파일)를 import -> contracts-schema-only
+        (f) 임시 packages/trace/client.ts 가 lib/client 경유로 lib/infra 에 전이 도달 -> pure-entry-points
+        (g) 임시 tools/ 파일이 packages/kernel/lib/ 를 import -> entrypoint-boundary-from-app
    하나라도 실패하지 않으면 script가 exit 1. 끝나면 작업 tree가 깨끗해야 한다.
+   cruise 대상 목록(packages, apps, tools)은 scripts/boundary-roots.ts 한 곳에 정의하고 lint:boundaries와 이 script가 공유한다.
 
-8. root script: typecheck, lint, lint:boundaries, lint:boundaries:prove, test, check(= typecheck + lint + lint:boundaries + test).
+7b. scripts/prove-lint.ts 와 `pnpm lint:prove`. 같은 방식으로 위 lint 규칙 14건 각각이 기대한 Oxlint 규칙으로 실패하는지 증명한다.
+
+8. root script: typecheck, lint, lint:prove, lint:boundaries, lint:boundaries:prove, test,
+   check(= typecheck + lint + lint:boundaries + lint:prove + test).
 
 9. CI: pnpm install --frozen-lockfile, pnpm check, pnpm lint:boundaries:prove.
 
@@ -593,11 +601,12 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 kernel 외의 package, apps, tools 안의 code, docker compose, DB 관련 설정, AGENTS.md 와 CONTEXT.md 의 내용.
 
 ## 허용 의존성
-typescript, zod, vitest, eslint, typescript-eslint, eslint-plugin-import-x, eslint-plugin-n, dependency-cruiser, turbo, tsx, @types/node.
+typescript, zod, vitest, oxlint, oxlint-tsgolint, dependency-cruiser, turbo, tsx, @types/node.
 version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요하면 중단하고 보고한다.
 
-설치 시점 예외 2건(2026-09-21, ACR-0001로 기록. 새 의존성 추가나 규칙 약화 아님):
-- `typescript`는 정확히 `6.0.3`으로 고정한다. 설치 시점 최신 stable은 7.0.2였으나 `dependency-cruiser@18.3.1`이 typescript 7을 지원하지 않아(`>=2.0.0 <7.0.0`) 경계 규칙이 0개 module만 분석하는 무효 통과가 된다. depcruise가 TS7을 지원하면 상향한다.
+설치 시점 예외(2026-09-21, ACR-0002로 기록. 새 의존성 추가나 규칙 약화 아님):
+- `typescript`는 설치 시점 최신 stable 7.x로 정확히 고정한다. `dependency-cruiser`는 typescript 7을 지원하지 않으므로(`>=2.0.0 <7.0.0`) pnpm `packageExtensions`로 dependency-cruiser에만 typescript 6.0.3을 공급한다. root는 7.x, depcruise는 6.0.3으로 분석한다.
+- lint/format을 ESLint에서 Oxlint로 옮긴다. typescript-eslint가 typescript 7에서 실행 예외로 종료하기 때문이다. type-aware 규칙은 oxlint-tsgolint가 담당한다. 제거: eslint, typescript-eslint, eslint-plugin-import-x, eslint-plugin-n.
 - `vitest.workspace.ts` 대신 `vitest.config.ts`의 `test.projects`를 쓴다. `vitest@5`가 workspace 파일과 `--workspace` 플래그를 제거했다. `test.projects`가 그 후속 기능이다.
 
 ## 완료 기준

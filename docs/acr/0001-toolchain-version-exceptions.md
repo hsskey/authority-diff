@@ -1,6 +1,8 @@
 # ACR-0001 toolchain 버전 예외 2건
 
-Status: accepted (2026-09-21). 절차: docs/design.md 33.3. 범위: docs/cutline.md의 허용 의존성 규칙과 root 파일 목록.
+Status: superseded by ACR-0002 (2026-09-21). 변경 1(typescript 6.0.3 고정)은 ACR-0002가 대체한다(root는 7.x, dependency-cruiser만 packageExtensions로 6.0.3). 변경 2(vitest test.projects)는 유효하며 ACR-0002가 유지한다. 아래는 원래 기록이다.
+
+절차: docs/design.md 33.3. 범위: docs/cutline.md의 허용 의존성 규칙과 root 파일 목록.
 
 repository scaffold에서 "허용 의존성 version은 설치 시점의 최신 stable" 규칙이 두 지점에서 아키텍처 경계 검증과 충돌했다. 규칙을 약화하거나 새 의존성을 추가하지 않고, 지정 도구의 동작하는 버전/후속 설정으로 고정했다.
 

@@ -8,22 +8,21 @@
   },
   "scripts": {
     "typecheck": "turbo run typecheck && tsc -p scripts/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
-    "lint": "eslint .",
-    "lint:boundaries": "depcruise packages",
+    "lint": "oxlint --type-aware",
+    "lint:prove": "tsx scripts/prove-lint.ts",
+    "lint:boundaries": "tsx scripts/cruise-boundaries.ts",
     "lint:boundaries:prove": "tsx scripts/prove-boundaries.ts",
     "test": "vitest run",
-    "check": "pnpm typecheck && pnpm lint && pnpm lint:boundaries && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm lint:boundaries && pnpm lint:prove && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
     "dependency-cruiser": "^18.3.1",
-    "eslint": "^10.11.0",
-    "eslint-plugin-import-x": "^4.17.1",
-    "eslint-plugin-n": "^18.3.0",
+    "oxlint": "^1.83.0",
+    "oxlint-tsgolint": "^7.0.2002",
     "tsx": "^4.23.15",
     "turbo": "^2.11.2",
-    "typescript": "6.0.3",
-    "typescript-eslint": "^8.70.0",
+    "typescript": "7.0.2",
     "vitest": "^5.0.1",
     "zod": "^4.6.5"
   }
