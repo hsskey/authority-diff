@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "credentialPaths": ["~/.synthetic-credentials/**"],
+    "agentConfigPaths": ["~/.synthetic-agent/**"],
+    "trustedRemotes": ["trusted.example.invalid/**"],
+    "publicRemotes": ["public.example.invalid/**"],
+    "protectedBranches": ["main"],
+    "productionMarkers": ["synthetic-production"]
+  },
+  "rules": [
+    {
+      "ruleId": "ask_writes",
+      "match": {
+        "capabilities": ["write"],
+        "zones": ["workspace"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "ask",
+      "rationale": "Synthetic baseline requires confirmation."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "actionKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sessionExternalId": "synthetic-session-001",
+  "operations": [
+    {
+      "index": 0,
+      "capability": "write",
+      "target": {
+        "kind": "path",
+        "path": "~/synthetic-workspace/note.txt",
+        "isInsideWorkspace": true
+      },
+      "analyzability": "full",
+      "program": null,
+      "fragment": "synthetic redacted write",
+      "signals": []
+    }
+  ],
+  "observedOutcome": "executed",
+  "occurredAt": "2026-01-02T03:04:05.006Z"
+}

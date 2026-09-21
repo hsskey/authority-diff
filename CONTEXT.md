@@ -15,10 +15,18 @@ _Avoid_: user, developer, owner
 Claude Code에서는 transcript 파일 하나.
 _Avoid_: conversation, run
 
+**Parsed Session**:
+transcript 줄을 memory에서 parse하고 redaction한 Session.
+parse하지 못한 줄의 수와 관측된 Action을 함께 담습니다.
+
 **Action**:
 Agent가 실행하려 한 tool call 하나.
 실행 여부와 무관하게 시도 자체를 가리킵니다.
 _Avoid_: command, event, tool use
+
+**Action Key**:
+runtime의 tool use 식별자에서 결정적으로 유도한 Action 식별자.
+tool use 식별자가 없을 때는 Session 식별자와 순번을 사용합니다.
 
 **Operation**:
 Action을 분해한 최소 단위.
@@ -85,6 +93,9 @@ _Avoid_: result, outcome
 Effect가 달라진 Action을 같은 signature로 묶은 단위.
 사람이 판정하는 단위입니다.
 _Avoid_: cluster, bucket
+
+**Group Key**:
+Diff Group signature에서 결정적으로 유도한 식별자.
 
 **Widening / Narrowing**:
 candidate의 Effect가 baseline보다 덜 제한적이면 Widening, 더 제한적이면 Narrowing.

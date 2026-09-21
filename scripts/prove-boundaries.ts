@@ -14,18 +14,6 @@ interface Proof {
   readonly files: ReadonlyArray<{ readonly path: string; readonly content: string }>;
 }
 
-// Fixture directories to remove between and after proofs. `tools` is created only
-// by proof (g); it does not exist in the tracked tree today.
-const TEMP_PACKAGE_DIRS = [
-  'packages/zz-proof',
-  'packages/platform',
-  'packages/action',
-  'packages/contracts',
-  'packages/policy',
-  'packages/trace',
-  'tools',
-];
-
 const PROOFS: readonly Proof[] = [
   {
     id: '(a) kernel test imports its own lib -> tests-through-entrypoints',
@@ -111,6 +99,17 @@ const PROOFS: readonly Proof[] = [
       },
     ],
   },
+  {
+    id: '(h) schema imports another package non-schema root -> schema-imports-schema-only',
+    expected: ['schema-imports-schema-only'],
+    files: [
+      { path: 'packages/policy/evaluate.ts', content: 'export const h = 1;\n' },
+      {
+        path: 'packages/contracts/schema.ts',
+        content: "import { h } from '../policy/evaluate.ts';\nexport const hh = h;\n",
+      },
+    ],
+  },
 ];
 
 const root = process.cwd();
@@ -138,14 +137,11 @@ function cleanup(proof: Proof): void {
   for (const file of proof.files) {
     rmSync(join(root, file.path), { force: true });
   }
-  for (const dir of TEMP_PACKAGE_DIRS) {
-    rmSync(join(root, dir), { recursive: true, force: true });
-  }
 }
 
 // Clear any leftovers from an interrupted run before starting.
-for (const dir of TEMP_PACKAGE_DIRS) {
-  rmSync(join(root, dir), { recursive: true, force: true });
+for (const proof of PROOFS) {
+  cleanup(proof);
 }
 
 let allPassed = true;
