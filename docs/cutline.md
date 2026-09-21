@@ -511,8 +511,8 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 1. pnpm workspace + Turborepo. Node 22, TypeScript, ESM 전용("type": "module").
    workspace glob: apps/*, packages/*, tools/*
 
-2. root 파일: package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .oxlintrc.json,
-   .dependency-cruiser.cjs, vitest.config.ts, .gitignore, .nvmrc, .github/workflows/ci.yml
+2. root 파일: package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .oxlintrc.json, .oxfmtrc.json,
+   .dependency-cruiser.cjs, vitest.config.ts, .gitignore, .nvmrc, .git-blame-ignore-revs, .githooks/pre-commit, .github/workflows/ci.yml
 
 3. tsconfig.base.json: strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride,
    noFallthroughCasesInSwitch, verbatimModuleSyntax, isolatedModules, module과 moduleResolution은 NodeNext.
