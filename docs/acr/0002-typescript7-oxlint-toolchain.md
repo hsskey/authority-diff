@@ -18,10 +18,10 @@ Status: accepted (2026-09-21). ACR-0001을 대체한다.
 
 - 문제: `typescript-eslint`는 typescript 7에서 실행 시 예외로 종료한다(`typescript-eslint does not support TS 7.0`). TS7과 linter 교체는 같은 변경이어야 한다.
 - 결정: ESLint 대신 Oxlint를 쓴다. type-aware 규칙은 `oxlint-tsgolint`가 담당하며 `oxlint --type-aware`에서 동작한다. 설정 문법이 아니라 아래 동작을 보존한다.
-- 보존한 lint 규칙(14건, `.oxlintrc.json`, 전부 error): no-floating-promises, require-await, `new Date()`(lib/domain, lib/app), `Math.random()`(같은 범위), `process.env`(지정 config 파일 2곳 예외), type assertion(`as T`), no-unnecessary-type-assertion, no-explicit-any, no-unsafe-assignment, no-console, no-non-null-assertion, switch-exhaustiveness-check, default export, `drizzle-orm` import(lib/infra와 platform 예외).
+- 보존한 lint 규칙(19건, `.oxlintrc.json`, 전부 error): no-floating-promises, no-misused-promises, require-await, `new Date()`(lib/domain, lib/app), `Math.random()`(같은 범위), `process.env`(지정 config 파일 2곳 예외), type assertion(`as T`), no-unnecessary-type-assertion, no-explicit-any, no-unsafe-assignment, no-unsafe-call, no-unsafe-member-access, no-unsafe-return, no-unsafe-argument, no-console, no-non-null-assertion, switch-exhaustiveness-check, default export, `drizzle-orm` import(lib/infra와 platform 예외).
 - `no-restricted-syntax` 부재 대체: `process.env`는 `node/no-process-env`, `Date.now`와 `Math.random`은 `no-restricted-properties`, `new Date()`를 포함한 lib/domain·lib/app의 Date 사용은 `no-restricted-globals: Date`(설계서 23장 "Date 객체는 infra 안에서만"과 같은 뜻. value 위치만 잡고 `: Date` type 위치는 잡지 않음을 실측).
 - 기존 예외 경로를 그대로 유지한다: `process.env`는 `packages/platform/lib/infra/config.ts`, `apps/cli/src/config.ts`, 그리고 tooling인 `scripts/**`와 `*.config.ts`에서 허용(이전 ESLint 설정이 이 경로에서 `no-restricted-syntax`를 껐던 것과 동일). `no-console`은 `apps/cli/src/output.ts`, `tools/**`, `scripts/**`, `*.config.ts`에서 허용. default export는 `scripts/**`, `*.config.ts`에서 허용.
-- 증명: `scripts/prove-lint.ts`가 14건 각각을 위반 fixture로 실패시켜 확인하고, `pnpm lint:prove`로 CI(`pnpm check`)에서 돈다. 14건이 전부 증명된 뒤에 ESLint 관련 의존성을 제거했다.
+- 증명: `scripts/prove-lint.ts`가 19건 각각을 위반 fixture로 실패시켜 확인하고, `pnpm lint:prove`로 CI(`pnpm check`)에서 돈다. 19건이 전부 증명된 뒤에 ESLint 관련 의존성을 제거했다.
 - 대안: 규칙별로 ESLint를 일부 남기는 혼합 구성(도구 이중화, 규칙 소유 분산). 채택하지 않았다.
 
 ## 변경 3: 경계 검사 범위 확장
@@ -37,7 +37,7 @@ Status: accepted (2026-09-21). ACR-0001을 대체한다.
 
 ## 변경 4: Oxfmt와 pre-commit hook
 
-- pre-commit은 lint-staged로 staged 파일에만 Oxfmt(`--check`)와 Oxlint를 실행한다. typecheck, test, depcruise는 넣지 않는다. hook 설치는 `prepare` script가 `core.hooksPath`를 `.githooks`로 설정한다.
+- pre-commit은 lint-staged로 staged 파일에만 Oxfmt(`--check`)와 Oxlint를 실행한다. typecheck, test, depcruise는 넣지 않는다. hook 설치는 `prepare` script가 `core.hooksPath`를 `.githooks`로 설정하고, Oxfmt 최초 reformat commit이 `git blame`을 가리지 않도록 `blame.ignoreRevsFile`을 `.git-blame-ignore-revs`로 설정한다.
 
 ## 범위 밖
 

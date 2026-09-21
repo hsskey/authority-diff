@@ -22,6 +22,9 @@ function serialize(value: unknown): string {
     return JSON.stringify(Object.is(value, -0) ? 0 : value);
   }
   if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      invariant(i in value, 'canonicalJson does not accept sparse arrays');
+    }
     return `[${value.map(serialize).join(',')}]`;
   }
   if (isPlainObject(value)) {

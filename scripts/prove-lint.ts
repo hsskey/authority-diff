@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 // Injects one deliberate violation per preserved lint behavior, confirms Oxlint
 // reports it for the intended rule, then removes the fixture. Exits non-zero if
 // any injected violation did NOT fire (a vacuous pass). This is the lint
-// counterpart of scripts/prove-boundaries.ts. The 14 behaviors are the lint
-// contract carried over from ESLint; source of truth: .oxlintrc.json.
+// counterpart of scripts/prove-boundaries.ts. The 19 behaviors are the lint
+// contract carried over from ESLint; source of truth: .oxlintrc.json. 19 rules.
 
 interface Proof {
   readonly id: string;
@@ -119,6 +119,42 @@ const PROOFS: readonly Proof[] = [
     typeAware: false,
     path: `${LIB}/zz_prove_drizzle.ts`,
     content: "import { sql } from 'drizzle-orm';\nexport const q = sql;\n",
+  },
+  {
+    id: '15 misused promise in boolean conditional',
+    rule: 'no-misused-promises',
+    typeAware: true,
+    path: `${LIB}/zz_prove_misused_promise.ts`,
+    content:
+      'async function asyncFn(): Promise<boolean> {\n  return true;\n}\nexport function run(): void {\n  if (asyncFn()) {}\n}\n',
+  },
+  {
+    id: '16 unsafe call',
+    rule: 'no-unsafe-call',
+    typeAware: true,
+    path: `${LIB}/zz_prove_unsafe_call.ts`,
+    content: 'const bad: any = () => {};\nexport function run(): void {\n  bad();\n}\n',
+  },
+  {
+    id: '17 unsafe member access',
+    rule: 'no-unsafe-member-access',
+    typeAware: true,
+    path: `${LIB}/zz_prove_unsafe_member.ts`,
+    content: 'const anyValue: any = 1;\nexport function run(): void {\n  anyValue.foo();\n}\n',
+  },
+  {
+    id: '18 unsafe return',
+    rule: 'no-unsafe-return',
+    typeAware: true,
+    path: `${LIB}/zz_prove_unsafe_return.ts`,
+    content: 'export function run(): number {\n  const anyValue: any = 1;\n  return anyValue;\n}\n',
+  },
+  {
+    id: '19 unsafe argument',
+    rule: 'no-unsafe-argument',
+    typeAware: true,
+    path: `${LIB}/zz_prove_unsafe_argument.ts`,
+    content: 'const bad: any = 1;\nexport function run(): void {\n  Math.abs(bad);\n}\n',
   },
 ];
 

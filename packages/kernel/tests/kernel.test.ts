@@ -45,6 +45,13 @@ describe('canonicalJson', () => {
     expect(() => canonicalJson(value)).toThrow(/invariant failed/);
   });
 
+  test('rejects sparse arrays', () => {
+    const sparse: number[] = [];
+    sparse[0] = 1;
+    sparse[2] = 3;
+    expect(() => canonicalJson(sparse)).toThrow(/invariant failed/);
+  });
+
   test.each([
     ['bigint', 1n],
     ['function', () => {}],
