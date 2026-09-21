@@ -1,0 +1,74 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "node"],
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", ".omc/**", "**/*.gen.ts"],
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/require-await": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/no-non-null-assertion": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "import/no-default-export": "error",
+    "no-console": "error",
+    "node/no-process-env": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          { "name": "drizzle-orm", "message": "drizzle-orm may be imported only from lib/infra and platform." },
+          { "name": "postgres", "message": "postgres may be imported only from lib/infra and platform." }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["packages/*/lib/domain/**/*.ts", "packages/*/lib/app/**/*.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          { "name": "Date", "message": "lib/domain and lib/app must not use the Date global; the Date object belongs in infra. Depend on the Clock port." }
+        ],
+        "no-restricted-properties": [
+          "error",
+          { "object": "Date", "property": "now", "message": "lib/domain and lib/app must not use Date.now(); depend on the Clock port." },
+          { "object": "Math", "property": "random", "message": "lib/domain and lib/app must not use Math.random()." }
+        ]
+      }
+    },
+    {
+      "files": ["packages/*/lib/infra/**/*.ts", "packages/platform/**/*.ts"],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
+      "files": ["packages/platform/lib/infra/config.ts", "apps/cli/src/config.ts"],
+      "rules": { "node/no-process-env": "off" }
+    },
+    {
+      "files": ["apps/cli/src/output.ts", "tools/**/*.ts"],
+      "rules": { "no-console": "off" }
+    },
+    {
+      "files": ["**/*.config.ts", "scripts/**/*.ts"],
+      "rules": { "import/no-default-export": "off", "no-console": "off", "node/no-process-env": "off" }
+    },
+    {
+      "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
+      "rules": {
+        "import/no-default-export": "off",
+        "no-console": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/require-await": "off",
+        "typescript/no-unnecessary-type-assertion": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/consistent-type-assertions": "off",
+        "typescript/no-non-null-assertion": "off",
+        "typescript/switch-exhaustiveness-check": "off"
+      }
+    }
+  ]
+}

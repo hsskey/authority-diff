@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { existingBoundaryRoots } from './boundary-roots.ts';
 
 // Injects intentional architecture-boundary violations, confirms dependency-cruiser
 // fails each one for its intended rule, then removes the fixtures. Exits non-zero if
@@ -13,12 +14,16 @@ interface Proof {
   readonly files: ReadonlyArray<{ readonly path: string; readonly content: string }>;
 }
 
+// Fixture directories to remove between and after proofs. `tools` is created only
+// by proof (g); it does not exist in the tracked tree today.
 const TEMP_PACKAGE_DIRS = [
   'packages/zz-proof',
   'packages/platform',
   'packages/action',
   'packages/contracts',
   'packages/policy',
+  'packages/trace',
+  'tools',
 ];
 
 const PROOFS: readonly Proof[] = [
@@ -74,6 +79,35 @@ const PROOFS: readonly Proof[] = [
       },
     ],
   },
+  {
+    id: '(f) pure entry reaches lib/infra transitively -> pure-entry-points',
+    expected: ['pure-entry-points'],
+    files: [
+      {
+        path: 'packages/trace/client.ts',
+        content: "import { parse } from './lib/client/parse.ts';\nexport const c = parse;\n",
+      },
+      {
+        path: 'packages/trace/lib/client/parse.ts',
+        content: "import { shared } from './shared.ts';\nexport const parse = shared;\n",
+      },
+      {
+        path: 'packages/trace/lib/client/shared.ts',
+        content: "import { db } from '../infra/db.ts';\nexport const shared = db;\n",
+      },
+      { path: 'packages/trace/lib/infra/db.ts', content: 'export const db = 1;\n' },
+    ],
+  },
+  {
+    id: '(g) tools file imports packages/kernel/lib -> entrypoint-boundary-from-app',
+    expected: ['entrypoint-boundary-from-app'],
+    files: [
+      {
+        path: 'tools/zz-proof/zz_prove_g.ts',
+        content: "import { canonicalJson } from '../../packages/kernel/lib/hash.ts';\nexport const g = canonicalJson({});\n",
+      },
+    ],
+  },
 ];
 
 const root = process.cwd();
@@ -85,7 +119,7 @@ function hasStdio(value: unknown): value is { stdout?: string; stderr?: string }
 
 function runDepcruise(): string {
   try {
-    return execFileSync(depcruiseBin, ['packages', '--output-type', 'err'], {
+    return execFileSync(depcruiseBin, [...existingBoundaryRoots(), '--output-type', 'err'], {
       cwd: root,
       encoding: 'utf8',
     });
