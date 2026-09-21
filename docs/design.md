@@ -2,12 +2,11 @@
 
 Agent 권한 변경을 적용하기 전에 승인 근거를 만드는 제품의 제품 설계와 구현 아키텍처입니다.
 
-- 독자: 설계를 리뷰하고 통합하는 사람 1명, 그리고 모듈 단위로 구현을 맡는 coding agent(Claude Code, Codex).
+- 독자: 설계를 리뷰하고 통합하는 사람, 그리고 모듈 단위로 구현하는 사람 또는 도구.
 - 목적: 이 문서만 읽고 각 모듈의 위치, 이름, 계약, 금지 사항을 새로 정하지 않고 구현을 시작할 수 있게 합니다.
 - 유형: 설명 문서(1~17장)와 참조 문서(18~38장)를 합친 형태입니다.
 - 작성 기준일: 2026-09-21.
 - 표기: 근거가 약한 곳은 "아직 검증되지 않은 가정"으로 적고 값을 모르는 곳은 `[확인 필요: 항목]`으로 적습니다.
-- 적용한 방법: jeffdean-mind(대안 2~3개 비교, 백오브엔벨로프 계산, 실패를 정상 상태로 취급), mattpocock/skills의 domain-modeling(용어집과 ADR 3조건), codebase-design(deep module, seam, adapter), setup-ts-deep-modules(dependency-cruiser 경계 규칙), to-tickets(tracer bullet과 blocking edge), tdd(합의한 seam에서만 테스트), writing-for-agents(AGENTS.md 작성 규칙).
 
 ## 1. 한 줄 결론
 
@@ -52,7 +51,7 @@ vendor의 주장은 "confidence가 높을수록 정확도가 높다"는 단조�
 Claude Code transcript(`~/.claude/projects/**/*.jsonl`)에는 `tool_use`와 `tool_result`가 남고 승인 prompt가 떴는지는 남지 않습니다.
 따라서 thesis의 "CURRENT POLICY: AUTO ALLOW 7,931"은 과거 기록에서 읽는 값이 아니라, baseline 정책을 같은 기록에 대입해 계산하는 값이어야 합니다.
 계산 결과가 실제 runtime 동작과 같은지는 별도로 측정해야 하고 이 설계에서는 `PermissionRequest` hook 관측으로 측정합니다.
-아직 검증되지 않은 가정: transcript에 prompt 표시 여부가 남지 않는다는 점은 Day 1에 실제 파일로 확인합니다.
+아직 검증되지 않은 가정: transcript에 prompt 표시 여부가 남지 않는다는 점은 초기 측정에서 실제 파일로 확인합니다.
 
 ### 2.5 Agent의 shell 입력은 command가 아니라 program입니다
 
@@ -241,7 +240,7 @@ Team/Enterprise plan에서 Auto Mode는 관리자가 켜야 하고 그 결정을
 | --- | --- | --- | --- |
 | vendor가 같은 기능을 이미 제공하는가 | 제공(managed settings) | 제공(Auto Mode) | 찾지 못함 |
 | 실행 경로의 가용성을 책임져야 하는가 | 아니오 | 예 | 아니오 |
-| 7일 안에 실제 데이터로 가설을 검증할 수 있는가 | 단말 여러 대가 필요 | 위험 사건이 없어 합성 데이터에 의존 | 본인 transcript로 Day 1에 가능 |
+| 7일 안에 실제 데이터로 가설을 검증할 수 있는가 | 단말 여러 대가 필요 | 위험 사건이 없어 합성 데이터에 의존 | 본인 transcript로 초기에 가능 |
 | 조직장의 결정과 직접 연결되는가 | 간접 | 간접 | 직접(승인 문서가 산출물) |
 | Jev 없이도 제품이 성립하는가 | 예 | 아니오 | 예(replay는 전부 deterministic) |
 
@@ -813,7 +812,7 @@ LLM baseline adapter는 5회 sampling의 득표 비율을 분포로 씁니다.
 
 하한 0.95를 주장하려면 오류 0건에 73개, 1건에 110개, 2건에 142개가 필요합니다.
 공개된 두 실험의 수치는 "전부 맞았다"이지 "95% 이상 맞는다"가 아닙니다.
-golden set은 200개 이상으로 잡고 그중 120개 이상이 `pTop >= t` 구간에 들어오는지를 Day 5에 확인합니다.
+golden set은 200개 이상으로 잡고 그중 120개 이상이 `pTop >= t` 구간에 들어오는지를 강화 단계에서 확인합니다.
 
 ### 15.2 threshold 산출 절차
 
@@ -1047,7 +1046,7 @@ flowchart LR
 | HTTP | Hono + `@hono/zod-openapi`, REST JSON | CLI, hook, web 세 종류의 client가 같은 계약을 씀. RPC 방식은 섞지 않음 |
 | web | Vite + React + TanStack Router + TanStack Query. build 결과를 server가 정적 제공 | 내부 도구에 SSR이 필요 없음 |
 | CLI | Node 단일 파일 bundle(tsup) | hook 기동 시간 60 ms 이내 |
-| shell 분석 | `web-tree-sitter` + `tree-sitter-bash` WASM | 오류에 강한 parse, native build 불필요. 아직 검증되지 않은 가정: WASM 배포본과 parse 성능은 Day 1 spike에서 확인 |
+| shell 분석 | `web-tree-sitter` + `tree-sitter-bash` WASM | 오류에 강한 parse, native build 불필요. 아직 검증되지 않은 가정: WASM 배포본과 parse 성능은 초기 spike에서 확인 |
 | 인증 | 고정 bearer token 2종(`admin`, `ingest`). token hash를 DB에 저장 | single tenant MVP. SSO는 범위 밖 |
 | 배포 | docker compose(server + postgres). 조직 내부 VM 또는 laptop | trace가 조직 밖으로 나가지 않음 |
 | 저장 전략 | 상태 table이 canonical. `agent_actions`는 append-only fact. audit은 별도 hash chain | event sourcing, CQRS는 쓰지 않음. 복원할 상태 이력이 Policy Version의 불변 문서로 이미 남음 |
@@ -1233,7 +1232,7 @@ ArchUnitTS는 추가하지 않습니다.
 | `web-only-contracts` | `apps/web`은 `@authority/contracts`, `@authority/kernel`만 import |
 | `cli-narrow` | `apps/cli`는 `@authority/contracts`, `@authority/kernel`, `@authority/trace/client`만 import |
 
-규칙이 실제로 실패하는지 증명하는 절차를 T01의 완료 조건에 넣습니다.
+규칙이 실제로 실패하는지 증명하는 절차를 root scaffold의 완료 조건에 넣습니다.
 위반 import를 일부러 넣어 실패를 확인하고 되돌린 뒤 통과를 확인합니다.
 
 `package-layering` 발췌:
@@ -1396,7 +1395,7 @@ architecture가 흐트러지거나 agent가 자주 틀리는 지점만 규칙으
 | feature flag | 두지 않음 | 없음 |
 | 생성 코드 | `drizzle/`, `apps/server/openapi.json`, `apps/web/src/routeTree.gen.ts`. 직접 수정 금지, script로 재생성, CI가 최신 여부 검사 | `scripts/check-generated.ts` |
 | hash | `kernel`의 canonical JSON(key 정렬) + sha256 | 단일 함수 |
-| 주석 | 이유만 적음. entry point의 export에는 invariant와 error를 적은 TSDoc 1~3줄. 주석 처리한 코드 금지. `TODO(T07):`처럼 ticket 번호 필수 | review |
+| 주석 | 이유만 적음. entry point의 export에는 invariant와 error를 적은 TSDoc 1~3줄. 주석 처리한 코드 금지. `TODO(<추적 가능한 참조>):` 형식 필수 | review |
 
 ## 24. 핵심 domain interface와 Zod schema
 
@@ -2129,54 +2128,15 @@ coverage 수치는 기준으로 쓰지 않습니다.
 | I9 | server가 응답하지 않아도 hook은 400 ms 안에 exit 0 | contract: 닫힌 port를 대상으로 실행 |
 | I10 | Decision Provider의 분포 합은 1이고 요청하지 않은 선택지가 오면 error. `noul` 답에 `confidence`가 없어도 parser가 동작 | contract: 전 adapter 공통 suite |
 | I11 | audit row를 하나라도 바꾸면 chain 검증이 실패 | integration |
-| I12 | 경계 규칙이 실제로 실패함 | T01의 증명 절차, CI에서 위반 fixture로 재확인 |
+| I12 | 경계 규칙이 실제로 실패함 | boundary proof script, CI에서 위반 fixture로 재확인 |
 | I13 | `draft`가 아닌 Policy Version의 문서는 바뀌지 않음 | integration |
 | I14 | provider 요청 본문에 trace에서 온 문자열이 없음 | unit: probe 입력 생성 함수의 입력 타입에 trace 타입이 없음 + I8 |
 
-## 33. AI coding agent별 구현 작업 분할
-
-### 33.1 원칙
-
-- 소유권은 package 단위로 나누고 작업 단위는 tracer bullet(schema부터 API, 화면, test까지 좁게 관통하는 slice)로 나눕니다.
-- slice 하나가 건드리는 범위는 package 1개, route 파일 1개, web `features/<segment>` 1개입니다.
-  그래서 병렬 작업이 서로 부딪히지 않습니다.
-- 계약(`schema.ts`, `events.ts`, `contracts`)이 고정된 뒤에만 병렬화합니다.
-  고정은 Day 1에 사람이 합니다.
-- ticket 하나는 새 context window 하나에 들어가는 크기입니다.
-
-### 33.2 ticket과 blocking edge
-
-| ticket | 내용 | 소유 경로 | blocked by |
-| --- | --- | --- | --- |
-| T01 | repo 골격, tooling, CI, depcruise 규칙과 실패 증명, 빈 package shell | root 설정, `packages/kernel` | 없음 |
-| T02 | platform(config, db, logger, clock, id, JobQueue 2종, http client, token, 멱등 key), server 골격과 middleware | `packages/platform`, `apps/server/src/{main,http/middleware}` | T01 |
-| T03 | classifier spike와 실제 기록 측정 script | `packages/action`, `tests/eval/corpus-shape.eval.ts` | T01 |
-| T04 | 계약 고정: `action`, `policy`, `trace`의 `schema.ts`, ingest DTO. 사람이 리뷰 | 각 `schema.ts`, `packages/contracts` | T01 |
-| T05 | trace import slice: transcript parser, redactor, CLI `import`, `POST /trace-imports`, `GET /actions`, `/trace-imports` 화면 | `packages/trace`, `apps/cli/src/commands/import.command.ts`, `trace-imports.routes.ts` | T02, T04. 화면은 T22 뒤 |
-| T06 | 정책 평가 slice: `evaluateAction`, `resolveZone`, 검증, 기본 template, property test | `packages/policy/lib/domain` | T04 |
-| T07 | Policy Version slice: table, CRUD, 상태 전이, editor 화면 | `packages/policy`(infra, app), `policies.routes.ts`, `features/policy-versions` | T02, T06, T22 |
-| T08 | replay slice: job, `version_diff`, group, severity, API, CLI text 출력 | `packages/replay`, `replay-runs.routes.ts` | T05, T06 |
-| T09 | classifier 심화: git, network, package, deploy, wrapper, inline code signal, label corpus 300건 | `packages/action`, `tests/corpus` | T03 |
-| T10 | redaction 강화: pattern, server 재검사, canary test, logger redaction | `packages/trace/lib/client`, `packages/platform` logger | T05 |
-| T11 | review slice: review, Verdict, gate, 승인, 화면 2개 | `packages/review`, `change-reviews.routes.ts`, `features/change-reviews` | T07, T08 |
-| T12 | audit slice: `EventSink`, hash chain, trigger, 검증 명령, `/audit` 화면 | `packages/audit`, `verify-audit.command.ts` | T02 |
-| T13 | Decision Provider slice: port, fixture, Jev, LLM baseline, contract suite | `packages/probe/lib/{app,infra}` | T02 |
-| T14 | Scenario slice: CRUD, template, probe job, verdict, `renderPolicyProse`, 화면 | `packages/probe`, `scenarios.routes.ts`, `features/scenarios` | T13, T06, T22 |
-| T15 | calibration slice: golden set, threshold 산출, provider 상태, 주간 schedule, panel | `packages/probe/lib/domain/calibration*` | T14 |
-| T16 | hook 관측 slice: CLI `hook`, `install-hooks`, spool, `POST /runtime-observations`, Disposition 도출 | `apps/cli/src/{commands/hook*,spool}`, `packages/trace` | T05 |
-| T17 | conformance slice: conformance replay, finding, 화면 | `packages/replay`, `features/conformance` | T08, T16 |
-| T18 | export slice | `packages/policy/lib/domain/export-claude-code*` | T06 |
-| T19 | Overview slice: `GET /authority-map`, 화면 | `packages/replay`, `features/overview` | T08, T22 |
-| T20 | 합성 workload 3종, 위험 corpus, benchmark 보고서 | `tests/workloads`, `tests/eval` | T05, T09 |
-| T21 | E2E journey, demo seed, README | `apps/web/e2e`, `scripts/seed-demo.ts` | T11, T14 |
-| T22 | web shell: layout, token 입력, api-client, ui primitive, empty/loading/error 공통 형태 | `apps/web/src/{shared,router.tsx}` | T02 |
-
-병렬 lane: action(T03, T09), trace(T05, T10, T16), policy(T06, T07, T18), replay와 review(T08, T11, T17, T19), probe(T13, T14, T15), 기반(T02, T12, T22), 평가(T20, T21).
-T08과 T17, T19는 같은 package를 건드리므로 같은 agent가 순서대로 처리합니다.
+## 33. 구현 규칙과 agent 설정
 
 ### 33.3 agent change rule
 
-구현 agent는 아래 중 하나가 필요해지면 작업을 중단하고 `docs/acr/NNNN-<slug>.md`(무엇을, 왜, 대안, 영향받는 package)를 작성합니다.
+구현자는 아래 중 하나가 필요해지면 작업을 중단하고 `docs/acr/NNNN-<slug>.md`(무엇을, 왜, 대안, 영향받는 package)를 작성합니다.
 사람이 승인한 뒤에만 진행합니다.
 
 1. 19.1 graph에 없는 package 간 import.
@@ -2216,95 +2176,7 @@ Agent 권한 정책 변경의 근거를 만드는 modular monolith.
 
 ## 34. ADR 목록
 
-되돌리기 어렵고 맥락 없이 보면 의아하고 실제 대안이 있던 결정만 남깁니다.
-
-### ADR-0001 실행 경로 밖에 둔다
-
-- Context: Agent 권한 제품은 tool call을 가로채 판정하는 형태가 먼저 떠오릅니다.
-  Claude Code Auto Mode가 이미 그 자리에 있고 실제 기록에서 탐지 대상의 base rate는 0에 가까웠습니다.
-- Decision: 이 제품은 어떤 tool call도 차단, 승인, 지연시키지 않습니다.
-  hook은 관측만 하고 항상 exit 0입니다.
-- Alternatives: `PreToolUse` gateway(방향 B).
-- Consequences: 가용성 부담이 없고 도입이 쉽습니다.
-  실시간 차단 데모는 없습니다.
-  강제는 vendor 기능에 의존합니다.
-- Reversal trigger: 적대적 입력 비율이 높은 runtime(CI Agent, 외부 입력 처리 Agent)을 지원해야 하고 vendor classifier를 쓸 수 없는 환경일 때.
-
-### ADR-0002 intent 수준 명세가 canonical이고 runtime 설정은 구현물이다
-
-- Context: replay의 기준을 "우리 명세"로 둘지 "Claude Code 설정을 모사한 결과"로 둘지 정해야 했습니다.
-  Claude Code의 권한 검사 로직은 매주 바뀝니다.
-- Decision: Capability와 Zone 기반 명세를 기준으로 삼고 runtime matcher를 모사하지 않습니다.
-  명세와 runtime의 차이는 conformance 관측으로 측정합니다.
-- Alternatives: `settings.json` rule matcher emulation.
-- Consequences: vendor 변경에 덜 흔들리고 runtime을 추가하기 쉽습니다.
-  replay 결과는 "명세상 차이"이지 "runtime의 실제 동작 예측"이 아니며 그 간극을 fidelity 지표로 드러내야 합니다.
-- Reversal trigger: fidelity가 0.8 아래에 머물고 원인이 명세 표현력의 한계일 때.
-
-### ADR-0003 Action은 Operation의 집합이고 분석 불가는 1급 결과다
-
-- Context: Bash 입력의 25.9%가 다른 언어 program을 포함하고 91.3%가 복합 명령이었습니다.
-- Decision: tool call을 Operation 목록으로 분해하고 Action의 Effect는 가장 제한적인 Operation을 따릅니다.
-  인식하지 못한 조각은 `execute` + `none`입니다.
-  classifier는 순수 함수이고 결과에 `classifierVersion`을 붙여 저장합니다.
-  Zone은 저장하지 않고 평가할 때 계산합니다.
-- Alternatives: 명령 문자열 prefix 매칭.
-  replay할 때마다 다시 분류.
-  LLM으로 의미 추정.
-- Consequences: 복합 명령으로 제한을 우회하는 분류가 구조적으로 막힙니다.
-  Environment Profile을 바꾼 candidate를 재분류 없이 replay할 수 있습니다.
-  분류 규칙이 바뀌면 reclassify job이 필요합니다.
-- Reversal trigger: `analyzability: none` 비율이 40%를 넘어 diff가 의미를 잃을 때(40장 1번과 동일).
-
-### ADR-0004 제한이 우선하는 순서 무관 평가, 기본 Effect는 ask, 자체 engine
-
-- Context: Rule 순서에 의존하면 diff 해석이 어렵고 agent 구현이 갈립니다.
-  OPA와 Cedar라는 기성 engine이 있습니다.
-- Decision: `deny > ask > allow`, 매칭이 없으면 `ask`.
-  약 100줄의 순수 함수로 직접 구현합니다.
-- Alternatives: first-match 순서 평가.
-  Cedar(permit/forbid, 기본 deny)를 WASM으로 내장.
-- Consequences: I1, I2를 property test로 증명할 수 있습니다.
-  넓은 `ask`를 좁히려면 그 Rule을 직접 고쳐야 합니다.
-  Effect가 3개 값이라 Cedar의 2개 값 모델에 그대로 맞지 않습니다.
-- Reversal trigger: Rule이 200개를 넘거나 Principal, 팀 계층 조건이 필요해질 때 Cedar로 옮깁니다.
-
-### ADR-0005 의미 판단 provider는 offline probe에만 쓰고 trace를 보내지 않는다
-
-- Context: Jev는 빠르고 저렴하지만 early access이고 data를 미국에서 처리합니다.
-  개인 실험에서 효과가 확인된 용도는 정책 문장 점검이었습니다.
-- Decision: provider가 받는 입력은 정책 산문과 가상 Scenario뿐입니다.
-  경계 밖으로 나가는 개념은 bounded question과 분포뿐이고 provider의 `confidence`는 쓰지 않습니다.
-- Alternatives: replay에서 Mandate 범위 판정.
-  실시간 판정.
-- Consequences: privacy 검토 없이 도입할 수 있고 provider를 바꿔도 다른 module이 영향을 받지 않습니다.
-  replay에서 Mandate Exception은 평가하지 못하고 표시만 합니다.
-- Reversal trigger: 조직 내부에 둘 수 있는 calibrated 판정 model이 나오고 범위 초과 label이 100건 이상 모였을 때.
-
-### ADR-0006 modular monolith, PostgreSQL job queue, 상태 table이 canonical
-
-- Context: ingest peak 7건/초, replay 수십 초, 외부 호출 월 2,800건입니다.
-- Decision: process 1개, PostgreSQL 1개, pg-boss.
-  event sourcing과 message broker는 쓰지 않습니다.
-  audit은 별도 hash chain table입니다.
-- Alternatives: 서비스 분리 + Kafka/Redis.
-  SQLite 단일 파일.
-- Consequences: 운영 대상이 2개입니다.
-  20배 성장까지 구조 변경이 없습니다.
-  SQLite를 쓰지 않아 설치가 docker compose를 요구합니다.
-- Reversal trigger: 월 Action이 500만 건을 넘거나 replay가 10분을 넘을 때 worker 분리와 partition을 넣습니다.
-
-### ADR-0007 승인 근거는 hash로 재현 가능해야 한다
-
-- Context: 승인 기록이 의미를 가지려면 승인 당시 무엇을 봤는지 나중에 증명할 수 있어야 합니다.
-- Decision: Policy Version은 `contentHash`, Replay Run은 `inputsHash`와 `resultHash`를 가지고 승인 audit event가 이 값들을 담습니다.
-  replay는 같은 입력에 같은 결과를 내야 합니다.
-- Alternatives: 승인 시점의 화면 snapshot 저장.
-  결과 전체 복제 저장.
-- Consequences: replay에 비결정적 요소(시각, 난수, 모델 호출)를 넣을 수 없습니다.
-  이 제약이 ADR-0005와 맞물립니다.
-- Reversal trigger: 없음.
-  이 결정을 버리면 제품의 승인 기록이 증거가 되지 못합니다.
+이 결정들은 `docs/adr/0001-0007.md`로 분리해 관리합니다.
 
 ## 35. North Star와 guardrail metrics
 
@@ -2353,7 +2225,7 @@ RAR = (최근 14일 Action 중, 검토를 거쳐 활성화된 Policy Version에�
 
 | 이름 | 내용 | 용도 |
 | --- | --- | --- |
-| R1 실제 기록 | 본인 `~/.claude/projects` 전체. Day 1에 건수 측정 | classifier 측정, replay 시연, fidelity |
+| R1 실제 기록 | 본인 `~/.claude/projects` 전체. 초기에 건수 측정 | classifier 측정, replay 시연, fidelity |
 | C1 label corpus | R1에서 Capability별로 층화 추출한 200건 + 공개 글에서 재구성한 형태 100건. 사람이 Operation을 label | classifier precision, recall |
 | C2 위험 corpus | 100건 이상. credential 읽기와 전송의 결합, `$(...)` 안의 읽기, base64를 shell로 pipe, inline Python의 `requests.post`, force push, 자기 설정 수정, 변수 간접 참조 | laundering rate |
 | S1 합성 조직 | Principal 40명, 30일, 약 30만 Action. R1의 분포를 seed로 변형 | 성능, 다인 group 집계 |
@@ -2395,85 +2267,6 @@ R1과 G1은 한 사람의 data이고 label도 한 사람이 했습니다.
 5. 승인, 활성화, audit chain 검증을 보여 줍니다.
 6. conformance 화면에서 `over_asked` 묶음(명세는 allow인데 runtime이 계속 묻는 명령)을 보여 줍니다.
 
-## 37. 7일 구현 계획
-
-Day 1과 Day 2에 thesis를 버릴 수 있는 측정을 먼저 합니다.
-
-### Day 1: 측정과 계약 고정
-
-- 학습 목표: 실제 기록에서 classifier가 확정할 수 있는 비율.
-  Jev access 여부.
-- 구현 결과: T01, T03, T04.
-  `docs/evidence/day1-corpus.md`(Action 수, tool 분포, `full`/`partial`/`none` 비율, 상위 program).
-  Jev smoke test 5건.
-- 병렬 작업: agent A가 T01을 끝낸 뒤 T02에 착수하고 agent B가 T03을 맡습니다.
-  사람은 T04와 `CONTEXT.md`를 맡습니다.
-- 통합 checkpoint: `pnpm check` 통과, depcruise 실패 증명 완료.
-- exit 기준: `none` 비율이 40% 이하.
-  넘으면 40장 1번에 따라 중단하거나 방향을 바꿉니다.
-  Jev key가 없으면 LLM baseline으로 진행하기로 결정하고 기록합니다.
-
-### Day 2: walking skeleton과 두 번째 측정
-
-- 학습 목표: 현실적인 정책 변경이 실제 기록에서 해석 가능한 크기의 diff를 만드는가.
-- 구현 결과: T02 마무리, T05(화면 제외), T06, T08(CLI text 출력까지).
-  `authority replay --baseline <id> --candidate <id>`가 실제 기록의 group을 출력.
-- 병렬 작업: 기반(T02), trace(T05), policy(T06).
-  T08은 T05와 T06의 entry point가 생긴 오후에 시작.
-- 통합 checkpoint: import, classify, 평가, diff가 한 명령 흐름으로 동작.
-- exit 기준: 36.4의 2번 변경에서 Widening group이 1개 이상 200개 이하.
-  범위를 벗어나면 group signature를 다시 설계하거나 40장 2번에 따라 중단합니다.
-
-### Day 3: 깊이
-
-- 학습 목표: classifier 규칙을 늘리면 `none` 비율과 오분류가 얼마나 줄어드는가.
-- 구현 결과: T09, T07, T10, T12, T22.
-  replay job과 API 완성.
-- 병렬 작업: 5개 lane 동시.
-- 통합 checkpoint: web에서 정책을 편집하고 API로 replay를 실행.
-- exit 기준: C1 초안 150건 label 완료, C2에 대한 laundering rate 0, I1~I6과 I8 통과.
-
-### Day 4: 핵심 workflow 완성
-
-- 학습 목표: 조직장이 review 화면의 상단만 읽고 결정할 수 있는가.
-- 구현 결과: T11, T18, T19.
-  E2E journey 초안.
-- 병렬 작업: review(T11), export(T18), Overview(T19).
-- 통합 checkpoint: draft, review, Verdict, 승인, 활성화, audit까지 화면으로 완주.
-- exit 기준: I7, I11, I13 통과.
-  E2E 1개 통과.
-
-### Day 5: probe
-
-- 학습 목표: provider가 golden set에서 threshold를 산출할 만큼 일치하는가.
-- 구현 결과: T13, T14.
-  사람은 G1 200개 label(약 70분).
-- 병렬 작업: provider(T13)와 Scenario(T14의 CRUD, template).
-  probe job은 T13 뒤.
-- 통합 checkpoint: review 생성 시 probe가 함께 돌고 gate에 반영.
-- exit 기준: I10, I14 통과.
-  golden set의 첫 calibration 결과가 나옴.
-
-### Day 6: calibration, 관측, 실패 경로
-
-- 학습 목표: replay 예측이 실제 runtime 동작과 얼마나 맞는가.
-- 구현 결과: T15, T16, T17.
-  실패 test(server 중단, 중복, 순서 뒤섞임, provider 529).
-- 병렬 작업: calibration(T15), hook(T16).
-  T17은 T16 뒤.
-- 통합 checkpoint: 본인 단말에 hook 설치, 실제 사용으로 관측 적재.
-- exit 기준: I5, I9 통과.
-  conformance finding이 1건 이상 나오거나 0건인 이유를 설명할 수 있음.
-
-### Day 7: 평가와 마감
-
-- 학습 목표: 추정과 실측의 차이, 남은 한계.
-- 구현 결과: T20, T21.
-  benchmark 보고서, demo seed, README, ADR 정리.
-- 병렬 작업: workload와 benchmark(T20), E2E와 demo(T21), 사람은 narrative.
-- 통합 checkpoint: 깨끗한 환경에서 `docker compose up`과 `pnpm seed:demo`로 36.4를 재현.
-- exit 기준: 38장 전 항목.
-
 ## 38. Definition of Done
 
 ### 완료로 보는 journey
@@ -2493,7 +2286,7 @@ Day 1과 Day 2에 thesis를 버릴 수 있는 측정을 먼저 합니다.
 
 - `pnpm check`, `test:int`, `e2e`가 CI에서 통과.
 - 32.2의 I1~I14 test 존재와 통과.
-- `docs/evidence/`에 Day 1 측정, classifier benchmark, provider 비교, replay 성능, fidelity 보고서.
+- `docs/evidence/`에 실제 기록 측정, classifier benchmark, provider 비교, replay 성능, fidelity 보고서.
 - ADR 7건, `CONTEXT.md`, `AGENTS.md`.
 - README에 한계 목록(단일 runtime, 한 사람의 data, 근사인 remote 해석, 검증하지 못한 가정).
 
@@ -2505,51 +2298,18 @@ Day 1과 Day 2에 thesis를 버릴 수 있는 측정을 먼저 합니다.
 - provider가 `trusted` 상태에 도달하는 것.
   `advisory_only`로 끝나도 측정 결과를 보고하면 완료입니다.
 
-## 39. 면접에서 설명할 수 있는 product narrative
-
-1. 출발점은 Jev라는 새 모델이었습니다.
-   calibrated 판정으로 Agent의 tool call을 자동 승인하는 제품을 떠올렸습니다.
-2. 자료를 확인하고 그 방향을 버렸습니다.
-   vendor가 같은 자리에 classifier를 이미 넣었고 한 개발자의 4개월치 기록에서 잡으려던 위험 사건은 0건이었습니다.
-3. 남은 질문은 조직장의 것이었습니다.
-   승인 prompt의 93%가 그대로 승인되는 상황에서 자율 범위를 넓히라는 요청은 계속 오는데 승인에 쓸 근거가 없습니다.
-4. 그래서 실행 경로 밖에서 근거를 만드는 제품으로 좁혔습니다.
-   정책 변경 전후를 실제 기록에 대입해 새로 허용되는 행동을 보여 주고 사람이 group 단위로 판정해야 승인됩니다.
-5. 기술적으로 가장 어려운 부분은 shell이었습니다.
-   Agent의 Bash 입력 4건 중 1건은 다른 언어 program입니다.
-   그래서 "분석할 수 없음"을 결과값으로 두고 모르는 것을 허용으로 분류하지 않는 것을 test로 강제했습니다.
-6. AI는 한 군데에만 썼습니다.
-   정책 문장이 두 가지로 읽히는 지점을 찾는 offline 점검입니다.
-   실행 기록은 모델로 보내지 않습니다.
-   threshold는 상수가 아니라 golden set에서 Wilson 하한으로 산출했고 30건 전부 정답이라는 공개 수치가 하한으로는 0.887이라는 계산에서 표본 수를 정했습니다.
-7. 지표는 Reviewed Autonomy Rate와 guardrail로 정의했고 replay 예측과 실제 runtime의 일치율을 hook 관측으로 측정했습니다.
-8. 구현은 coding agent가 했습니다.
-   제 역할은 문제 범위를 줄이는 일, 계약과 경계를 먼저 고정하는 일, 경계 규칙이 실제로 실패하는지 증명하는 일, 버릴 기준을 미리 적어 두는 일이었습니다.
-
-### 조직장이 이 제품을 보고 할 말
-
-원래의 Authority Plane(control plane + compiler)을 보여 주면 "기술 데모로는 흥미롭지만 별도 제품으로 설치하지는 않겠다"가 나올 가능성이 높습니다.
-설정 배포는 managed settings로 충분하고 제3자 서비스를 실행 경로에 넣을 이유가 약합니다.
-
-Authority Diff는 "Agent를 더 넓게 쓰게 될 때 겪을 법한 문제"로 받아들여질 가능성이 있습니다.
-Auto Mode를 켤지, allowlist를 넓힐지 결정을 요청받아 본 조직장에게는 구체적인 장면이 있습니다.
-
-다만 별도 제품으로 채택될지는 불확실합니다.
-vendor의 관리 console이나 AI 보안 platform의 기능 하나로 흡수될 수 있는 크기입니다.
-이 점을 숨기지 않고 portfolio로서의 가치를 문제 발견, 범위 축소, 측정, 폐기 기준에 둡니다.
-
 ## 40. 이 아이디어를 폐기해야 하는 falsification criteria
 
 | 번호 | 조건 | 확인 시점 | 조치 |
 | --- | --- | --- | --- |
-| 1 | 실제 기록에서 `analyzability: none` 비율이 40%를 넘고 규칙을 두 차례 보강해도 내려가지 않음 | Day 1, Day 3 | replay diff가 "알 수 없음"으로 채워짐. 폐기하거나 "sandbox 밖에서 실행된 분석 불가 program 보고서"로 축소 |
-| 2 | 현실적인 정책 변경의 diff가 0개이거나 200개를 넘고 signature를 바꿔도 해석 가능한 크기로 묶이지 않음 | Day 2 | 폐기. 사람이 판정할 수 없는 diff는 근거가 되지 못함 |
-| 3 | 위험 corpus의 laundering rate를 0으로 만들지 못함 | Day 3, Day 7 | 승인 근거로 쓸 수 없음. classifier 범위를 tool 단위(Bash 제외)로 줄이거나 폐기 |
+| 1 | 실제 기록에서 `analyzability: none` 비율이 40%를 넘고 규칙을 두 차례 보강해도 내려가지 않음 | 초기 측정과 강화 | replay diff가 "알 수 없음"으로 채워짐. 폐기하거나 "sandbox 밖에서 실행된 분석 불가 program 보고서"로 축소 |
+| 2 | 현실적인 정책 변경의 diff가 0개이거나 200개를 넘고 signature를 바꿔도 해석 가능한 크기로 묶이지 않음 | diff 검증 | 폐기. 사람이 판정할 수 없는 diff는 근거가 되지 못함 |
+| 3 | 위험 corpus의 laundering rate를 0으로 만들지 못함 | 강화와 마감 | 승인 근거로 쓸 수 없음. classifier 범위를 tool 단위(Bash 제외)로 줄이거나 폐기 |
 | 4 | vendor가 관리 기능으로 "조직 transcript에 대한 정책 변경 simulation"을 제공 | 상시. release note 확인 | 제품으로서는 폐기. portfolio에는 문제 정의와 측정 기록으로 남김 |
-| 5 | 어떤 provider도 golden set에서 threshold를 산출하지 못하고 30개 Rule 정책에서 probe가 찾은 실제 공백이 3건 미만 | Day 5~6 | probe를 제품에서 제거하고 replay와 conformance만 유지 |
-| 6 | replay fidelity가 0.5 아래이고 원인이 명세와 runtime의 구조적 차이 | Day 6~7 | "예측"이라는 표현을 버리고 conformance 중심으로 재정의. ADR-0002 재검토 |
-| 7 | Principal 1명의 기록만으로 제품 가치가 전부 나오고 2명 이상일 때 추가되는 것이 없음 | Day 4, Day 7(S1) | 개인용 allowlist 도구와 같아짐. 앞서 폐기한 방향과 같은 결론이므로 폐기 |
-| 8 | 조직장이 읽는 상단 요약이 Rule 문법이나 shell 지식 없이는 이해되지 않음 | Day 4 | 산출물이 개발자 도구로 되돌아간 것. 요약을 다시 설계하고 안 되면 폐기 |
+| 5 | 어떤 provider도 golden set에서 threshold를 산출하지 못하고 30개 Rule 정책에서 probe가 찾은 실제 공백이 3건 미만 | Tier 2 검토 | probe를 제품에서 제거하고 replay와 conformance만 유지 |
+| 6 | replay fidelity가 0.5 아래이고 원인이 명세와 runtime의 구조적 차이 | 마감 단계 | "예측"이라는 표현을 버리고 conformance 중심으로 재정의. ADR-0002 재검토 |
+| 7 | Principal 1명의 기록만으로 제품 가치가 전부 나오고 2명 이상일 때 추가되는 것이 없음 | journey 검증과 마감 | 개인용 allowlist 도구와 같아짐. 앞서 폐기한 방향과 같은 결론이므로 폐기 |
+| 8 | 조직장이 읽는 상단 요약이 Rule 문법이나 shell 지식 없이는 이해되지 않음 | journey 검증 | 산출물이 개발자 도구로 되돌아간 것. 요약을 다시 설계하고 안 되면 폐기 |
 
 ## 부록 A. 기본 정책 template
 
