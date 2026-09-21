@@ -24,7 +24,15 @@ const PROCESS_ENV = {
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/.turbo/**', '.omc/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.turbo/**',
+      '.omc/**',
+      // Architecture-rule fixtures deliberately violate the boundaries and naming
+      // conventions; they are exercised by tests/arch, not linted.
+      'tests/arch/fixtures/**',
+    ],
   },
   ...tseslint.configs.strictTypeChecked,
   {
@@ -53,21 +61,9 @@ export default tseslint.config(
       'no-restricted-syntax': ['error', PROCESS_ENV, ...DATE_RANDOM],
     },
   },
-  {
-    files: ['**/*.ts'],
-    ignores: ['packages/*/lib/infra/**', 'packages/platform/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            { name: 'drizzle-orm', message: 'drizzle-orm may be imported only from lib/infra and platform.' },
-            { name: 'postgres', message: 'postgres may be imported only from lib/infra and platform.' },
-          ],
-        },
-      ],
-    },
-  },
+  // drizzle-orm and postgres confinement moved to the architecture test suite
+  // (tests/arch, rule G14 drizzlePostgresConfined) so every import-graph boundary has
+  // a single owner. See docs/adr/0010 and docs/acr/0002.
   {
     files: ['apps/cli/src/output.ts', 'tools/**/*.ts'],
     rules: { 'no-console': 'off' },
