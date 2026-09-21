@@ -172,16 +172,13 @@ module.exports = {
     },
     {
       name: 'contracts-schema-only',
-      comment: 'packages/contracts/** may import only another package schema.ts and @authority/kernel.',
+      comment:
+        'packages/contracts/** may import only another package schema.ts and @authority/kernel.',
       severity: 'error',
       from: { path: '^packages/contracts/' },
       to: {
         path: '^packages/',
-        pathNot: [
-          '^packages/contracts/',
-          '^packages/kernel/',
-          '^packages/[^/]+/schema\\.ts$',
-        ],
+        pathNot: ['^packages/contracts/', '^packages/kernel/', '^packages/[^/]+/schema\\.ts$'],
       },
     },
   ],
