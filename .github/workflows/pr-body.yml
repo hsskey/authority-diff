@@ -1,0 +1,29 @@
+name: pr-body
+
+# Informational PR body conformance check. It does not block merge unless an admin
+# adds it as a required status check separately from the code CI workflow (check).
+# Branch protection excludes this check per project policy; only CI remains required.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1635ce9593fd5e7a48369c50de # v4.2.2
+      - uses: pnpm/action-setup@a7487d7fca10404dafc8080a6a2457529ea0e4a8 # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd0f4d03442f2 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx scripts/validate-pr-body.ts
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
