@@ -16,9 +16,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1635ce9593fd5e7a48369c50de # v4.2.2
-      - uses: pnpm/action-setup@a7487d7fca10404dafc8080a6a2457529ea0e4a8 # v4.1.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd0f4d03442f2 # v4.4.0
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
