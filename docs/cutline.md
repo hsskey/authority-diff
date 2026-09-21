@@ -592,8 +592,8 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 
 7b. scripts/prove-lint.ts 와 `pnpm lint:prove`. 같은 방식으로 위 lint 규칙 14건 각각이 기대한 Oxlint 규칙으로 실패하는지 증명한다.
 
-8. root script: typecheck, lint, lint:prove, lint:boundaries, lint:boundaries:prove, test,
-   check(= typecheck + lint + lint:boundaries + lint:prove + test).
+8. root script: typecheck, lint, format, format:check, lint:prove, lint:boundaries, lint:boundaries:prove, test,
+   check(= typecheck + lint + format:check + lint:boundaries + lint:prove + test).
 
 9. CI: pnpm install --frozen-lockfile, pnpm check, pnpm lint:boundaries:prove.
 
@@ -601,7 +601,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 kernel 외의 package, apps, tools 안의 code, docker compose, DB 관련 설정, AGENTS.md 와 CONTEXT.md 의 내용.
 
 ## 허용 의존성
-typescript, zod, vitest, oxlint, oxlint-tsgolint, dependency-cruiser, turbo, tsx, @types/node.
+typescript, zod, vitest, oxlint, oxlint-tsgolint, oxfmt, lint-staged, dependency-cruiser, turbo, tsx, @types/node.
 version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요하면 중단하고 보고한다.
 
 설치 시점 예외(2026-09-21, ACR-0002로 기록. 새 의존성 추가나 규칙 약화 아님):

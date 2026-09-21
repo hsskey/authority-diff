@@ -31,12 +31,15 @@ Status: accepted (2026-09-21). ACR-0001을 대체한다.
 
 ## 의존성
 
-- 추가: `oxlint`, `oxlint-tsgolint`.
+- 추가: `oxlint`, `oxlint-tsgolint`, `oxfmt`, `lint-staged`.
 - 제거: `eslint`, `typescript-eslint`, `eslint-plugin-import-x`, `eslint-plugin-n`.
 - 유지: `dependency-cruiser`(packageExtensions로 typescript 6.0.3 공급), typescript, zod, vitest, turbo, tsx, @types/node.
 
+## 변경 4: Oxfmt와 pre-commit hook
+
+- pre-commit은 lint-staged로 staged 파일에만 Oxfmt(`--check`)와 Oxlint를 실행한다. typecheck, test, depcruise는 넣지 않는다. hook 설치는 `prepare` script가 `core.hooksPath`를 `.githooks`로 설정한다.
+
 ## 범위 밖
 
-- Oxfmt와 pre-commit hook(후속 변경).
 - ArchUnitTS 도입.
 - kernel 외 package, apps, tools 안의 code.
