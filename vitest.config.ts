@@ -8,7 +8,11 @@ export default defineConfig({
       {
         test: {
           name: 'authority',
-          include: ['packages/*/tests/**/*.test.ts', 'tools/*/tests/**/*.test.ts'],
+          include: [
+            'packages/*/tests/**/*.test.ts',
+            'tools/*/tests/**/*.test.ts',
+            'scripts/tests/**/*.test.ts',
+          ],
         },
       },
     ],

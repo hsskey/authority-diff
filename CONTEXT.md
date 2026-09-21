@@ -4,7 +4,7 @@
 파일, symbol, table, HTTP 이름도 여기 단어를 씁니다.
 출처는 `docs/design.md` 13.1이며, V1 범위(`docs/cutline.md`)에 맞춰 Tier 2/3 개념을 뺐습니다.
 Target Architecture 전용 용어(Mandate, Mandate Exception, Disposition, Decision Source, Scenario, Precedent, Probe Run, Decision Provider, Conformance Finding)는 V1 용어집에 없습니다.
-용어집 완성은 M02의 사람 작업이고 이 목록은 그 입력입니다.
+용어집 완성은 계약 고정 시점의 사람 작업이고 이 목록은 그 입력입니다.
 
 **Principal**:
 Agent에게 작업을 맡긴 사람.

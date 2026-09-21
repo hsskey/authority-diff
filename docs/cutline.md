@@ -4,8 +4,8 @@
   이하 "설계서".
 - 지위: 설계서는 Target Architecture로 남깁니다.
   첫 7일 구현(V1)의 범위, 순서, 계약은 이 메모가 정하고 둘이 다르면 V1에 한해 이 메모를 따릅니다.
-- 독자: 통합과 판단을 맡는 사람 1명, 그리고 ticket 단위로 구현하는 coding agent.
-- 목적: 오늘 첫 구현 요청을 coding agent에 넘길 수 있게 합니다.
+- 독자: 통합과 판단을 맡는 사람, 그리고 모듈 단위로 구현하는 사람 또는 도구.
+- 목적: 첫 구현 범위와 계약을 정의합니다.
 - repo 위치: `docs/cutline.md`.
 
 ## 1. 최종 판단
@@ -15,7 +15,7 @@ Authority Diff 방향은 유지합니다.
 
 설계서 10.3의 Must ship 12개에는 서로 다른 검증 loop가 4개 들어 있었습니다.
 shell 분류가 실제 기록에서 쓸 만한가, replay diff를 사람이 검토할 수 있는가, provider의 판정 분포를 믿을 수 있는가, runtime 관측이 명세와 맞는가.
-coding agent가 줄여 주는 것은 code 작성 시간이고 실제 기록을 보고 분류 오류를 고치고 diff를 다시 묶어 보는 시간은 줄지 않습니다.
+구현 도구가 줄여 주는 것은 code 작성 시간이고 실제 기록을 보고 분류 오류를 고치고 diff를 다시 묶어 보는 시간은 줄지 않습니다.
 7일 안에 끝까지 돌릴 수 있는 loop는 앞의 두 개입니다.
 
 V1은 아래 한 줄만 증명합니다.
@@ -23,7 +23,7 @@ V1은 아래 한 줄만 증명합니다.
 > 이 Authority Policy 변경을 적용하면 최근 실제 Agent 작업 기록의 어떤 action이 다른 effect를 받는가.
 
 V1은 모델 호출 0건으로 완결됩니다.
-계속할지는 Day 4에 아래 질문으로 판정합니다.
+계속할지는 핵심 journey 검증 시점에 아래 질문으로 판정합니다.
 
 > 현실적인 정책 변경 하나로 실제 과거 action의 effect가 어떻게 달라지는지를 검토 가능한 크기로 보여 줄 수 있고, 조직장이 shell parsing이나 Claude Code 내부를 몰라도 그 의미를 이해하는가. 실제 기록에서 의도보다 넓어진 action이 발견되면 보너스이고, 없으면 그 사실을 그대로 보고합니다.
 
@@ -56,21 +56,6 @@ architecture:
 - 의미 판단 provider는 offline에서만, 실제 trace를 보내지 않음, provider abstraction(ADR-0005).
 - naming 규칙(설계서 22장), TypeScript 규칙(23장), error 모양(28장), agent change rule(33.3).
 
-## 3. 과도했던 범위
-
-| 설계서 항목 | 추가되는 검증 loop | V1에서 빼는 이유 |
-| --- | --- | --- |
-| 10.3의 6, 7번. 14~15장. T13, T14, T15 | Scenario 200개 label, provider 3종 비교, Wilson threshold, ECE, Brier, provider 상태 기계, 주간 재측정 | 모델 평가 과제가 하나 더 생깁니다. portfolio의 중심이 조직장의 결정에서 calibration으로 옮겨 갑니다. 핵심 질문에 답하는 데 필요하지 않습니다 |
-| 10.3의 8번. 16.2. T16, T17 | hook 관측, Action과의 결합, Disposition 추정, conformance finding | 측정 체계가 하나 더 생깁니다. 핵심 thesis의 하류입니다. R3의 표현만 지키면 V1은 이것 없이도 주장이 정직합니다 |
-| 10.3의 9번. 30.3. T12. 27장 event 전체 | hash chain, trigger, 검증 명령, event envelope | 보안 기반 작업입니다. V1에 필요한 것은 "어떤 근거로 검토했는가"가 남는 불변 record 하나입니다 |
-| 10.3의 10번. T18 | Claude Code 설정 문법 대응, 변환 불가 rule 처리 | 버린 Compiler 방향으로 되돌아갑니다. vendor 문법은 검증하지 못한 가정입니다 |
-| 16.3의 `approved -> active -> superseded`, rollback, 16.4의 `stale` | 활성화와 rollback 의미론, 근거 만료 | "활성화"가 배포로 읽힙니다. V1의 수락은 검토 기록입니다 |
-| 18.2의 pg-boss, `JobQueue` port, 주기 작업 | job 연결, retry, schedule | 한 사람 기록 1만~5만 Action의 replay는 1~5초입니다(설계서 17장의 50 µs/건 × 2). 내구성 있는 queue가 풀어 줄 문제가 없습니다 |
-| 25장의 `api_tokens`, `idempotency_keys`. 18.2의 OpenAPI 생성. 30.2의 metric endpoint | 기반 기능 4종 | 단일 사용자 V1에서 지키는 invariant가 없습니다 |
-| 35장 RAR, fidelity. 36장 S1(합성 조직), G1, workload 3종. T20 | 합성 data 생성과 지표 계산 | 실제 조직 사용이 없는 상태의 North Star는 합성 수치입니다. V1은 실제 기록에서 나온 검증 지표만 씁니다 |
-| 12장 화면 6개, rule 표 form editor | 화면 3개분의 UX 확인 | 핵심 장면은 Change Review 하나입니다 |
-| 33.2의 22개 ticket, 7개 병렬 lane | 통합 비용 | 병렬 lane이 많을수록 사람이 실제 data를 들여다볼 시간이 줄어듭니다 |
-
 ## 4. Tier 1 / Tier 2 / Tier 3 scope table
 
 판정 기준: 빼도 demo가 "이 정책을 적용하면 어떤 권한이 달라지는가"에 답하면 Tier 1이 아닙니다.
@@ -78,19 +63,19 @@ architecture:
 | 기능 | Tier | 이유 |
 | --- | --- | --- |
 | Claude Code transcript parse와 redaction(`trace/client.ts`) | 1 | 실제 기록이 없으면 thesis를 시험할 수 없음 |
-| classifier(tree-sitter, Operation, `analyzability`) | 1 | 제품의 가장 큰 위험. Gate 1의 대상 |
-| local pipeline 도구(`measure`, `replay-local`). DB와 server 없이 memory에서 실행 | 1(신규) | Gate 1, 2를 plumbing 없이 돌림. 순수 함수 설계의 직접적인 이득 |
+| classifier(tree-sitter, Operation, `analyzability`) | 1 | 제품의 가장 큰 위험. classifier 측정의 대상 |
+| local pipeline 도구(`measure`, `replay-local`). DB와 server 없이 memory에서 실행 | 1(신규) | 측정과 diff 검증을 plumbing 없이 돌림. 순수 함수 설계의 직접적인 이득 |
 | Policy 문서, 불변 version, `contentHash`, 검증, 기본 template | 1 | replay의 입력 |
 | `evaluateAction`, Zone(R2 반영), Reversibility | 1 | 핵심 |
 | `version_diff` replay, `inputsHash`, `resultHash`, process 안에서 비동기 실행 | 1 | 핵심 |
-| Diff Group: signature(R1), severity, target 요약, 평문 한 문장 | 1 | 검토 부담을 줄이는 장치. Gate 2의 대상 |
+| Diff Group: signature(R1), severity, target 요약, 평문 한 문장 | 1 | 검토 부담을 줄이는 장치. diff 검토 검증의 대상 |
 | Change Review: Verdict, gate, 수락과 반려 | 1 | 필수 journey 7번 |
 | Evidence report(Markdown)와 불변 decision record(hash 포함) | 1 | 필수 journey 8번. 조직장이 읽는 산출물 |
 | 화면 3개: Activity Shape, Policy Version(JSON 편집 + 읽기 전용 rule 표), Change Review | 1 | journey에 필요한 최소 |
 | PostgreSQL 저장, ingest API, `authority import`, 재분류 명령 | 1 | 검토 기록이 남아야 함. classifier는 이번 주 내내 바뀜 |
 | label corpus C1 100건, 위험 corpus C2 60건, laundering rate CI 검사 | 1(축소) | "모르는 것을 안전으로 분류하지 않는다"를 증명 |
 | invariant test I1~I8, I12, I13. E2E 1개 | 1(축소) | 15장 참조 |
-| transcript의 `tool_result`에서 사람의 거절 여부 수집(`observedOutcome`) | 1(수집만) | parser가 어차피 읽는 값. 나중에 채우려면 재import가 필요. Day 1에 형식 확인이 안 되면 제외 |
+| transcript의 `tool_result`에서 사람의 거절 여부 수집(`observedOutcome`) | 1(수집만) | parser가 어차피 읽는 값. 나중에 채우려면 재import가 필요. transcript 형식 확인이 안 되면 제외 |
 | "사람이 거절했던 action이 allow가 됨" 표시 | 2 | 강한 신호지만 핵심 질문의 답은 아님 |
 | sample에 직전 Mandate 문장 표시(`mandates` table) | 2 | 판정에 도움. 자유 문장의 redaction 부담이 있음 |
 | rule 표 form editor | 2 | JSON 편집으로 journey가 성립 |
@@ -106,7 +91,7 @@ architecture:
 | 합성 조직 S1, workload 3종, RAR, fidelity | 3 | 실제 사용 없이는 합성 수치 |
 | Codex adapter, runtime port | 3 | adapter 1개면 seam이 아님 |
 
-## 5. 7-Day MVP user journey
+## 5. MVP user journey
 
 1. `authority import ~/.claude/projects`를 실행합니다.
    CLI가 transcript를 parse하고 secret literal을 치환한 뒤 local server로 보냅니다.
@@ -183,7 +168,7 @@ flowchart BT
 | 항목 | 설계서 | V1 | 이유 |
 | --- | --- | --- | --- |
 | replay 실행 | pg-boss job | 같은 process 안의 비동기 함수. 상태는 `replay_runs.status`. 재시작 때 60초 넘게 `running`인 run은 `failed`로 바꾸고 같은 `inputsHash`로 다시 요청 | 1만 2천 Action에 1.2초 |
-| 순수 entry point | `trace/client.ts` 하나 | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts` | DB 없이 전체 계산을 돌리는 local pipeline이 Gate 1, 2의 도구 |
+| 순수 entry point | `trace/client.ts` 하나 | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts` | DB 없이 전체 계산을 돌리는 local pipeline이 측정과 diff 검증의 도구 |
 | Action 식별자 | `act_` ULID + `actionKey` | `actionKey`(sha256)가 primary key | 재import와 local/server 양쪽에서 같은 식별자가 나와야 `resultHash`를 비교할 수 있음 |
 | 인증 | token table, role 2종 | 환경 변수의 token 1개. 검토자 이름은 결정할 때 입력 | 단일 사용자 |
 | HTTP | `@hono/zod-openapi` | Hono + `contracts`의 Zod schema 검증 | 생성물을 하나 줄임 |
@@ -284,158 +269,9 @@ ADR과 이 표가 자리 예약입니다.
 replay table은 한 번 쓰고 바꾸지 않고 review table은 결정 전까지 바뀝니다.
 둘을 섞으면 I6(같은 입력이면 같은 결과)을 package 단위로 말할 수 없게 됩니다.
 
-## 9. Updated ticket graph
+## 11. 측정 기준
 
-22개를 16개로 줄였고 Tier 1은 14개입니다.
-동시에 도는 agent lane은 최대 5개입니다.
-
-| ticket | 내용 | 소유 경로 | blocked by | lane |
-| --- | --- | --- | --- | --- |
-| M01 | repo 골격, `kernel`, 경계 규칙과 실패 증명, CI | root 설정, `packages/kernel`, `scripts/prove-boundaries.ts` | 없음 | F |
-| M02 | 계약 고정: `action`, `trace`, `policy`, `replay`의 `schema.ts`(6장의 변경 반영), V1 `CONTEXT.md` | 각 `schema.ts`, `CONTEXT.md` | M01 | 사람 |
-| M03 | transcript parser와 redactor(`trace/client.ts`), 실제 파일 fixture test, canary secret test | `packages/trace/client.ts`, `lib/client`, `tests` | M02 | T |
-| M04 | classifier v0: tree-sitter, Operation 분해, 상위 program 인식, 모르면 `execute` + `none`, I4 | `packages/action` | M02 | A |
-| M05 | local pipeline. 1단계 `measure`, 2단계 `replay-local` | `tools/local-pipeline` | 1단계: M03, M04. 2단계: M06, M07, Gate 1 | F |
-| M06 | 정책 순수 부분: `evaluateAction`, `resolveZone`(R2), Reversibility, 검증, 기본 template, I1~I3 | `packages/policy/evaluate.ts`, `lib/domain` | M02 | P |
-| M07 | diff 순수 부분: `computeDiff`, signature(R1), severity, `targetSummary`, `headline`, `resultHash`, I6 | `packages/replay/diff.ts`, `lib/domain` | M02 | R |
-| M08 | `platform`과 server 골격: config, db, logger, token middleware, error mapper, `/healthz`, docker compose | `packages/platform`, `apps/server/src/{main,http}` | M01, Gate 2 | F |
-| M09 | trace 저장: table, `POST /trace-imports`, `GET /actions`, 재분류, `authority import` | `packages/trace/lib/{app,infra}`, `apps/cli` | M03, M08, Gate 2 | T |
-| M10 | Policy Version 저장과 API: CRUD, 고정과 철회, 상태 전이, I13 | `packages/policy/lib/{app,infra}`, `policies.routes.ts` | M06, M08, Gate 2 | P |
-| M11 | Replay Run 저장과 API, process 안 실행, Activity Shape 집계 | `packages/replay/lib/{app,infra}`, `replay-runs.routes.ts` | M07, M08, Gate 2 | R |
-| M12 | review: Change Review, Verdict, gate, 수락과 반려, `review_decisions`, Evidence report, I7 | `packages/review`, `change-reviews.routes.ts` | M10, M11 | R |
-| M13 | web: shell, Activity Shape, Policy Version(JSON 편집), Change Review와 group 상세 | `apps/web` | M08. 화면별로 M10, M11, M12 | W |
-| M14 | 강화: C1 100건 benchmark, C2 60건과 laundering CI 검사, I5, I8, E2E 1개, Day 4에서 나온 수정 | `packages/action`, `tests/corpus`, `apps/web/e2e` | M04. E2E는 M13 | A |
-| M15 | Tier 2: 탐색적 probe(12장) | `packages/probe`, `apps/cli`의 `probe` 명령 | Gate 3, 12장의 조건 | P |
-| M16 | demo seed(synthetic danger fixture는 `synthetic` label과 provenance 필수), README narrative, `docs/evidence` 보고서 | `scripts`, `docs` | M14 | F |
-
-```mermaid
-flowchart LR
-    M01 --> M02
-    M02 --> M03 & M04 & M06 & M07
-    M03 & M04 --> M05a["M05 measure"]
-    M05a --> G1{{"Gate 1"}}
-    G1 --> M05b["M05 replay-local"]
-    M06 & M07 --> M05b
-    M05b --> G2{{"Gate 2"}}
-    G2 --> M08
-    G2 --> M09 & M10 & M11
-    M08 --> M09 & M10 & M11 & M13
-    M10 & M11 --> M12
-    M12 --> M13
-    M13 --> G3{{"Gate 3"}}
-    M04 --> M14
-    G3 --> M14
-    G3 -.-> M15
-    M14 --> M16
-```
-
-설계서 ticket과의 대응:
-
-| 설계서 | V1 |
-| --- | --- |
-| T01 | M01 |
-| T04 | M02 |
-| T05, T10 | M03(단말 쪽), M09(server 쪽) |
-| T03, T09 | M04, M14 |
-| T06 | M06 |
-| T08 | M07(순수), M11(저장과 API) |
-| T02 | M08(축소) |
-| T07 | M10(활성화와 form editor 제외) |
-| T11 | M12 |
-| T19, T22 | M13에 흡수 |
-| T20, T21 | M14, M16(합성 조직과 workload 3종 제외) |
-| T13, T14 | M15(최소) |
-| T12, T15, T16, T17, T18 | V1에서 제거 |
-
-agent change rule(설계서 33.3)은 그대로 적용합니다.
-M08과 docker compose, PostgreSQL 등 영속 저장 작업 전부는 Gate 2 PASS 뒤에만 시작합니다.
-
-## 10. Updated 7-day plan
-
-매일 실행 가능한 산출물이 하나씩 나옵니다.
-사람의 시간은 실제 data를 읽는 데 먼저 씁니다.
-
-### Day 1: 실제 기록 측정
-
-- 산출물: `pnpm dev:measure ~/.claude/projects`의 출력과 `docs/evidence/day1-corpus.md`.
-- 사람: M02 계약 고정(약 2시간).
-  `none` 50건과 `full`로 분류된 Bash 50건을 무작위로 읽고 오분류를 기록(약 1시간).
-  Gate 1 판정.
-- agent lane: F가 M01 뒤 M05 1단계.
-  T가 M03.
-  A가 M04.
-- 통합 checkpoint: `pnpm check` 통과, 경계 규칙 실패 증명 통과, `measure`가 실제 directory에서 끝까지 실행.
-- 통과 기준: Gate 1.
-
-### Day 2: memory 안에서 끝까지
-
-- 산출물: `pnpm dev:replay-local --baseline policies/a.json --candidate policies/b.json`의 text diff와 `docs/evidence/day2-diff.md`.
-- 사람: 정책 A(기본 template에 본인 환경 반영), B(Day 1 data에서 고른 현실적인 변경), B′(B에 `github.com/*` 실수 추가) 작성.
-  replay 전에 예상 group을 `docs/evidence/day2-predictions.md`에 적음.
-  A, B, B′와 예상 목록은 replay 전에 고정합니다.
-  결과를 본 뒤 예상 밖 발견을 만들려고 정책을 고치지 않습니다.
-  stopwatch를 켜고 Widening group 전부를 판정.
-  Gate 2 판정.
-- agent lane: P가 M06.
-  R이 M07.
-  F가 M05 2단계.
-  A가 Day 1 오분류 목록으로 classifier 보강 1회(4시간 제한).
-- 통합 checkpoint: `replay-local`을 두 번 돌려 같은 `resultHash`.
-- 통과 기준: Gate 2.
-
-### Day 3: 저장과 API
-
-- 산출물: `authority import` 뒤 `curl`로 Change Review를 만들면 server가 JSON diff를 반환.
-- 사람: C1 100건 label(60~90분).
-  실제 출력의 `headline` 문장과 group 묶음을 읽고 수정 요청.
-  Evidence report의 문구 확정.
-- agent lane: F가 M08을 먼저 끝냅니다. platform과 server entry point가 생긴 뒤 T가 M09, P가 M10, R이 M11, W가 M13의 shell과 Activity Shape. A는 처음부터 classifier 보강 2회차와 C2 초안.
-- 통합 checkpoint: 같은 입력에서 server의 `resultHash`가 `replay-local`의 값과 같음.
-  같은 directory를 두 번 import해도 Action 수가 같음.
-- 통과 기준: 두 hash가 같음.
-  다르면 화면 작업을 중단하고 결정성부터 고칩니다.
-
-### Day 4: 핵심 장면
-
-- 산출물: browser에서 journey 1~9번을 실제 기록으로 완주, Evidence report 파일.
-- 사람: journey를 처음부터 끝까지 직접 실행.
-  Gate 3 판정.
-  수정 목록 작성.
-- agent lane: R이 M12.
-  W가 M13의 Policy Version 화면과 Change Review 화면.
-- 통합 checkpoint: `curl`이나 DB 조작 없이 완주.
-- 통과 기준: Gate 3.
-
-### Day 5: 신뢰할 수 있게
-
-- 산출물: laundering 검사가 들어간 `pnpm check`, `pnpm e2e`, `docs/evidence/classifier-benchmark.md`.
-- 사람: 오분류 목록 검토, C2의 애매한 사례 판정, README narrative 초안, Jev API access 확인과 진행 여부 결정(12장). access 확인은 이 시점에만 합니다.
-- agent lane: A가 M14.
-  W와 R이 Day 4 수정 목록.
-- 통합 checkpoint: I1~I8, I12, I13이 CI에서 통과.
-- 통과 기준: laundering rate 0.
-  0이 아니면 Day 6을 classifier에 쓰고 Tier 2를 전부 포기합니다.
-
-### Day 6: Tier 2 또는 보강
-
-- 산출물: Jev를 진행하면 `authority probe`의 출력과 report의 참고 절.
-  진행하지 않으면 Tier 2를 "거절 이력 표시, Mandate 문장, form editor" 순서로.
-- 사람: Scenario 30~50개 작성(약 90분) 또는 Tier 2 우선순위 결정.
-- agent lane: P가 M15 또는 Tier 2 항목.
-- 통합 checkpoint: E2E가 계속 통과.
-- 통과 기준: Day 6 안에 끝나지 않은 Tier 2 작업은 merge하지 않습니다.
-
-### Day 7: 증거와 마감
-
-- 산출물: 깨끗한 환경에서 `docker compose up`, `pnpm seed:demo`, journey 재현.
-  README와 `docs/evidence` 보고서 4종.
-- 사람: narrative, 한계 목록, demo 녹화.
-- agent lane: F가 M16.
-- 통과 기준: 14장.
-
-## 11. Day 1~2 go/no-go gates
-
-### Gate 1(Day 1 종료 시)
+### classifier 측정 기준
 
 `measure`가 출력해야 하는 값:
 
@@ -454,7 +290,7 @@ classify 처리량(Action/초), none의 signal 상위 20개
 | Action 2,000건 미만 또는 Bash Action 500건 미만 | 보류. 다른 단말과 과거 기록을 더 모읍니다. 실제 기록으로 시험할 수 없으면 V1의 주장이 성립하지 않습니다 |
 | parse하지 못한 줄 5% 이상 | thesis 문제가 아닙니다. parser를 고치고 같은 날 다시 측정합니다 |
 | `none`(전체 Action) 25% 이하, 아래 표본 검사 통과 | GO |
-| `none` 25% 초과 40% 이하 | 조건부 GO. Day 2에 classifier 보강 1회(4시간, `none` signal 상위 5개만 대상) 뒤 Gate 2와 함께 다시 측정 |
+| `none` 25% 초과 40% 이하 | 조건부 GO. classifier 보강 1회(4시간, `none` signal 상위 5개만 대상) 뒤 diff 검토와 함께 다시 측정 |
 | `none` 40% 초과 | 보강을 2회까지 합니다. 그래도 40%를 넘으면 NO-GO. 대안은 replay 대상을 Bash 외 tool과 인식된 `git`, network, package program으로 좁히고 제품의 주장을 "git과 network 권한의 diff"로 줄이는 것, 또는 중단 |
 | 표본 검사: `full`로 분류된 Bash 50건을 사람이 확인. 45건 이상 정확 | 통과 |
 | 같은 표본에서 쓰기, 전송, push, 삭제, 실행을 읽기로만 분류한 사례 | 1건이라도 나오면 고치고 C2에 추가한 뒤 진행. 3건 이상이면 고칠 때까지 NO-GO |
@@ -463,12 +299,12 @@ classify 처리량(Action/초), none의 signal 상위 20개
 25%와 40%는 "diff의 대부분이 알 수 없음으로 채워지면 근거가 되지 못한다"는 판단을 미리 숫자로 고정한 값입니다.
 측정 뒤에 기준을 바꾸지 않습니다.
 
-### Gate 2(Day 2 종료 시)
+### diff 검토 기준
 
 입력:
 
 - 정책 A: 기본 template + 본인 환경의 Environment Profile.
-- 정책 B: Day 1 `measure`에서 `push`, `install`, `fetch`, `send` 중 Action 수가 가장 많은 `ask` 조합을 `allow`로 바꾸는 변경.
+- 정책 B: `measure`에서 `push`, `install`, `fetch`, `send` 중 Action 수가 가장 많은 `ask` 조합을 `allow`로 바꾸는 변경.
 - 정책 B′: B의 `trustedRemotes`를 `github.com/*`처럼 넓게 적은 실수.
 - 예상 목록: replay 전에 적은 `day2-predictions.md`.
 
@@ -488,9 +324,9 @@ push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같�
 
 실패하면 signature 재설계를 한 번(반나절) 합니다.
 조정 대상은 `program`을 signature에서 빼는 것과 target의 조직 단위를 넣는 것 두 가지입니다.
-그 뒤에도 실패하면 M08~M13을 시작하지 않고 thesis를 고치거나 접습니다.
+그 뒤에도 실패하면 서버와 영속 저장 구현을 시작하지 않고 thesis를 고치거나 접습니다.
 
-### Gate 3(Day 4 종료 시)
+### 핵심 journey 검증 기준
 
 1. 합성이 아닌 실제 과거 Action의 Effect가 정책 변경으로 달라지는 장면(Widening group)이 화면에 나옵니다. 의도보다 넓은지는 Verdict로 사람이 판정하고, 실제 기록에 예상 밖 widening이 있었는지를 화면과 report가 명시합니다.
 2. report 첫 화면에 명령 원문, label 없는 `ruleId`, 정규식이 없습니다.
@@ -527,9 +363,9 @@ push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같�
 아래 중 하나라도 해당하면 뺍니다.
 LLM baseline으로 대체하지 않습니다.
 
-1. Gate 3을 Day 4에 통과하지 못함.
-2. Day 5 통과 기준(laundering rate 0, E2E 통과)을 채우지 못함.
-3. Day 5 18시까지 Jev API access가 없음.
+1. 핵심 journey 검증을 통과하지 못함.
+2. 신뢰성 기준(laundering rate 0, E2E 통과)을 채우지 못함.
+3. Tier 2 검토 시점에 Jev API access가 없음.
 4. demo 정책에 시험할 자연어 조항이 없음(V1 문서의 자연어는 rationale뿐이고 그 문장이 한 가지로 읽힘).
 
 빼더라도 narrative 7번은 성립합니다.
@@ -585,7 +421,7 @@ Target Architecture의 완성이 아닙니다.
 7. 수락 또는 반려가 `review_decisions`에 hash와 함께 남고 Evidence report에 5장의 고정 문구가 들어갑니다.
 8. demo에서 `github.com/*` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance와 실제 기록의 예상 밖 widening 유무를 적습니다.
 9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm e2e`가 CI에서 통과합니다.
-10. `docs/evidence`에 Day 1 측정, Day 2 diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
+10. `docs/evidence`에 실제 기록 측정, diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
 11. README에 한계가 적혀 있습니다.
     한 사람의 기록, 단일 runtime, 근사인 remote 해석, runtime 동작과의 일치를 측정하지 않았다는 점, demo에 synthetic fixture를 썼는지와 실제 기록의 예상 밖 widening 유무, 13장의 목록.
 
@@ -593,11 +429,11 @@ V1의 검증 지표(North Star 대신):
 
 | 지표 | 값의 출처 |
 | --- | --- |
-| 분석 가능한 Action 비율(`full` + `partial`) | Day 1, Day 5 측정 |
+| 분석 가능한 Action 비율(`full` + `partial`) | 초기 측정과 강화 뒤 재측정 |
 | laundering rate | C2, CI |
 | replay 결정성 | 두 번 실행, local과 server 비교 |
 | 압축: 바뀐 Action 수 / Diff Group 수 | demo 변경 |
-| 검토 시간(분) | Gate 2의 stopwatch, Day 4 재측정 |
+| 검토 시간(분) | replay 검토 stopwatch, journey 검증 시 재측정 |
 | 예상 밖 Widening 수 | 예상 목록과의 차이 |
 | classifier 정확도 | C1 100건, Capability별 precision과 recall |
 
@@ -626,7 +462,7 @@ dependency-cruiser(전부 `error`):
 
 ESLint(`error`): `any` 금지, `as T`와 `!` 금지, `no-floating-promises`, `switch-exhaustiveness-check`, default export 금지, `console` 금지(`apps/cli/src/output.ts`, `tools/*` 예외), `process.env`는 config 파일 두 곳만, `drizzle-orm`과 `postgres`는 `lib/infra`와 `platform`만, `lib/domain`과 `lib/app`에서 `new Date()`, `Date.now()`, `Math.random()` 금지.
 
-그대로 유지: TypeScript compiler 설정(설계서 23장), `Result` 규칙과 error code 모양(28장), naming(22장 중 파일, symbol, DB, HTTP), 생성물 직접 수정 금지, agent change rule(33.3), M02 이후 `schema.ts` 변경은 ACR.
+그대로 유지: TypeScript compiler 설정(설계서 23장), `Result` 규칙과 error code 모양(28장), naming(22장 중 파일, symbol, DB, HTTP), 생성물 직접 수정 금지, agent change rule(33.3), 계약 고정 뒤 `schema.ts` 변경은 ACR.
 
 V1에서 내려놓는 규칙: event naming, metric naming, audit 규칙, `Idempotency-Key`, 파일 크기 lint.
 
@@ -634,47 +470,29 @@ invariant test:
 
 | id | V1 |
 | --- | --- |
-| I1~I3 정책 평가(순서 무관, 단조성, 가장 제한적인 Operation) | 유지. M06 |
-| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. laundering rate 0 | 유지. M04, M14 |
-| I5 import 멱등 | 유지. M09 |
-| I6 replay 결정성. local과 server의 hash 일치 추가 | 유지, 강화. M07, M11 |
-| I7 gate | 유지(blocker 5개). M12 |
-| I8 canary secret이 DB와 log에 없음 | 유지(provider 요청 항목 제외). M03, M09 |
-| I12 경계 규칙이 실제로 실패 | 유지. M01 |
-| I13 `draft`가 아닌 문서는 불변 | 유지. M10 |
+| I1~I3 정책 평가(순서 무관, 단조성, 가장 제한적인 Operation) | 유지. policy |
+| I4 classifier가 실패하지 않고 모르는 입력을 `read`로 분류하지 않음. laundering rate 0 | 유지. action |
+| I5 import 멱등 | 유지. trace |
+| I6 replay 결정성. local과 server의 hash 일치 추가 | 유지, 강화. replay |
+| I7 gate | 유지(blocker 5개). review |
+| I8 canary secret이 DB와 log에 없음 | 유지(provider 요청 항목 제외). trace |
+| I12 경계 규칙이 실제로 실패 | 유지. kernel과 root 설정 |
+| I13 `draft`가 아닌 문서는 불변 | 유지. policy |
 | I9, I11 | 제거(hook, audit 없음) |
-| I10, I14 | M15를 할 때만 |
+| I10, I14 | probe를 할 때만 |
 
-## 16. Final implementation order
+## 16. Repository scaffold contract
 
-### 16.1 오늘의 순서
+### 16.2 Scaffold 요구사항과 검증
 
-1. 사람(15분): repo를 만들고 `docs/design.md`, `docs/cutline.md`, `AGENTS.md`, `CONTEXT.md`를 commit합니다.
-   `AGENTS.md`는 설계서 33.4에 아래 한 줄을 추가합니다.
-   "`docs/cutline.md`가 `docs/design.md`와 다르면 cutline을 따른다.
-   cutline 13장의 code는 작성하지 않는다."
-   `CONTEXT.md`는 설계서 13.1에서 Mandate, Mandate Exception, Disposition, Decision Source, Scenario, Precedent, Probe Run, Decision Provider, Conformance Finding을 뺀 용어집입니다.
-2. agent F에 16.2의 M01 요청을 넘깁니다.
-3. M01이 도는 동안 사람이 M02를 작성합니다.
-   설계서 24장의 schema에 이 메모 6장의 변경을 반영합니다.
-4. M01을 merge하고 M02를 commit한 뒤 M03(agent T)과 M04(agent A)를 동시에 넘깁니다.
-5. 두 entry point가 생기면 M05 1단계(agent F)를 넘깁니다.
-6. `measure`를 실제 directory에 돌리고 표본 100건을 읽은 뒤 Gate 1을 판정합니다.
-7. Day 2 아침에 M06(P), M07(R)을 동시에 넘기고 오후에 M05 2단계, 저녁에 Gate 2를 판정합니다.
-8. Gate 2를 통과한 뒤에만 M08을 넘기고, M08의 entry point가 생기면 M09, M10, M11, M13을 넘깁니다.
-   M12는 M10과 M11의 entry point가 생긴 뒤입니다.
-9. Gate 3 뒤에 M14, 12장의 조건을 확인한 뒤 M15, 마지막에 M16입니다.
-
-### 16.2 첫 구현 요청(M01)
-
-아래를 그대로 coding agent에 넘깁니다.
+repository scaffold의 요구사항과 검증 기준이다.
 
 ````text
-# M01: repo 골격, kernel, 경계 규칙
+# repo 골격, kernel, 경계 규칙
 
 ## 배경
-Authority Diff는 coding agent 권한 정책 변경을 과거 작업 기록에 대입해 diff를 만드는 modular monolith다.
-이 ticket은 업무 로직 없이 골격과 경계 규칙만 만든다.
+Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입해 diff를 만드는 modular monolith다.
+이 문서는 업무 로직 없이 골격과 경계 규칙만 정의한다.
 근거 문서는 docs/design.md 19~23장과 docs/cutline.md 6, 15장이다. 두 문서가 다르면 cutline.md를 따른다.
 
 ## 만들 것
@@ -782,14 +600,3 @@ version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요
 - `reachable` 로 pure-entry-points 를 표현할 수 없을 때. rule을 약하게 만들지 말고 보고한다.
 - rule, lint 설정을 완화해야 통과할 때.
 ````
-
-### 16.3 다음 요청의 요지
-
-| ticket | agent에 줄 핵심 | 완료 기준 |
-| --- | --- | --- |
-| M03 | 입력은 transcript의 줄 배열, 출력은 `ToolCall[]`과 Session 정보. 파일 읽기는 하지 않음. redaction은 literal 치환. 실제 transcript에서 사람이 고른 fixture 3개를 `tests/`에 둠 | fixture contract test, canary secret이 출력에 없음, parse하지 못한 줄 수를 반환 |
-| M04 | `classifyToolCall(call): Operation[]`. 실패하지 않음. 설계서 13.2의 분류 규칙. `CLASSIFIER_VERSION` | 임의 문자열 property test(I4), 설계서 13.2의 예 전부에 대한 literal test |
-| M05 1단계 | directory를 읽어 M03, M04를 조합하고 Gate 1의 값을 출력. `none`과 `full` 표본을 무작위 50건씩 파일로 저장 | 실제 directory에서 끝까지 실행, 같은 입력에 같은 출력 |
-| M06 | `evaluateAction(operations, document)`. R2의 Zone 순서. 기본 template은 설계서 부록 A에서 Mandate Exception 열을 뺀 것(`ask_external_disclosure`는 예외 없는 `ask`) | I1~I3 property test, 부록 A의 Rule마다 literal test |
-| M07 | `computeDiff(actions, baselineDoc, candidateDoc)`. R1의 signature와 severity. `headline` template. `resultHash` | I6, 6장의 예시 장면(`github.com/*`)이 critical로 나오는 literal test |
-| M08 | config, db, logger, token middleware, error envelope, `/healthz`, docker compose. `kernel`에 `TransactionRunner` 추가 | server 기동, 잘못된 token에 401 envelope |

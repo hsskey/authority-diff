@@ -89,6 +89,7 @@ export default tseslint.config(
     rules: {
       'import-x/no-default-export': 'off',
       'no-console': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
 );

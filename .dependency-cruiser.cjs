@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Architecture boundary rules for Authority Diff (M01).
+ * Architecture boundary rules for Authority Diff.
  * Source of truth: docs/cutline.md 15, 16.2. All rules are severity error.
  * "root file" = a file directly under packages/<pkg>/ (depth 1). Everything in
  * a subfolder (lib/, tests/) is private to its package.
