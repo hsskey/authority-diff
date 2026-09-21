@@ -511,7 +511,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    - index.ts (browser에서도 import 가능. node builtin을 import하지 않는다)
      type Result<T, E>, ok(), err()
      EffectSchema, type Effect = 'allow' | 'ask' | 'deny'
-     IsoTimestampSchema: 'Z'로 끝나는 UTC ISO 8601 문자열, brand 'IsoTimestamp'
+     IsoTimestampSchema: 밀리초 3자리로 끝나는 UTC ISO 8601 문자열(YYYY-MM-DDTHH:mm:ss.SSSZ), brand 'IsoTimestamp'
      Sha256Schema: 소문자 hex 64자
      prefixedId(prefix, brand): `<prefix>_` 뒤에 Crockford base32 26자를 검증하는 Zod schema를 반환
      interface AppError { code: string; message: string; isRetryable: boolean; details: Record<string, unknown> | null; cause: unknown | null }
@@ -521,7 +521,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
      interface IdGenerator { next(prefix: string): string }
      interface Logger { debug, info, warn, error: (msg: string, fields?: Record<string, unknown>) => void }
    - hash.ts (node 전용)
-     canonicalJson(value): string. object key는 사전순 정렬, 배열 순서는 유지, 값에 undefined가 있으면 invariant 실패
+     canonicalJson(value): string. object key는 사전순 정렬, 배열 순서는 유지, -0은 0으로 직렬화. undefined, 비유한 number(NaN/Infinity), plain object가 아닌 값(Date, Map, class instance 등), bigint/function/symbol이면 invariant 실패
      sha256Hex(input: string): string
    test (tests/ 아래, entry point만 import):
      canonicalJson이 key 순서가 다른 두 object에 같은 문자열을 낸다

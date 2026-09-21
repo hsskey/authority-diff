@@ -1,5 +1,6 @@
-import { describe, test, expect } from 'vitest';
-import { ok, err, prefixedId } from '../index.ts';
+import { describe, test, expect, expectTypeOf } from 'vitest';
+import { z } from 'zod';
+import { ok, err, prefixedId, IsoTimestampSchema } from '../index.ts';
 import { canonicalJson, sha256Hex } from '../hash.ts';
 
 describe('canonicalJson', () => {
@@ -9,6 +10,42 @@ describe('canonicalJson', () => {
 
   test('preserves array order', () => {
     expect(canonicalJson([3, 1, 2])).toBe('[3,1,2]');
+  });
+
+  test('serializes negative zero as zero', () => {
+    expect(canonicalJson(-0)).toBe('0');
+  });
+
+  test.each([
+    ['NaN', NaN],
+    ['Infinity', Infinity],
+    ['-Infinity', -Infinity],
+  ] as const)('rejects non-finite number %s', (_label, value) => {
+    expect(() => canonicalJson(value)).toThrow(/invariant failed/);
+  });
+
+  test.each([
+    ['Date', new Date('2024-01-01T00:00:00.000Z')],
+    ['Map', new Map([['a', 1]])],
+    ['class instance', new (class Thing { x = 1; })()],
+  ] as const)('rejects %s', (_label, value) => {
+    expect(() => canonicalJson(value)).toThrow(/invariant failed/);
+  });
+
+  test.each([
+    ['top-level undefined', undefined],
+    ['nested object undefined', { a: undefined }],
+    ['nested array undefined', [1, undefined]],
+  ] as const)('rejects %s', (_label, value) => {
+    expect(() => canonicalJson(value)).toThrow(/invariant failed/);
+  });
+
+  test.each([
+    ['bigint', 1n],
+    ['function', () => {}],
+    ['symbol', Symbol('x')],
+  ] as const)('rejects %s', (_label, value) => {
+    expect(() => canonicalJson(value)).toThrow(/invariant failed/);
   });
 });
 
@@ -33,6 +70,52 @@ describe('prefixedId', () => {
 
   test('rejects a wrong length', () => {
     expect(schema.safeParse('act_0123').success).toBe(false);
+  });
+
+  test('distinct brands are not equal types', () => {
+    const ActionIdSchema = prefixedId('act', 'ActionId');
+    const SessionIdSchema = prefixedId('ses', 'SessionId');
+    type ActionId = z.infer<typeof ActionIdSchema>;
+    type SessionId = z.infer<typeof SessionIdSchema>;
+
+    expect(ActionIdSchema.safeParse('act_0123456789ABCDEFGHJKMNPQRS').success).toBe(true);
+    expect(SessionIdSchema.safeParse('ses_0123456789ABCDEFGHJKMNPQRS').success).toBe(true);
+    expectTypeOf<ActionId>().branded.toEqualTypeOf<ActionId>();
+    type BrandsAreDistinct = [ActionId] extends [SessionId]
+      ? [SessionId] extends [ActionId]
+        ? false
+        : true
+      : true;
+    expectTypeOf<BrandsAreDistinct>().toEqualTypeOf<true>();
+  });
+});
+
+describe('IsoTimestampSchema', () => {
+  test('accepts exactly three millisecond digits', () => {
+    expect(IsoTimestampSchema.safeParse('2024-01-01T00:00:00.000Z').success).toBe(true);
+    expect(IsoTimestampSchema.safeParse('2024-06-15T12:30:45.123Z').success).toBe(true);
+  });
+
+  test('rejects missing fractional seconds', () => {
+    expect(IsoTimestampSchema.safeParse('2024-01-01T00:00:00Z').success).toBe(false);
+  });
+
+  test('rejects six-digit fractional seconds', () => {
+    expect(IsoTimestampSchema.safeParse('2024-01-01T00:00:00.123456Z').success).toBe(false);
+  });
+
+  test('accepted values sort in time order', () => {
+    const timestamps = [
+      '2024-01-01T00:00:00.000Z',
+      '2024-01-01T00:00:00.500Z',
+      '2024-01-01T00:00:01.000Z',
+      '2024-06-15T12:30:45.999Z',
+    ];
+    for (const ts of timestamps) {
+      expect(IsoTimestampSchema.safeParse(ts).success).toBe(true);
+    }
+    const sorted = [...timestamps].sort();
+    expect(sorted).toEqual(timestamps);
   });
 });
 
