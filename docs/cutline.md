@@ -306,7 +306,7 @@ classify 처리량(Action/초), none의 signal 상위 20개
 - 정책 A: 기본 template + 본인 환경의 Environment Profile.
 - 정책 B: `measure`에서 `push`, `install`, `fetch`, `send` 중 Action 수가 가장 많은 `ask` 조합을 `allow`로 바꾸는 변경.
 - 정책 B′: B의 `trustedRemotes`를 `github.com/*`처럼 넓게 적은 실수.
-- 예상 목록: replay 전에 적은 `day2-predictions.md`.
+- 예상 목록: replay 전에 적은 `replay-predictions.md`.
 
 | 측정 | 통과 기준 |
 | --- | --- |
@@ -319,7 +319,7 @@ classify 처리량(Action/초), none의 signal 상위 20개
 
 보너스 관측(통과 기준 아님): B′에서 조직 밖 저장소나 host로 간 실제 과거 Action이 critical Widening으로 나타나는지, B에서 예상 목록에 없던 group이 있는지 기록합니다.
 push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같은 `fetch`, `install` 기록을 봅니다.
-나타나지 않으면 `day2-diff.md`에 "실제 기록에 예상 밖 widening 없음"이라고 그대로 적습니다.
+나타나지 않으면 `replay-diff.md`에 "실제 기록에 예상 밖 widening 없음"이라고 그대로 적습니다.
 이 관측을 얻으려고 정책을 조작하지 않습니다.
 
 실패하면 signature 재설계를 한 번(반나절) 합니다.
@@ -334,6 +334,17 @@ push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같�
 3. critical Widening group(실제 기록에 없으면 `synthetic` label이 붙은 fixture group)의 `headline`만 읽어도 무엇이(평문 Capability), 어디로(저장소와 host 이름), 어떻게(Effect 변화), 왜(Zone 재분류 또는 Rule 변경) 바뀌는지 알 수 있습니다.
 4. 가능하면 shell을 모르는 사람 1명에게 첫 화면을 2분 보여 주고 "무엇이 바뀌고 왜 문제인가"를 말하게 합니다.
 5. `curl`과 DB 조작 없이 journey를 완주합니다.
+
+결과 등급(통과 기준 아님):
+
+| 등급 | 조건 |
+| --- | --- |
+| 강 | 실제 기록에서 예상 목록에 없던 Widening이 발견됨 |
+| 중 | 실제 기록의 Widening을 검토할 수 있었으나 전부 예상 범위 |
+| 약 | critical Widening 장면을 synthetic fixture로만 시연 |
+
+화면, Evidence report, README는 위 등급 중 해당하는 것만 적고, 등급보다 강한 표현을 쓰지 않습니다.
+측정 전에는 등급을 단정하지 않고 이 표만 적습니다.
 
 실패하면 기능을 더하지 않습니다.
 하루를 `headline`, group 묶음, report 수정에만 쓰고 그래도 실패하면 thesis를 고치거나 접습니다.
@@ -419,11 +430,11 @@ Target Architecture의 완성이 아닙니다.
 5. Widening group마다 `headline`, target 요약, sample이 나오고 Verdict를 기록할 수 있습니다.
 6. 판정이 끝나지 않은 Widening group이 있으면 수락되지 않습니다(I7).
 7. 수락 또는 반려가 `review_decisions`에 hash와 함께 남고 Evidence report에 5장의 고정 문구가 들어갑니다.
-8. demo에서 `github.com/*` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance와 실제 기록의 예상 밖 widening 유무를 적습니다.
+8. demo에서 `github.com/*` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)을 적고, 등급보다 강한 표현을 쓰지 않습니다.
 9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm e2e`가 CI에서 통과합니다.
 10. `docs/evidence`에 실제 기록 측정, diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
 11. README에 한계가 적혀 있습니다.
-    한 사람의 기록, 단일 runtime, 근사인 remote 해석, runtime 동작과의 일치를 측정하지 않았다는 점, demo에 synthetic fixture를 썼는지와 실제 기록의 예상 밖 widening 유무, 13장의 목록.
+    한 사람의 기록, 단일 runtime, 근사인 remote 해석, runtime 동작과의 일치를 측정하지 않았다는 점, demo에 synthetic fixture를 썼는지, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준), 13장의 목록.
 
 V1의 검증 지표(North Star 대신):
 
