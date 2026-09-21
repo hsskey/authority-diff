@@ -1160,7 +1160,7 @@ authority-diff/
   AGENTS.md                     agent 공통 규칙. CLAUDE.md는 AGENTS.md의 symlink
   CONTEXT.md                    용어집 (13.1)
   package.json  pnpm-workspace.yaml  turbo.json  tsconfig.base.json
-  eslint.config.js  .dependency-cruiser.cjs  docker-compose.yml
+  eslint.config.js  tsconfig.arch.json  docker-compose.yml
   apps/
     server/
       src/
@@ -1210,12 +1210,13 @@ authority-diff/
 
 ## 21. architecture dependency rules
 
-강제 수단은 dependency-cruiser 하나와 ESLint 하나입니다.
-ArchUnitTS는 추가하지 않습니다.
-경계 규칙의 출처가 둘이 되면 어느 쪽이 맞는지 다시 판단해야 합니다.
+강제 수단은 ArchUnitTS arch test(`tests/arch/*.arch.test.ts`)와 ESLint입니다.
+import graph와 파일/폴더 predicate의 owner는 arch test, 구문과 타입의 owner는 lint로 검사 대상마다 하나만 둡니다(ADR-0010).
+경계 규칙의 출처가 둘이 되면 어느 쪽이 맞는지 다시 판단해야 하므로, 같은 invariant를 두 도구가 동시에 표현하지 않습니다.
 두 검사는 `pnpm check`(typecheck, lint, `lint:boundaries`, unit test)에 묶여 있고 CI에서 필수입니다.
+`lint:boundaries`와 `lint:boundaries:prove`는 arch test 전체 검증과 위반 proof(`-t fires`)의 alias입니다.
 
-### 21.1 dependency-cruiser rule(`error`)
+### 21.1 import graph rule (arch test, 위반은 실패)
 
 | rule 이름 | 내용 |
 | --- | --- |
@@ -1383,10 +1384,10 @@ architecture가 흐트러지거나 agent가 자주 틀리는 지점만 규칙으
 | 불변성 | domain 값은 `readonly`. 입력을 변경하지 않음. 함수 안 누적 변수의 변경은 허용 | `prefer-readonly-parameter-types`(domain만) |
 | 크기 | 파일 400줄에서 경고. use case가 60줄을 넘으면 순수 함수로 분리 | `max-lines`(warn), review |
 | export | named export만. default export는 framework가 요구하는 파일에만 | `import/no-default-export` |
-| barrel | package root의 entry point만 re-export 가능. `lib/` 안의 `index.ts` 금지 | depcruise, file 이름 lint |
+| barrel | package root의 entry point만 re-export 가능. `lib/` 안의 `index.ts` 금지 | arch test(N3), 파일 이름 규칙(N1) |
 | 의존성 주입 | deps 객체를 받는 factory 함수. container, decorator, singleton, module 수준 가변 상태 금지 | review |
 | 생성 | domain 값은 Zod schema 또는 `parse<Type>(input): Result<...>`로 생성. `new` 사용 안 함 | review |
-| side effect | `lib/infra`와 `apps/*`에만 | depcruise `domain-is-pure`, `app-has-no-infra` |
+| side effect | `lib/infra`와 `apps/*`에만 | arch test `domain-is-pure`, `app-has-no-infra` |
 | async | 모든 promise를 await하거나 반환 | `no-floating-promises`, `no-misused-promises` |
 | Result와 exception | 예상 가능한 실패는 `Result<T, E>`. exception은 결함에만 쓰고 HTTP middleware와 job runner에서 한 번 잡아 `internal.unexpected`로 변환. infra adapter는 library exception을 잡아 module error로 변환 | review, 28장 |
 | 분기 | union은 `switch` + `assertNever`. TS `enum` 금지 | `switch-exhaustiveness-check`, `no-restricted-syntax` |
@@ -2107,7 +2108,7 @@ Decision Provider의 출력은 미리 정한 선택지의 분포뿐이라, 입�
 
 test는 합의한 seam에서만 작성합니다.
 seam은 각 package의 entry point, HTTP API, CLI 명령 세 가지입니다.
-`lib/` 내부 함수를 직접 import하는 test는 depcruise가 막습니다.
+`lib/` 내부 함수를 직접 import하는 test는 arch test가 막습니다.
 기대값은 구현과 같은 방식으로 다시 계산하지 않고 손으로 확인한 literal이나 label된 corpus에서 가져옵니다.
 
 ### 32.2 critical invariants
@@ -2147,7 +2148,7 @@ coverage 수치는 기준으로 쓰지 않습니다.
 6. 이 문서에 없는 구조(class, DI container, event bus, cache, 새 계층).
 7. 소유 경로 밖의 파일 수정.
    예외는 조립 파일(`composition-root.ts`, `http/app.ts`, `jobs/index.ts`, `router.tsx`)에 등록 한 줄을 추가하는 경우.
-8. lint, depcruise, test 규칙의 완화와 `eslint-disable`, `@ts-expect-error` 추가.
+8. lint, arch test, test 규칙의 완화와 `eslint-disable`, `@ts-expect-error` 추가.
 
 공유 타입 변경은 expand-contract 순서로 합니다.
 새 field를 선택 field로 추가하고 사용처를 옮기고 마지막 ticket에서 옛 field를 지웁니다.

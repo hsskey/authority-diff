@@ -47,7 +47,7 @@ V1은 모델 호출 0건으로 완결됩니다.
 
 architecture:
 
-- modular monolith, package 단위 소유, entry point 경계, dependency-cruiser로 강제(설계서 19, 21장).
+- modular monolith, package 단위 소유, entry point 경계, ArchUnitTS arch test로 강제(설계서 19, 21장, ADR-0010).
 - `AgentAction -> Operation`, `analyzability`가 1급 결과, 인식하지 못한 입력을 안전한 쪽으로 분류하지 않음(ADR-0003).
 - intent 수준 명세가 canonical이고 runtime matcher를 모사하지 않음(ADR-0002).
 - 순서와 무관한 평가, `deny > ask > allow`, 기본 Effect `ask`(ADR-0004).
@@ -446,7 +446,7 @@ DoD가 아닌 것: Tier 2 전부, Tier 3 전부, provider 관련 어떤 결과�
 
 V1에서 agent의 이탈을 실제로 줄이는 규칙만 남깁니다.
 
-dependency-cruiser(전부 `error`):
+arch test 규칙(위반은 실패):
 
 | rule | 내용 |
 | --- | --- |
@@ -456,7 +456,7 @@ dependency-cruiser(전부 `error`):
 | `no-circular` | 순환 금지 |
 | `package-layering` | 6장의 graph. `kernel: []`, `platform: [kernel]`, `action: [kernel]`, `trace: [kernel, action, platform]`, `policy: [kernel, action, platform]`, `replay: [kernel, action, policy, trace, platform]`, `review: [kernel, policy, replay, platform]`, `contracts: [kernel + 각 schema.ts]` |
 | `domain-is-pure`, `app-has-no-infra` | 설계서 21.1과 동일 |
-| `pure-entry-points` | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts`, 모든 `schema.ts`에서 출발해 닿을 수 있는 파일에 `lib/infra`, `@authority/platform`, `drizzle-orm`, `postgres`가 없음(`reachable` 사용) |
+| `pure-entry-points` | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts`, 모든 `schema.ts`에서 출발해 닿을 수 있는 파일에 `lib/infra`, `@authority/platform`, `drizzle-orm`, `postgres`가 없음(순수 entry가 lib/app·lib/infra·platform을 직접 import하지 않는 직접 규칙 G10', ACR-0002) |
 | `web-only-contracts`, `cli-narrow`, `tools-narrow` | `apps/web`은 `contracts`와 `kernel/index.ts`만. `apps/cli`는 거기에 `trace/client.ts` 추가. `tools/local-pipeline`은 순수 entry와 `schema.ts`만 |
 | `contracts-schema-only` | `packages/contracts/**`는 다른 package에서 `<pkg>/schema.ts`와 `@authority/kernel`만 import |
 
@@ -501,7 +501,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    workspace glob: apps/*, packages/*, tools/*
 
 2. root 파일: package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, eslint.config.js,
-   .dependency-cruiser.cjs, vitest.config.ts, .gitignore, .nvmrc, .github/workflows/ci.yml
+   vitest.config.ts, tsconfig.arch.json, .gitignore, .nvmrc, .github/workflows/ci.yml
 
 3. tsconfig.base.json: strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride,
    noFallthroughCasesInSwitch, verbatimModuleSyntax, isolatedModules, module과 moduleResolution은 NodeNext.
@@ -529,7 +529,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
      prefixedId가 올바른 id를 통과시키고 prefix가 다르거나 길이가 다른 값을 거부한다
      ok, err가 판별 가능한 union을 만든다
 
-5. .dependency-cruiser.cjs. 전부 severity error. package root는 `packages`이고, package의 root 파일만 public, subfolder는 전부 private이다.
+5. arch test(`tests/arch/`). 위반은 실패. package root는 `packages`이고, package의 root 파일만 public, subfolder는 전부 private이다.
    - entrypoint-boundary-from-app: apps/**, tools/** 는 packages/<pkg>/ 의 root 파일만 import
    - entrypoint-boundary-across-packages: package는 다른 package의 root 파일만 import. 자기 package 안은 자유
    - tests-through-entrypoints: packages/<pkg>/tests/** 는 어떤 package든 root 파일과 자기 tests/ fixture만 import
@@ -548,31 +548,32 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
    - app-has-no-infra: packages/*/lib/app/** 는 lib/infra, @authority/platform, zod 외 third-party를 import할 수 없다
    - pure-entry-points: packages/action/index.ts, packages/trace/client.ts, packages/policy/evaluate.ts, packages/replay/diff.ts,
      packages/*/schema.ts 에서 출발해 닿을 수 있는 파일에 lib/infra, @authority/platform, drizzle-orm, postgres 가 없어야 한다.
-     dependency-cruiser의 `reachable` 을 쓴다.
+     순수 entry가 lib/app, lib/infra, platform을 직접 import하지 않는 직접 규칙으로 인코딩한다(ACR-0002).
    - web-only-contracts: apps/web/** 는 @authority/contracts 와 @authority/kernel 의 index.ts 만 import
    - cli-narrow: apps/cli/** 는 @authority/contracts, @authority/kernel, packages/trace/client.ts 만 import
    - tools-narrow: tools/** 는 @authority/kernel, packages/action/index.ts, packages/trace/client.ts, packages/policy/evaluate.ts,
      packages/replay/diff.ts, 각 package의 schema.ts 만 import
    - contracts-schema-only: packages/contracts/** 는 다른 package에서 <pkg>/schema.ts 와 @authority/kernel 만 import.
      다른 package의 schema.ts 아닌 파일을 import하면 위반이다.
-   아직 없는 package에 대한 rule도 경로 pattern으로 지금 작성한다.
+   - drizzle-postgres-confined: drizzle-orm 과 postgres는 packages/*/lib/infra/** 와 packages/platform/** 에서만 import (import 텍스트 검사, ACR-0002).
+   아직 없는 package에 대한 rule도 경로 pattern으로 지금 작성하고, 아직 없는 package를 대상으로 하는 규칙은 tests/arch/fixtures/의 위반 fixture로 증명한다.
 
 6. eslint.config.js (flat config, typescript-eslint strictTypeChecked 기반). 전부 error.
    no-explicit-any, no-unsafe-*, consistent-type-assertions(assertionStyle never, `as const` 허용), no-non-null-assertion,
    no-floating-promises, no-misused-promises, switch-exhaustiveness-check, default export 금지(설정 파일 예외),
    no-console(apps/cli/src/output.ts 와 tools/** 예외),
    process.env 접근 금지(packages/platform/lib/infra/config.ts 와 apps/cli/src/config.ts 예외),
-   drizzle-orm 과 postgres import 금지(packages/*/lib/infra/** 와 packages/platform/** 예외),
    packages/*/lib/domain/** 과 packages/*/lib/app/** 에서 new Date(), Date.now(), Math.random() 금지.
+   (drizzle-orm 과 postgres import 제한은 arch test로 옮겼다. 위 section 5의 drizzle-postgres-confined, ADR-0010.)
 
-7. scripts/prove-boundaries.ts 와 `pnpm lint:boundaries:prove`.
-   위반 파일을 임시로 만들고, depcruise를 실행해 기대한 rule 이름으로 실패하는지 확인하고, 임시 파일을 지운다.
+7. `pnpm lint:boundaries:prove`(= `vitest run --project arch -t fires`).
+   tests/arch/fixtures/의 위반 fixture로 각 규칙이 기대한 이름으로 실패함을 arch test가 확인한다. positive fixture는 통과하고 매칭 파일 수가 0이 아니어야 한다.
    최소 5개: (a) kernel의 test가 자기 lib/ 를 직접 import -> tests-through-entrypoints
              (b) kernel의 lib/domain 파일이 node:fs 를 import -> domain-is-pure
              (c) 임시 package packages/zz-proof 가 packages/kernel/lib/ 를 import -> entrypoint-boundary-across-packages
              (d) 임시 packages/action/lib/domain/x.ts 가 @authority/platform 을 import -> package-layering 또는 domain-is-pure
              (e) 임시 packages/contracts/lib/x.ts 가 packages/policy/evaluate.ts (schema.ts 아닌 root 파일)를 import -> contracts-schema-only
-   하나라도 실패하지 않으면 script가 exit 1. 끝나면 작업 tree가 깨끗해야 한다.
+   하나라도 실패하지 않으면 exit 1. 위반 fixture는 tracked이고 positive 검사에서 제외된다.
 
 8. root script: typecheck, lint, lint:boundaries, lint:boundaries:prove, test, check(= typecheck + lint + lint:boundaries + test).
 
@@ -582,7 +583,7 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 kernel 외의 package, apps, tools 안의 code, docker compose, DB 관련 설정, AGENTS.md 와 CONTEXT.md 의 내용.
 
 ## 허용 의존성
-typescript, zod, vitest, eslint, typescript-eslint, eslint-plugin-import-x, eslint-plugin-n, dependency-cruiser, turbo, tsx, @types/node.
+typescript, zod, vitest, eslint, typescript-eslint, eslint-plugin-import-x, eslint-plugin-n, archunit, turbo, tsx, @types/node.
 version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요하면 중단하고 보고한다.
 
 설치 시점 예외 2건(2026-09-21, ACR-0001로 기록. 새 의존성 추가나 규칙 약화 아님):
