@@ -112,20 +112,20 @@ export async function runSpoolFlush(): Promise<void> {
 
   for (const name of names.sort()) {
     const path = join(directory, name);
-    const observations = readFileSync(path, 'utf8')
-      .split('\n')
-      .filter((line) => line.trim().length > 0)
-      .map(toObservation)
-      .filter((observation): observation is RuntimeObservationInput => observation !== null);
+    try {
+      const observations = readFileSync(path, 'utf8')
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+        .map(toObservation)
+        .filter((observation): observation is RuntimeObservationInput => observation !== null);
 
-    if (observations.length === 0 || (await postObservations(base, token, observations))) {
-      try {
+      if (observations.length === 0 || (await postObservations(base, token, observations))) {
         renameSync(path, `${path}.sent`);
         sentFiles++;
-      } catch {
+      } else {
         failedFiles++;
       }
-    } else {
+    } catch {
       failedFiles++;
     }
   }
