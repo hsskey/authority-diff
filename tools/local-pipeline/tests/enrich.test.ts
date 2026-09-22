@@ -54,10 +54,11 @@ describe('enrichRepoRemotes', () => {
 
     const call = enriched?.toolCalls[0];
     expect(call).toBeDefined();
-    expect(call?.repoRemotes).toEqual({ origin: 'git@github.com:acme/x.git' });
+    if (call === undefined) throw new Error('expected an enriched tool call');
+    expect(call.repoRemotes).toEqual({ origin: 'git@github.com:acme/x.git' });
 
     const classify = await createClassifier();
-    const push = classify(call!).find((operation) => operation.capability === 'push');
+    const push = classify(call).find((operation) => operation.capability === 'push');
     expect(push?.target).toMatchObject({ kind: 'vcs_remote', remoteKey: 'github.com/acme/x' });
   });
 
@@ -66,10 +67,11 @@ describe('enrichRepoRemotes', () => {
     const [enriched] = enrichRepoRemotes([session(pushToolCall('~/dev/x'))], read);
 
     const call = enriched?.toolCalls[0];
-    expect(call?.repoRemotes).toBeNull();
+    if (call === undefined) throw new Error('expected an enriched tool call');
+    expect(call.repoRemotes).toBeNull();
 
     const classify = await createClassifier();
-    const push = classify(call!).find((operation) => operation.capability === 'push');
+    const push = classify(call).find((operation) => operation.capability === 'push');
     expect(push?.target).toMatchObject({ kind: 'vcs_remote', remoteKey: null });
   });
 });
