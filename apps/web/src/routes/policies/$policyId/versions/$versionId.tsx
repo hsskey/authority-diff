@@ -99,7 +99,8 @@ function PolicyVersionEditor({
       }
       return result.value;
     },
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      setDraftText(JSON.stringify(updated.document, null, 2));
       setValidation(null);
       void queryClient.invalidateQueries({ queryKey: ['policy-version', version.id] });
     },
@@ -175,7 +176,11 @@ function PolicyVersionEditor({
           >
             {save.isPending ? 'Saving…' : 'Save draft'}
           </button>
-          <button type="button" disabled={validate.isPending} onClick={() => validate.mutate()}>
+          <button
+            type="button"
+            disabled={validate.isPending || isDirty}
+            onClick={() => validate.mutate()}
+          >
             {validate.isPending ? 'Validating…' : 'Validate'}
           </button>
           <button
@@ -186,6 +191,11 @@ function PolicyVersionEditor({
             {createDraft.isPending ? 'Creating…' : 'Create draft from this version'}
           </button>
         </div>
+        {isDirty ? (
+          <p className="state-message hint">
+            Save the draft before validating; validation runs against the stored document.
+          </p>
+        ) : null}
         <MutationError label="Save failed" error={save.error} />
         <MutationError label="Validation request failed" error={validate.error} />
         <MutationError label="Create draft failed" error={createDraft.error} />
