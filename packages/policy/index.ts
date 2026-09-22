@@ -1,9 +1,15 @@
 export {
   createPolicyRepository,
   type CreatePolicyInput,
+  type PolicyPage,
   type PolicyRepository,
   type PolicyRepositoryDeps,
 } from './lib/infra/repository.ts';
+export {
+  createPolicyModule,
+  type PolicyModule,
+  type PolicyValidation,
+} from './lib/infra/module.ts';
 export { migratePolicyStore } from './lib/infra/migrate.ts';
 export { nextStatus, type PolicyTransition } from './lib/domain/transition.ts';
 export { DEFAULT_POLICY_DOCUMENT } from './lib/domain/default-policy-document.ts';
