@@ -636,4 +636,21 @@ version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요
 - 목록 밖 의존성이 필요할 때.
 - `reachable` 로 pure-entry-points 를 표현할 수 없을 때. rule을 약하게 만들지 말고 보고한다.
 - rule, lint 설정을 완화해야 통과할 때.
+
+## 17. 개정 1: 일요일 마감 범위 (2026-09-22 저녁)
+
+일요일(09-27) 완료를 목표로 4장의 Tier 표와 13장의 제외 목록을 아래와 같이 고친다. 본문의 다른 절은 그대로다.
+
+Tier 1로 올림(13장 제외 목록에서 삭제):
+- CLI `hook`(PreToolUse, PermissionRequest, SessionEnd 관측 전용, exit 0, 400 ms), `install-hooks`, local spool. 근거: V3 fidelity는 달력 시간에 묶이므로 수집을 V1 구축 중에 시작해야 함.
+- `runtime_observations` table, `POST /runtime-observations`, CLI `spool-flush`. 근거: 위 수집의 적재 경로.
+
+Tier 2(수요일 Gate 2 통과 뒤 착수):
+- V2 탐색적 probe: DecisionProvider port, Jev와 fixture adapter, `authority probe`, report 참고 절. threshold, calibration, gate 연동 없음.
+- conformance replay(축소): `observed_runtime` Decision Source, finding 3종, finding 화면. Disposition에 `hook_approved`(plugin hook이 승인) 추가.
+- audit hash chain(`review_decisions` 위에 prev_hash/hash, 검증 명령).
+
+Tier 3 유지(일요일 이후 또는 영구): calibration platform, LLM baseline, 활성화와 rollback lifecycle, 설정 export, job queue, SSO와 다중 tenant, Codex adapter, 합성 조직 S1, RAR.
+
+수락(Accept)의 의미는 5장 그대로다. 관측을 수집해도 V1은 runtime 동작을 예측한다고 말하지 않는다(1장 R3).
 ````
