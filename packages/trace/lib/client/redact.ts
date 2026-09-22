@@ -73,7 +73,7 @@ const RULES: readonly RedactionRule[] = [
   {
     kind: 'secret_assignment',
     pattern:
-      /\b(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD))([A-Za-z0-9_]+)(["']?\s*[:=]\s*)(?!["']?__REDACTED_)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
+      /\b(?!__REDACTED_)(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD))([A-Za-z0-9_]+)(["']?\s*[:=]\s*)(?!["']?__REDACTED_)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
     replacement: '$1$2__REDACTED_SECRET_ASSIGNMENT__',
   },
 ];

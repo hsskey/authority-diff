@@ -124,6 +124,18 @@ describe('redactText invariants', () => {
     expect(second.redactions).toEqual([]);
   });
 
+  test.each(['KEY="value":extra', "TOKEN='abc':tail"])(
+    'a quoted value followed by a colon redacts once and stays idempotent: %s',
+    (input) => {
+      const first = redactText(input);
+      const second = redactText(first.text);
+      expect(first.text).toContain('__REDACTED_SECRET_ASSIGNMENT__');
+      expect(first.text.endsWith(input.split(':').pop() ?? '')).toBe(true);
+      expect(second.text).toBe(first.text);
+      expect(second.redactions).toEqual([]);
+    },
+  );
+
   test('redactions are sorted by kind', () => {
     const { redactions } = redactText(CASES.map((c) => c.secret).join(' '));
     const kinds = redactions.map((r) => r.kind);
