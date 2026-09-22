@@ -623,6 +623,9 @@ version은 설치 시점의 최신 stable. 이 목록 밖의 의존성이 필요
 - lint/format을 ESLint에서 Oxlint로 옮긴다. typescript-eslint가 typescript 7에서 실행 예외로 종료하기 때문이다. type-aware 규칙은 oxlint-tsgolint가 담당한다. 제거: eslint, typescript-eslint, eslint-plugin-import-x, eslint-plugin-n.
 - `vitest.workspace.ts` 대신 `vitest.config.ts`의 `test.projects`를 쓴다. `vitest@5`가 workspace 파일과 `--workspace` 플래그를 제거했다. `test.projects`가 그 후속 기능이다.
 
+설치 시점 예외(2026-09-22, ACR-0003으로 기록. 새 승인이나 규칙 약화가 아니라 이미 승인된 예외의 기록이다):
+- classifier가 실제 shell grammar로 Bash를 분해하려고 `packages/action`에 runtime 의존성 `web-tree-sitter`와 `tree-sitter-bash`, dev 의존성 `fast-check`를 추가한다. 세 의존성은 정확한 version으로 고정한다. 승인 근거, 정확한 pin, 대안은 ACR-0003에 있다.
+
 ## 완료 기준
 - `pnpm install && pnpm check` 가 exit 0.
 - `pnpm lint:boundaries:prove` 가 exit 0 이고 fixture마다 실패시킨 rule 이름을 출력한다.
