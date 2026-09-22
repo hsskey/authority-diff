@@ -136,9 +136,13 @@ function collectRedirects(node: Node): ShellRedirect[] {
   for (const child of container.namedChildren) {
     if (child === null) continue;
     if (child.type === 'file_redirect') {
+      // A file-descriptor duplication (`2>&1`, `>&2`, `1>&2`) redirects one fd to
+      // another and writes no file, so it yields no Operation.
+      if (isFdDuplication(child)) continue;
       const op = fileRedirectOperator(child);
-      const kind = op === '>>' ? 'append' : op === '<' ? 'read' : 'write';
-      redirects.push({ kind, target: redirectTarget(child), heredocBody: null });
+      const kind = op.includes('>>') ? 'append' : op.startsWith('<') ? 'read' : 'write';
+      const target = redirectTarget(child);
+      if (target !== null) redirects.push({ kind, target, heredocBody: null });
     } else if (child.type === 'heredoc_redirect') {
       redirects.push({ kind: 'heredoc', target: null, heredocBody: heredocBody(child) });
     }
@@ -154,9 +158,20 @@ function fileRedirectOperator(node: Node): string {
   return '>';
 }
 
+/**
+ * True for fd-duplication redirects (`>&`, `<&`, `M>&N`). The `&` follows the
+ * arrow and the target is a descriptor, not a file. `&>`/`&>>` (all-output to a
+ * file) start with `&` and are real writes, so they are excluded.
+ */
+function isFdDuplication(node: Node): boolean {
+  const op = fileRedirectOperator(node);
+  return op.includes('&') && !op.startsWith('&');
+}
+
+/** The redirect target word, skipping any leading file-descriptor node. */
 function redirectTarget(node: Node): ShellWord | null {
   for (const child of node.namedChildren) {
-    if (child !== null) return readWord(child);
+    if (child !== null && child.type !== 'file_descriptor') return readWord(child);
   }
   return null;
 }

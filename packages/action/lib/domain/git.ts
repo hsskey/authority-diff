@@ -61,31 +61,67 @@ const FORCE_FLAGS: readonly string[] = [
   '--force-if-includes',
 ];
 
+/** git global options (before the subcommand) that consume the next token. */
+const GIT_GLOBAL_VALUE_FLAGS: ReadonlySet<string> = new Set([
+  '-C',
+  '-c',
+  '--git-dir',
+  '--work-tree',
+  '--namespace',
+  '--exec-path',
+  '--super-prefix',
+]);
+
+/**
+ * Drops git global options (and their values) that precede the subcommand so
+ * `git -C <dir> push` and `git -c k=v commit` resolve to push/commit instead of
+ * falling through to an unknown subcommand.
+ */
+function stripGitGlobals(args: readonly ShellWord[]): ShellWord[] {
+  let i = 0;
+  while (i < args.length) {
+    const t = args[i]?.text ?? '';
+    if (t.length === 0) break;
+    if (GIT_GLOBAL_VALUE_FLAGS.has(t)) {
+      i += 2;
+      continue;
+    }
+    if (t.startsWith('-')) {
+      i += 1;
+      continue;
+    }
+    break;
+  }
+  return args.slice(i);
+}
+
 export function classifyGit(cmd: NormalizedCommand): OperationDraft[] {
-  const positional = nonFlagArgs(cmd.args);
+  const args = stripGitGlobals(cmd.args);
+  const gitCmd: NormalizedCommand = { ...cmd, args };
+  const positional = nonFlagArgs(args);
   const sub = positional[0]?.text ?? '';
-  const rest = cmd.args.filter((a) => a !== positional[0]);
+  const rest = args.filter((a) => a !== positional[0]);
 
   if (FETCH_SUBS.has(sub)) {
-    return [remoteOp('fetch', cmd, sub, rest)];
+    return [remoteOp('fetch', gitCmd, sub, rest)];
   }
   if (sub === 'push') {
-    const forced = hasFlag(cmd.args, ...FORCE_FLAGS) || hasPlusRefspec(rest);
-    return [remoteOp(forced ? 'rewrite' : 'push', cmd, sub, rest)];
+    const forced = hasFlag(args, ...FORCE_FLAGS) || hasPlusRefspec(rest);
+    return [remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest)];
   }
   if (sub === 'reset') {
-    return [localOp(hasFlag(cmd.args, '--hard') ? 'rewrite' : 'commit', cmd)];
+    return [localOp(hasFlag(args, '--hard') ? 'rewrite' : 'commit', gitCmd)];
   }
-  if (sub === 'clean') return [localOp('delete', cmd)];
-  if (sub === 'rm') return [localOp('delete', cmd)];
-  if (sub === 'branch') return [branchOp(cmd)];
-  if (sub === 'tag') return [tagOp(cmd, positional)];
-  if (sub === 'config') return [localOp(positional.length >= 3 ? 'write' : 'read', cmd)];
-  if (COMMIT_SUBS.has(sub)) return [localOp('commit', cmd)];
-  if (READ_SUBS.has(sub)) return [localOp('read', cmd)];
+  if (sub === 'clean') return [localOp('delete', gitCmd)];
+  if (sub === 'rm') return [localOp('delete', gitCmd)];
+  if (sub === 'branch') return [branchOp(gitCmd)];
+  if (sub === 'tag') return [tagOp(gitCmd, positional)];
+  if (sub === 'config') return [localOp(positional.length >= 3 ? 'write' : 'read', gitCmd)];
+  if (COMMIT_SUBS.has(sub)) return [localOp('commit', gitCmd)];
+  if (READ_SUBS.has(sub)) return [localOp('read', gitCmd)];
   // Unknown git subcommand: opaque execution rather than a false read.
   return [
-    draft('execute', { kind: 'unknown' }, 'none', 'git', cmd.raw, ['git_subcommand_unknown']),
+    draft('execute', { kind: 'unknown' }, 'none', 'git', gitCmd.raw, ['git_subcommand_unknown']),
   ];
 }
 
@@ -159,7 +195,9 @@ function remoteOp(
 }
 
 function hasPlusRefspec(args: readonly ShellWord[]): boolean {
-  return nonFlagArgs(args).some((w) => w.text.startsWith('+') && w.text.includes(':'));
+  // A leading `+` force-updates the ref, with or without a `:` (for example
+  // `git push origin +main` and `git push origin +src:dst`).
+  return nonFlagArgs(args).some((w) => w.text.startsWith('+') && w.text.length > 1);
 }
 
 function looksLikeRemoteUrl(text: string): boolean {
