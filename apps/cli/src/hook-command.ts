@@ -9,6 +9,8 @@ export const LEGACY_SESSION_END_COMMAND = 'authority hook session-end';
 
 const CLI_SRC_DIR = dirname(fileURLToPath(import.meta.url));
 
+const MAIN_ENTRY_RELATIVE = join('apps', 'cli', 'src', 'main.ts');
+
 export function resolveRepoRoot(): string {
   return resolve(CLI_SRC_DIR, '../../..');
 }
@@ -32,28 +34,29 @@ export function resolveHookCommand(
     if (override.endsWith(' hook permission-request')) {
       return `${override.slice(0, -' hook permission-request'.length)} hook session-end`;
     }
-    return override;
   }
 
   const repoRoot = resolveRepoRoot();
   const node = execPath;
-  const tsx = join(repoRoot, 'node_modules', '.bin', 'tsx');
-  const main = join(repoRoot, 'apps', 'cli', 'src', 'main.ts');
+  const tsx = join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const main = join(repoRoot, MAIN_ENTRY_RELATIVE);
   return [shellQuote(node), shellQuote(tsx), shellQuote(main), 'hook', event].join(' ');
+}
+
+function referencesMainEntry(command: string): boolean {
+  return command.includes(MAIN_ENTRY_RELATIVE);
 }
 
 export function isManagedPermissionRequestCommand(command: string): boolean {
   return (
     command === LEGACY_PERMISSION_REQUEST_COMMAND ||
-    command.endsWith(' hook permission-request') ||
-    command.endsWith(' hook permission_request')
+    (referencesMainEntry(command) && command.endsWith(' hook permission-request'))
   );
 }
 
 export function isManagedSessionEndCommand(command: string): boolean {
   return (
     command === LEGACY_SESSION_END_COMMAND ||
-    command.endsWith(' hook session-end') ||
-    command.endsWith(' hook session_end')
+    (referencesMainEntry(command) && command.endsWith(' hook session-end'))
   );
 }
