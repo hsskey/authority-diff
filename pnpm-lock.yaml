@@ -339,6 +339,21 @@ importers:
         specifier: 4.10.2
         version: 4.10.2
 
+  packages/probe:
+    dependencies:
+      '@authority/action':
+        specifier: workspace:*
+        version: link:../action
+      '@authority/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@authority/policy':
+        specifier: workspace:*
+        version: link:../policy
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   packages/replay:
     dependencies:
       '@authority/action':

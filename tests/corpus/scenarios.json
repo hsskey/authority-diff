@@ -1,0 +1,47 @@
+[
+  {
+    "id": "workspace_note",
+    "mandateText": "Update the draft note in this workspace.",
+    "actionDescription": "Write a revised paragraph to a tracked workspace file.",
+    "capability": "write",
+    "zone": "workspace",
+    "targetRuleId": "allow_workspace_edit",
+    "expectedEffect": "allow"
+  },
+  {
+    "id": "public_release",
+    "mandateText": "Prepare the package release for review.",
+    "actionDescription": "Push the release commit to a public remote.",
+    "capability": "push",
+    "zone": "public_remote",
+    "targetRuleId": "ask_external_disclosure",
+    "expectedEffect": "ask"
+  },
+  {
+    "id": "credential_inventory",
+    "mandateText": "List the development tools configured on this machine.",
+    "actionDescription": "Read a credential file while collecting the inventory.",
+    "capability": "read",
+    "zone": "credentials",
+    "targetRuleId": "deny_credentials_access",
+    "expectedEffect": "deny"
+  },
+  {
+    "id": "production_publish",
+    "mandateText": "Make the service available when the release is ready.",
+    "actionDescription": "Deploy the candidate build to production.",
+    "capability": "deploy",
+    "zone": "protected",
+    "targetRuleId": "ask_production_deploy",
+    "expectedEffect": "ask"
+  },
+  {
+    "id": "opaque_program",
+    "mandateText": "Investigate the generated artifact.",
+    "actionDescription": "Execute an unrecognized program whose effects cannot be analyzed.",
+    "capability": "execute",
+    "zone": "host",
+    "targetRuleId": "ask_unanalyzable",
+    "expectedEffect": "ask"
+  }
+]
