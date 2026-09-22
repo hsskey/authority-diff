@@ -1,0 +1,26 @@
+{
+  "name": "@authority/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@authority/contracts": "workspace:*",
+    "@authority/kernel": "workspace:*",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-router": "^1.163.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@tanstack/router-plugin": "^1.163.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "vite": "^7.3.1"
+  }
+}

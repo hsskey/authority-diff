@@ -59,6 +59,11 @@ export const ErrorEnvelopeSchema = z.object({
 });
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
+export const HealthzResponseSchema = z.object({
+  status: z.literal('ok'),
+});
+export type HealthzResponse = z.infer<typeof HealthzResponseSchema>;
+
 // POST /trace-imports
 export const ImportTraceRequestSchema = ParsedSessionSchema.extend({
   toolCalls: ParsedSessionSchema.shape.toolCalls.max(1000),
