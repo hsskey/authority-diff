@@ -66,9 +66,29 @@ function readStdin(): string {
   return readFileSync(0, 'utf8');
 }
 
-function finish(exitTimer: NodeJS.Timeout): void {
-  clearTimeout(exitTimer);
-  process.exit(0);
+// Fail-open core: read stdin, parse, append one spool record. Never throws, never exits.
+// Split out from runHook so I9 (exit 0 on malformed/closed/empty stdin) is testable in-process.
+export function spoolFromStdin(event: HookEvent, readInput: () => string = readStdin): void {
+  try {
+    const raw = readInput();
+    if (raw.trim().length === 0) {
+      return;
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) {
+      return;
+    }
+
+    const record = buildRecord(event, parsed, new Date());
+    if (record === null) {
+      return;
+    }
+
+    appendSpoolRecord(record, new Date(record.timestamp));
+  } catch {
+    // fail-open: no stdout
+  }
 }
 
 export function runHook(event: HookEvent, readInput: () => string = readStdin): void {
@@ -76,29 +96,8 @@ export function runHook(event: HookEvent, readInput: () => string = readStdin): 
     process.exit(0);
   }, HOOK_EXIT_BUDGET_MS);
 
-  try {
-    const raw = readInput();
-    if (raw.trim().length === 0) {
-      finish(exitTimer);
-      return;
-    }
+  spoolFromStdin(event, readInput);
 
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) {
-      finish(exitTimer);
-      return;
-    }
-
-    const record = buildRecord(event, parsed, new Date());
-    if (record === null) {
-      finish(exitTimer);
-      return;
-    }
-
-    appendSpoolRecord(record, new Date(record.timestamp));
-  } catch {
-    // fail-open: no stdout, exit 0
-  }
-
-  finish(exitTimer);
+  clearTimeout(exitTimer);
+  process.exit(0);
 }

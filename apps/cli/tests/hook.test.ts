@@ -1,6 +1,6 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
-import { runHook } from '../src/commands/hook.command.ts';
+import { spoolFromStdin } from '../src/commands/hook.command.ts';
 import { makeTempHome, readSpoolLines, runAuthority } from './support/harness.ts';
 import { isRecord, readNullableString, readString } from './support/record.ts';
 
@@ -28,9 +28,7 @@ describe('authority hook', () => {
     expect(() => readSpoolLines(home)).toThrow();
   });
 
-  test('exits 0 in-process on malformed, closed, and empty stdin (I9)', () => {
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
-
+  test('stays fail-open in-process on malformed, closed, and empty stdin (I9)', () => {
     const stdinCases: ReadonlyArray<() => string> = [
       () => 'not-json',
       () => {
@@ -40,12 +38,8 @@ describe('authority hook', () => {
     ];
 
     for (const readInput of stdinCases) {
-      exitSpy.mockClear();
-      expect(() => runHook('permission_request', readInput)).not.toThrow();
-      expect(exitSpy).toHaveBeenCalledWith(0);
+      expect(() => spoolFromStdin('permission_request', readInput)).not.toThrow();
     }
-
-    exitSpy.mockRestore();
   });
 
   test('appends one spool line for permission-request without storing raw tool_input', () => {
