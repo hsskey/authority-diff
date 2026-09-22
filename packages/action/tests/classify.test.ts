@@ -337,6 +337,6 @@ describe('truncation and fragment cap', () => {
   });
 });
 
-test('classifier version is 0.1.1', () => {
-  expect(CLASSIFIER_VERSION).toBe('0.1.1');
+test('classifier version is 0.2.0', () => {
+  expect(CLASSIFIER_VERSION).toBe('0.2.0');
 });

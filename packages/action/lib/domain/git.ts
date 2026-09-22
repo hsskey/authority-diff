@@ -36,6 +36,14 @@ const READ_SUBS: ReadonlySet<string> = new Set([
   'name-rev',
   'symbolic-ref',
   'for-each-ref',
+  'merge-base',
+  'check-ignore',
+  'check-attr',
+  'ls-tree',
+  'hash-object',
+  'show-ref',
+  'merge-tree',
+  'archive',
 ]);
 const COMMIT_SUBS: ReadonlySet<string> = new Set([
   'add',
@@ -52,8 +60,12 @@ const COMMIT_SUBS: ReadonlySet<string> = new Set([
   'apply',
   'mv',
   'notes',
+  'init',
+  'commit-tree',
+  'update-ref',
+  'format-patch',
 ]);
-const FETCH_SUBS: ReadonlySet<string> = new Set(['clone', 'fetch', 'pull']);
+const FETCH_SUBS: ReadonlySet<string> = new Set(['clone', 'fetch', 'pull', 'ls-remote']);
 const FORCE_FLAGS: readonly string[] = [
   '--force',
   '-f',
