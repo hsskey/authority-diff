@@ -20,7 +20,12 @@ function readString(record: Record<string, unknown>, key: string): string | null
 }
 
 function toObservation(line: string): RuntimeObservationInput | null {
-  const parsed: unknown = JSON.parse(line);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return null;
+  }
   if (!isRecord(parsed)) {
     return null;
   }
@@ -34,6 +39,10 @@ function toObservation(line: string): RuntimeObservationInput | null {
   ) {
     return null;
   }
+  const occurredAt = IsoTimestampSchema.safeParse(timestamp);
+  if (!occurredAt.success) {
+    return null;
+  }
   return {
     event,
     sessionExternalId,
@@ -41,7 +50,7 @@ function toObservation(line: string): RuntimeObservationInput | null {
     toolInputHash: readString(parsed, 'toolInputHash'),
     cwd: readString(parsed, 'cwd'),
     runtimeVersion: readString(parsed, 'runtimeVersion'),
-    occurredAt: IsoTimestampSchema.parse(timestamp),
+    occurredAt: occurredAt.data,
   };
 }
 
@@ -110,8 +119,12 @@ export async function runSpoolFlush(): Promise<void> {
       .filter((observation): observation is RuntimeObservationInput => observation !== null);
 
     if (observations.length === 0 || (await postObservations(base, token, observations))) {
-      renameSync(path, `${path}.sent`);
-      sentFiles++;
+      try {
+        renameSync(path, `${path}.sent`);
+        sentFiles++;
+      } catch {
+        failedFiles++;
+      }
     } else {
       failedFiles++;
     }
