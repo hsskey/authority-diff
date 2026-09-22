@@ -75,7 +75,9 @@ export function buildPolicyApp(policy: PolicyModule): Hono<AppEnv> {
   return app;
 }
 
-export function authed(init: RequestInit = {}): RequestInit {
+type AuthedInit = { method?: string; body?: string; headers?: Record<string, string> };
+
+export function authed(init: AuthedInit = {}): RequestInit {
   return {
     ...init,
     headers: {
