@@ -228,6 +228,12 @@ importers:
       '@authority/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@authority/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
+      '@authority/replay':
+        specifier: workspace:*
+        version: link:../../packages/replay
       '@authority/trace':
         specifier: workspace:*
         version: link:../../packages/trace
@@ -380,12 +386,18 @@ importers:
       '@authority/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@authority/platform':
+        specifier: workspace:*
+        version: link:../platform
       '@authority/policy':
         specifier: workspace:*
         version: link:../policy
       '@authority/trace':
         specifier: workspace:*
         version: link:../trace
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(postgres@3.4.9)
       zod:
         specifier: ^4.6.5
         version: 4.6.5

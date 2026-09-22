@@ -11,6 +11,8 @@
     "@authority/contracts": "workspace:*",
     "@authority/kernel": "workspace:*",
     "@authority/platform": "workspace:*",
+    "@authority/policy": "workspace:*",
+    "@authority/replay": "workspace:*",
     "@authority/trace": "workspace:*",
     "@hono/node-server": "2.1.1",
     "hono": "4.13.8"
