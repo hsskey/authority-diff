@@ -7,6 +7,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@authority/action": "workspace:*",
+    "@authority/kernel": "workspace:*",
     "@authority/trace": "workspace:*"
   }
 }

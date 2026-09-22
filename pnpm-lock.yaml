@@ -312,6 +312,12 @@ importers:
 
   tools/local-pipeline:
     dependencies:
+      '@authority/action':
+        specifier: workspace:*
+        version: link:../../packages/action
+      '@authority/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
       '@authority/trace':
         specifier: workspace:*
         version: link:../../packages/trace
