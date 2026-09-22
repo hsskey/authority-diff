@@ -2,6 +2,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { createSystemClock } from '@authority/platform';
 import { createTraceModule } from '@authority/trace';
+import { composeModules } from '../composition-root.ts';
 import type { AppEnv, ServerDeps } from './env.ts';
 import { internalUnexpected, respondError } from './errors.ts';
 import { createAuthMiddleware } from './middleware/auth.ts';
@@ -46,6 +47,8 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
     clock: createSystemClock(),
     idGenerator: deps.idGenerator,
   });
+
+  composeModules(app, deps.config);
 
   app.get('*', serveStatic({ root: '../web/dist' }));
 

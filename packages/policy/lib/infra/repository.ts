@@ -1,4 +1,4 @@
-import { and, desc, eq, max } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, max } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { err, invariant, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
@@ -22,10 +22,16 @@ export interface CreatePolicyInput {
   readonly template: 'default' | 'empty';
 }
 
+export interface PolicyPage {
+  readonly items: readonly Policy[];
+  readonly nextCursor: string | null;
+}
+
 export interface PolicyRepository {
   createPolicy(
     input: CreatePolicyInput,
   ): Promise<Result<{ policy: Policy; initialVersion: PolicyVersion }, AppError>>;
+  listPolicies(cursor: string | null, limit: number): Promise<Result<PolicyPage, AppError>>;
   getVersion(id: PolicyVersionId): Promise<Result<PolicyVersion, AppError>>;
   createDraftVersion(
     policyId: PolicyId,
@@ -148,6 +154,22 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
             cause: null,
           });
         }
+        return err(internal(cause));
+      }
+    },
+
+    async listPolicies(cursor, limit) {
+      try {
+        const rows = await db
+          .select()
+          .from(policies)
+          .where(cursor === null ? undefined : gt(policies.id, cursor))
+          .orderBy(asc(policies.id))
+          .limit(limit + 1);
+        const items = rows.slice(0, limit).map(toPolicy);
+        const nextCursor = rows.length > limit ? (items.at(-1)?.id ?? null) : null;
+        return ok({ items, nextCursor });
+      } catch (cause) {
         return err(internal(cause));
       }
     },
