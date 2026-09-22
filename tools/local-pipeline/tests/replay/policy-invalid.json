@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "credentialPaths": ["~/.ssh/**"],
+    "agentConfigPaths": [],
+    "trustedRemotes": [],
+    "publicRemotes": [],
+    "protectedBranches": [],
+    "productionMarkers": ["("]
+  },
+  "rules": [
+    {
+      "ruleId": "duplicate_rule",
+      "match": {
+        "capabilities": "*",
+        "zones": ["credentials"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "deny",
+      "rationale": "First rule with an id that is intentionally duplicated below."
+    },
+    {
+      "ruleId": "duplicate_rule",
+      "match": {
+        "capabilities": "*",
+        "zones": ["host"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Second rule reusing the same id to trigger a duplicate_rule_id issue."
+    }
+  ]
+}
