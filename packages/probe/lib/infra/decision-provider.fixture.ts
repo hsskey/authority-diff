@@ -24,7 +24,8 @@ function replayResponse(
   if (input.signal.aborted) {
     return err(fixtureError('probe.aborted', 'probe request was aborted'));
   }
-  const response = responses.find((item) => input.context.includes(item.contextIncludes));
+  const contextLines = input.context.split('\n');
+  const response = responses.find((item) => contextLines.includes(item.contextIncludes));
   if (response === undefined) {
     return err(fixtureError('probe.fixture_not_found', 'no recorded response matches the context'));
   }

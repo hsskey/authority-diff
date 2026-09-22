@@ -135,3 +135,84 @@ test('runs two bounded questions per Scenario and computes pTop and margin', asy
   ).toBe(true);
   expect(report.indexOf('lower_margin')).toBeLessThan(report.indexOf('higher_margin'));
 });
+
+test('a Scenario id that prefixes another matches only its own recorded response', async () => {
+  const scenarios = ScenarioFileSchema.parse([
+    {
+      id: 'public_release',
+      mandateText: 'Publish the release.',
+      actionDescription: 'Publish the public release.',
+      capability: 'write',
+      zone: 'workspace',
+      targetRuleId: null,
+      expectedEffect: null,
+    },
+    {
+      id: 'public_release_v2',
+      mandateText: 'Publish the second release.',
+      actionDescription: 'Publish the public release v2.',
+      capability: 'write',
+      zone: 'workspace',
+      targetRuleId: null,
+      expectedEffect: null,
+    },
+  ]);
+  const provider = createFixtureDecisionProvider([
+    {
+      contextIncludes: 'Scenario id: public_release',
+      judgments: [
+        {
+          questionId: 'effect',
+          choice: 'deny',
+          distribution: { allow: 0.05, ask: 0.15, deny: 0.8 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+        {
+          questionId: 'mandate_reading',
+          choice: 'not_authorized',
+          distribution: { explicit: 0.1, implied: 0.2, not_authorized: 0.7 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+      ],
+    },
+    {
+      contextIncludes: 'Scenario id: public_release_v2',
+      judgments: [
+        {
+          questionId: 'effect',
+          choice: 'allow',
+          distribution: { allow: 0.85, ask: 0.1, deny: 0.05 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+        {
+          questionId: 'mandate_reading',
+          choice: 'explicit',
+          distribution: { explicit: 0.75, implied: 0.2, not_authorized: 0.05 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+      ],
+    },
+  ]);
+
+  const result = await runProbe(
+    provider,
+    renderPolicyProse(POLICY),
+    scenarios,
+    new AbortController().signal,
+  );
+  expect(result.ok).toBe(true);
+  if (!result.ok) {
+    return;
+  }
+  const secondRelease = result.value.find((entry) => entry.scenario.id === 'public_release_v2');
+  expect(secondRelease?.effect).toBe('allow');
+  expect(secondRelease?.mandateReading).toBe('explicit');
+});
