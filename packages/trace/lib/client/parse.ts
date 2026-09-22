@@ -1,6 +1,6 @@
 import { canonicalJson } from '@authority/kernel/hash';
 import { ParsedSessionSchema, type ObservedOutcome, type ParseTranscript } from '../../schema.ts';
-import { redactText } from './redact.ts';
+import { redactStructuredInput, redactText } from './redact.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -85,13 +85,17 @@ const MAX_INPUT_LENGTH = 16000;
 // elision marker is not truncation. Only a final string over 16,000 characters
 // is cut, and only that cut sets isInputTruncated.
 function buildToolInput(toolName: string, input: unknown): BuiltInput {
-  let base: string;
+  let text: string;
+  let redactions: readonly RedactionCount[];
   if (toolName === 'Bash' && isRecord(input) && typeof input.command === 'string') {
-    base = input.command;
+    const redacted = redactText(input.command);
+    text = redacted.text;
+    redactions = redacted.redactions;
   } else {
-    base = canonicalJson(elideLongStrings(input === undefined ? null : input));
+    const masked = redactStructuredInput(input === undefined ? null : input);
+    text = canonicalJson(elideLongStrings(masked.value));
+    redactions = masked.redactions;
   }
-  const { text, redactions } = redactText(base);
   const isInputTruncated = text.length > MAX_INPUT_LENGTH;
   const toolInputRedacted = isInputTruncated ? text.slice(0, MAX_INPUT_LENGTH) : text;
   return { toolInputRedacted, isInputTruncated, redactions };

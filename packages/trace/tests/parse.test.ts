@@ -232,7 +232,7 @@ describe('parseTranscript tool input', () => {
     expect(call?.isInputTruncated).toBe(true);
   });
 
-  test('redacts prefix-free credential values in canonical JSON keyed by a secret name', () => {
+  test('masks prefix-free credential values under secret-named keys as key_masked', () => {
     const parsed = parseTranscript({
       sessionExternalId: 's',
       lines: [
@@ -247,8 +247,11 @@ describe('parseTranscript tool input', () => {
     const redacted = parsed.toolCalls[0]?.toolInputRedacted ?? '';
     expect(redacted.includes('hunter2synthetic0001')).toBe(false);
     expect(redacted.includes('randomsynth7654321')).toBe(false);
-    expect(redacted).toContain('__REDACTED_SECRET_ASSIGNMENT__');
-    expect(parsed.redactions).toContainEqual({ kind: 'secret_assignment', count: 2 });
+    expect(JSON.parse(redacted)).toEqual({
+      apiKey: '__REDACTED_KEY_APIKEY__',
+      password: '__REDACTED_KEY_PASSWORD__',
+    });
+    expect(parsed.redactions).toContainEqual({ kind: 'key_masked', count: 2 });
   });
 
   test('redacts a large single-token command in linear time and leaves no credential match', () => {
@@ -271,6 +274,62 @@ describe('parseTranscript tool input', () => {
     expect(call?.toolInputRedacted.length).toBe(16000);
     expect(parsed.redactions).toEqual([]);
     expect(elapsedMs).toBeLessThan(5000);
+  });
+});
+
+describe('parseTranscript structural credential masking', () => {
+  function maskedInput(toolInput: unknown): { redacted: string; parsed: ReturnType<typeof parseTranscript> } {
+    const parsed = parseTranscript({
+      sessionExternalId: 's',
+      lines: [
+        assistantLine({
+          id: 't',
+          name: 'McpTool',
+          toolInput,
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    return { redacted: parsed.toolCalls[0]?.toolInputRedacted ?? '', parsed };
+  }
+
+  test('masks an array value under a credential-named key and stays valid JSON', () => {
+    const { redacted, parsed } = maskedInput({ apiTokens: ['realsecretAAA', 'realsecretBBB'] });
+    expect(redacted.includes('realsecretAAA')).toBe(false);
+    expect(redacted.includes('realsecretBBB')).toBe(false);
+    expect(JSON.parse(redacted)).toEqual({ apiTokens: '__REDACTED_KEY_APITOKENS__' });
+    expect(parsed.redactions).toContainEqual({ kind: 'key_masked', count: 1 });
+  });
+
+  test('masks an object value nested under a credential-named key', () => {
+    const { redacted, parsed } = maskedInput({ auth: { password: 'plainsecretx' } });
+    expect(redacted.includes('plainsecretx')).toBe(false);
+    expect(JSON.parse(redacted)).toEqual({ auth: { password: '__REDACTED_KEY_PASSWORD__' } });
+    expect(parsed.redactions).toContainEqual({ kind: 'key_masked', count: 1 });
+  });
+
+  test('masks a credential-named key three levels deep', () => {
+    const { redacted } = maskedInput({ level1: { level2: { sessionToken: 'buried999' } } });
+    expect(redacted.includes('buried999')).toBe(false);
+    expect(JSON.parse(redacted)).toEqual({
+      level1: { level2: { sessionToken: '__REDACTED_KEY_SESSIONTOKEN__' } },
+    });
+  });
+
+  test('never masks excluded path or command keys, only the sibling credential key', () => {
+    const { redacted } = maskedInput({
+      file_path: '/tmp/synthetic.txt',
+      path: '/tmp',
+      command: 'run --now',
+      apiKey: 'realsecretZZZ',
+    });
+    expect(redacted.includes('realsecretZZZ')).toBe(false);
+    expect(JSON.parse(redacted)).toEqual({
+      apiKey: '__REDACTED_KEY_APIKEY__',
+      command: 'run --now',
+      file_path: '/tmp/synthetic.txt',
+      path: '/tmp',
+    });
   });
 });
 

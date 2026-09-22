@@ -103,3 +103,77 @@ export const redactText: RedactText = (text) => {
     .sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
   return { text: current, redactions };
 };
+
+interface RedactionCount {
+  readonly kind: string;
+  readonly count: number;
+}
+
+const CREDENTIAL_KEY_PARTS: readonly string[] = [
+  'key',
+  'token',
+  'secret',
+  'password',
+  'passwd',
+  'credential',
+  'authorization',
+  'cookie',
+  'private',
+];
+
+const MASK_EXCLUDED_KEYS: ReadonlySet<string> = new Set(['file_path', 'path', 'command']);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isCredentialKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  if (MASK_EXCLUDED_KEYS.has(lower)) {
+    return false;
+  }
+  return CREDENTIAL_KEY_PARTS.some((part) => lower.includes(part));
+}
+
+function redactValue(value: unknown, counts: Map<string, number>): unknown {
+  if (typeof value === 'string') {
+    const { text, redactions } = redactText(value);
+    for (const { kind, count } of redactions) {
+      counts.set(kind, (counts.get(kind) ?? 0) + count);
+    }
+    return text;
+  }
+  if (Array.isArray(value)) {
+    return value.map((child) => redactValue(child, counts));
+  }
+  if (isRecord(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (isCredentialKey(key)) {
+        out[key] = `__REDACTED_KEY_${key.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}__`;
+        counts.set('key_masked', (counts.get('key_masked') ?? 0) + 1);
+      } else {
+        out[key] = redactValue(child, counts);
+      }
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Masks the whole value under any credential-named key and pattern-redacts the
+ * remaining string leaves of a non-Bash tool input tree. The returned value is
+ * still a plain JSON value; counts include `key_masked` for structural masks.
+ */
+export function redactStructuredInput(value: unknown): {
+  readonly value: unknown;
+  readonly redactions: readonly RedactionCount[];
+} {
+  const counts = new Map<string, number>();
+  const redacted = redactValue(value, counts);
+  const redactions = [...counts.entries()]
+    .map(([kind, count]) => ({ kind, count }))
+    .sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
+  return { value: redacted, redactions };
+}
