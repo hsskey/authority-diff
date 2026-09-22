@@ -8,3 +8,4 @@ export { createLogger } from './lib/infra/logger.ts';
 export type { LoggerOptions } from './lib/infra/logger.ts';
 export { createDatabase } from './lib/infra/database.ts';
 export type { Database } from './lib/infra/database.ts';
+export { narrowTransaction } from './lib/infra/transaction.ts';

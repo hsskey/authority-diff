@@ -1,10 +1,10 @@
 # ACR-0004 Platform and server foundation dependencies and single-token auth
 
-Status: accepted (2026-09-22). Approved for exactly the three foundation choices below: a required single-user `AUTHORITY_AUTH_TOKEN` Bearer secret, the `@hono/node-server` 2.1.1 adapter, and an initial Drizzle database handle.
+Status: accepted (2026-09-22). Approved for the foundation choices below: a required single-user `AUTHORITY_AUTH_TOKEN` Bearer secret, the `@hono/node-server` 2.1.1 adapter, an initial Drizzle database handle, a kernel transaction-runner port with its platform implementation, and root migration tooling.
 Procedure: docs/design.md 33.3.
 Scope: docs/cutline.md 6 (MVP architecture, foundational decision changes) and 8 (module changes); docs/design.md 19, 21, 25, 28, 29, 30.
 
-This change introduces the runtime dependencies, environment variable, and platform entry points required to build the `packages/platform` and `apps/server` skeleton. It does not add business tables, business endpoints, a job queue, a token table, probe, or an observability platform.
+This change introduces the runtime dependencies, environment variable, and platform entry points required to build the `packages/platform` and `apps/server` skeleton, plus a transaction abstraction and migration tooling. It does not add business tables, business endpoints, a job queue, a token table, probe, or an observability platform.
 
 ## Context
 
@@ -35,6 +35,19 @@ The platform public entry points are `index.ts` and `testing.ts` (docs/design.md
 ### Integration testing and workspace wiring
 
 The database-connectivity integration test requires a running PostgreSQL, so it is separated into `test:int` and excluded from the CI `pnpm check`, matching the test-only database in docs/cutline.md 6 and the `test:int` split in docs/design.md 33.3. `vitest.config.ts` adds `apps/*/tests` to the unit target and excludes `*.int.test.ts` from it; `vitest.int.config.ts` runs the integration tests. The integration database uses a dedicated compose project name, a dedicated port, and tmpfs so it never collides with another stack's containers or volumes.
+
+### Transaction runner
+
+The kernel gains an opaque `Transaction` brand and a `TransactionRunner` port so that domain code can compose atomic work without importing the database driver (docs/design.md 21.2).
+The platform `Database` provides the implementation over drizzle's `db.transaction`, and platform exports a single narrowing helper that resolves a `Transaction` handle back to the driver transaction for `lib/infra` repositories.
+This record is the approval basis for the kernel change.
+
+### Database migration tooling
+
+`drizzle-kit` 0.31.11 is added as an exact root devDependency with a root `drizzle.config.ts` (dialect `postgresql`, schema glob `packages/*/lib/infra/tables.ts`, output `drizzle/`, credentials from `AUTHORITY_DB_URL`) and root `db:generate` and `db:migrate` scripts.
+The server container runs `db:migrate` before start.
+`drizzle-kit` 0.31.11 exits 1 when the schema glob matches zero files, so a placeholder `packages/platform/lib/infra/tables.ts` is kept to anchor the glob; generation then reports zero tables, exits 0, and writes only the empty `drizzle/meta/_journal.json`, which is committed as a generated artifact and never hand-edited.
+Each future storage-layer change adds its own `packages/<pkg>/lib/infra/tables.ts` and runs `db:generate` to produce its migrations.
 
 ## Alternatives
 

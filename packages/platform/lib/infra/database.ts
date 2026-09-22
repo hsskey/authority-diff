@@ -2,11 +2,13 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { err, ok } from '@authority/kernel';
-import type { AppError, Result } from '@authority/kernel';
+import type { AppError, Result, TransactionRunner } from '@authority/kernel';
 import type { Config } from './config.ts';
+import { createTransactionRunner } from './transaction.ts';
 
 export interface Database {
   readonly db: PostgresJsDatabase;
+  readonly transactionRunner: TransactionRunner;
   readonly ping: () => Promise<Result<true, AppError>>;
   readonly close: () => Promise<void>;
 }
@@ -16,6 +18,7 @@ export function createDatabase(config: Config): Database {
   const db = drizzle(sql);
   return {
     db,
+    transactionRunner: createTransactionRunner(db),
     ping: async (): Promise<Result<true, AppError>> => {
       try {
         await sql`select 1`;

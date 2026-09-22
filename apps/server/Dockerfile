@@ -9,6 +9,8 @@ RUN git init -q
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages ./packages
 COPY apps ./apps
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
 
 RUN pnpm install --frozen-lockfile
 
