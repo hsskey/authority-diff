@@ -503,9 +503,7 @@ function wranglerOps(cmd: NormalizedCommand): OperationDraft[] {
 }
 
 function sedOps(cmd: NormalizedCommand): OperationDraft[] {
-  const inPlace = cmd.args.some(
-    (a) => a.text.startsWith('-i') || a.text.startsWith('--in-place'),
-  );
+  const inPlace = cmd.args.some((a) => a.text.startsWith('-i') || a.text.startsWith('--in-place'));
   return fileOps(cmd, inPlace ? 'write' : 'read', { patternFirst: true, destLast: false });
 }
 

