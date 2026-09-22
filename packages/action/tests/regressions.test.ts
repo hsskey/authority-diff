@@ -318,3 +318,31 @@ describe('git push branch follows an explicit refspec, not the current branch', 
     expect(pushBranchOf('git push origin')).toBe('main');
   });
 });
+
+describe('redirect writes are captured across pipelines and chains', () => {
+  test('a pipe-tail redirect writes its target', () => {
+    const ops = classify(bash("git ls-files -z | tr '\\0' '\\n' > /tmp/x.txt"));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({ kind: 'path', path: '/tmp/x.txt', isInsideWorkspace: false });
+  });
+
+  test('every redirect in a repeated-command chain is captured', () => {
+    const ops = classify(bash('printf a > /tmp/a.txt && printf b > /tmp/b.txt'));
+    const writes = ops.flatMap((o) =>
+      o.capability === 'write' && o.target.kind === 'path' ? [o.target.path] : [],
+    );
+    expect(writes).toContain('/tmp/a.txt');
+    expect(writes).toContain('/tmp/b.txt');
+  });
+
+  test('an unrecognized pipe tail still captures the redirect and stays execute', () => {
+    const ops = classify(bash('frobnicate | unknownprog > /tmp/c.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({ kind: 'path', path: '/tmp/c.txt', isInsideWorkspace: false });
+    expect(withCap(ops, 'execute')?.target.kind).toBe('unknown');
+  });
+
+  test('a pipe-tail redirect to /dev/null stays a no-op', () => {
+    expect(withCap(classify(bash('sort a | uniq > /dev/null')), 'write')).toBeUndefined();
+  });
+});
