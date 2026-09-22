@@ -21,13 +21,6 @@ interface SessionEndHookGroup {
   readonly hooks: readonly HookCommand[];
 }
 
-interface ClaudeSettings {
-  readonly hooks?: {
-    readonly PermissionRequest?: readonly MatcherHookGroup[];
-    readonly SessionEnd?: readonly SessionEndHookGroup[];
-  };
-}
-
 interface HookInstallChange {
   readonly PermissionRequest?: readonly MatcherHookGroup[];
   readonly SessionEnd?: readonly SessionEndHookGroup[];
@@ -37,80 +30,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readHookCommand(value: unknown): HookCommand | null {
-  if (!isRecord(value) || value.type !== 'command') {
-    return null;
+function arrayContainsCommand(value: unknown, command: string): boolean {
+  if (!Array.isArray(value)) {
+    return false;
   }
-  const command = value.command;
-  if (typeof command !== 'string' || command.length === 0) {
-    return null;
-  }
-  return { type: 'command', command };
-}
-
-function readMatcherGroup(value: unknown): MatcherHookGroup | null {
-  if (!isRecord(value) || !Array.isArray(value.hooks)) {
-    return null;
-  }
-  const hooks = value.hooks
-    .map((entry) => readHookCommand(entry))
-    .filter((entry): entry is HookCommand => entry !== null);
-  if (hooks.length === 0) {
-    return null;
-  }
-  const matcher = typeof value.matcher === 'string' ? value.matcher : undefined;
-  return matcher === undefined ? { hooks } : { matcher, hooks };
-}
-
-function readSessionEndGroup(value: unknown): SessionEndHookGroup | null {
-  if (!isRecord(value) || !Array.isArray(value.hooks)) {
-    return null;
-  }
-  const hooks = value.hooks
-    .map((entry) => readHookCommand(entry))
-    .filter((entry): entry is HookCommand => entry !== null);
-  if (hooks.length === 0) {
-    return null;
-  }
-  return { hooks };
-}
-
-function readSettings(raw: string): ClaudeSettings {
-  const parsed: unknown = JSON.parse(raw);
-  if (!isRecord(parsed)) {
-    return {};
-  }
-
-  const hooksValue = parsed.hooks;
-  if (!isRecord(hooksValue)) {
-    return {};
-  }
-
-  const permissionRequest = Array.isArray(hooksValue.PermissionRequest)
-    ? hooksValue.PermissionRequest.map((entry) => readMatcherGroup(entry)).filter(
-        (entry): entry is MatcherHookGroup => entry !== null,
-      )
-    : [];
-
-  const sessionEnd = Array.isArray(hooksValue.SessionEnd)
-    ? hooksValue.SessionEnd.map((entry) => readSessionEndGroup(entry)).filter(
-        (entry): entry is SessionEndHookGroup => entry !== null,
-      )
-    : [];
-
-  return {
-    hooks: {
-      PermissionRequest: permissionRequest,
-      SessionEnd: sessionEnd,
-    },
-  };
-}
-
-function hasHookCommand(
-  groups: readonly { readonly hooks: readonly HookCommand[] }[],
-  command: string,
-): boolean {
-  return groups.some((group) => group.hooks.some((hook) => hook.command === command));
+  return value.some((group) => {
+    if (!isRecord(group) || !Array.isArray(group.hooks)) {
+      return false;
+    }
+    return group.hooks.some((hook) => isRecord(hook) && hook.command === command);
+  });
 }
 
 function permissionRequestEntry(): MatcherHookGroup {
@@ -126,33 +55,37 @@ function sessionEndEntry(): SessionEndHookGroup {
   };
 }
 
-function mergeHooks(settings: ClaudeSettings): {
-  readonly settings: ClaudeSettings;
+function mergeHooks(document: Record<string, unknown>): {
+  readonly document: Record<string, unknown>;
   readonly change: HookInstallChange;
 } {
-  const existingPermissionRequest = settings.hooks?.PermissionRequest ?? [];
-  const existingSessionEnd = settings.hooks?.SessionEnd ?? [];
+  const hooksValue = isRecord(document.hooks) ? document.hooks : {};
+  const existingPermissionRequest = Array.isArray(hooksValue.PermissionRequest)
+    ? hooksValue.PermissionRequest
+    : [];
+  const existingSessionEnd = Array.isArray(hooksValue.SessionEnd) ? hooksValue.SessionEnd : [];
 
   let change: HookInstallChange = {};
-  let nextPermissionRequest = existingPermissionRequest;
-  let nextSessionEnd = existingSessionEnd;
+  let nextPermissionRequest: readonly unknown[] = existingPermissionRequest;
+  let nextSessionEnd: readonly unknown[] = existingSessionEnd;
 
-  if (!hasHookCommand(existingPermissionRequest, PERMISSION_REQUEST_HOOK_COMMAND)) {
+  if (!arrayContainsCommand(hooksValue.PermissionRequest, PERMISSION_REQUEST_HOOK_COMMAND)) {
     const entry = permissionRequestEntry();
     nextPermissionRequest = [...existingPermissionRequest, entry];
     change = { ...change, PermissionRequest: [entry] };
   }
 
-  if (!hasHookCommand(existingSessionEnd, SESSION_END_HOOK_COMMAND)) {
+  if (!arrayContainsCommand(hooksValue.SessionEnd, SESSION_END_HOOK_COMMAND)) {
     const entry = sessionEndEntry();
     nextSessionEnd = [...existingSessionEnd, entry];
     change = { ...change, SessionEnd: [entry] };
   }
 
   return {
-    settings: {
-      ...settings,
+    document: {
+      ...document,
       hooks: {
+        ...hooksValue,
         PermissionRequest: nextPermissionRequest,
         SessionEnd: nextSessionEnd,
       },
@@ -161,11 +94,11 @@ function mergeHooks(settings: ClaudeSettings): {
   };
 }
 
-function loadSettingsFile(): ClaudeSettings {
+function loadDocument(): Record<string, unknown> {
   const path = claudeSettingsPath();
+  let raw: string;
   try {
-    const raw = readFileSync(path, 'utf8');
-    return readSettings(raw);
+    raw = readFileSync(path, 'utf8');
   } catch (error: unknown) {
     if (
       isRecord(error) &&
@@ -176,12 +109,14 @@ function loadSettingsFile(): ClaudeSettings {
     }
     throw error;
   }
+  const parsed: unknown = JSON.parse(raw);
+  return isRecord(parsed) ? parsed : {};
 }
 
-function writeSettingsFile(settings: ClaudeSettings): void {
+function writeSettingsFile(document: Record<string, unknown>): void {
   const path = claudeSettingsPath();
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+  writeFileSync(path, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
 }
 
 function hasChange(change: HookInstallChange): boolean {
@@ -189,7 +124,7 @@ function hasChange(change: HookInstallChange): boolean {
 }
 
 export function runInstallHooks(options: { readonly printOnly: boolean }): void {
-  const current = loadSettingsFile();
+  const current = loadDocument();
   const merged = mergeHooks(current);
 
   if (options.printOnly) {
@@ -200,6 +135,6 @@ export function runInstallHooks(options: { readonly printOnly: boolean }): void 
   }
 
   if (hasChange(merged.change)) {
-    writeSettingsFile(merged.settings);
+    writeSettingsFile(merged.document);
   }
 }

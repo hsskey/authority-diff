@@ -59,6 +59,61 @@ describe('authority install-hooks', () => {
     });
   });
 
+  test('preserves unrelated top-level keys and other hook events', () => {
+    const home = makeTempHome();
+    mkdirSync(join(home, '.claude'), { recursive: true });
+    writeFileSync(
+      settingsPath(home),
+      `${JSON.stringify(
+        {
+          model: 'claude-opus-4-8',
+          env: { EXAMPLE: '1' },
+          permissions: { allow: ['Read'] },
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: 'Bash',
+                hooks: [{ type: 'command', command: 'echo pre' }],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+
+    const result = runAuthority(['install-hooks'], { home });
+    expect(result.status).toBe(0);
+
+    const settings: unknown = JSON.parse(readFileSync(settingsPath(home), 'utf8'));
+    expect(settings).toEqual({
+      model: 'claude-opus-4-8',
+      env: { EXAMPLE: '1' },
+      permissions: { allow: ['Read'] },
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: 'Bash',
+            hooks: [{ type: 'command', command: 'echo pre' }],
+          },
+        ],
+        PermissionRequest: [
+          {
+            matcher: '*',
+            hooks: [{ type: 'command', command: PERMISSION_REQUEST_HOOK_COMMAND }],
+          },
+        ],
+        SessionEnd: [
+          {
+            hooks: [{ type: 'command', command: SESSION_END_HOOK_COMMAND }],
+          },
+        ],
+      },
+    });
+  });
+
   test('--print writes only the intended change and does not modify settings', () => {
     const home = makeTempHome();
     const dryRun = runAuthority(['install-hooks', '--print'], { home });

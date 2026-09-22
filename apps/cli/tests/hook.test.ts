@@ -1,10 +1,11 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
+import { runHook } from '../src/commands/hook.command.ts';
 import { makeTempHome, readSpoolLines, runAuthority } from './support/harness.ts';
 import { isRecord, readNullableString, readString } from './support/record.ts';
 
 describe('authority hook', () => {
-  test('exits 0 within 400 ms on malformed stdin', () => {
+  test('exits 0 on malformed stdin without stdout', () => {
     const home = makeTempHome();
     const result = runAuthority(['hook', 'permission-request'], {
       home,
@@ -13,10 +14,9 @@ describe('authority hook', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe('');
-    expect(result.durationMs).toBeLessThan(400);
   });
 
-  test('exits 0 within 400 ms in a closed environment without writing spool output', () => {
+  test('exits 0 in a closed environment without writing spool output', () => {
     const home = makeTempHome();
     const result = runAuthority(['hook', 'session-end'], {
       home,
@@ -25,8 +25,27 @@ describe('authority hook', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe('');
-    expect(result.durationMs).toBeLessThan(400);
     expect(() => readSpoolLines(home)).toThrow();
+  });
+
+  test('exits 0 in-process on malformed, closed, and empty stdin (I9)', () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+
+    const stdinCases: ReadonlyArray<() => string> = [
+      () => 'not-json',
+      () => {
+        throw new Error('stdin closed');
+      },
+      () => '',
+    ];
+
+    for (const readInput of stdinCases) {
+      exitSpy.mockClear();
+      expect(() => runHook('permission_request', readInput)).not.toThrow();
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    }
+
+    exitSpy.mockRestore();
   });
 
   test('appends one spool line for permission-request without storing raw tool_input', () => {

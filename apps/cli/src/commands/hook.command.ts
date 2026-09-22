@@ -71,13 +71,13 @@ function finish(exitTimer: NodeJS.Timeout): void {
   process.exit(0);
 }
 
-export function runHook(event: HookEvent): void {
+export function runHook(event: HookEvent, readInput: () => string = readStdin): void {
   const exitTimer = setTimeout(() => {
     process.exit(0);
   }, HOOK_EXIT_BUDGET_MS);
 
   try {
-    const raw = readStdin();
+    const raw = readInput();
     if (raw.trim().length === 0) {
       finish(exitTimer);
       return;
