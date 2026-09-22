@@ -1,3 +1,4 @@
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import type { AppEnv, ServerDeps } from './env.ts';
 import { internalUnexpected, respondError } from './errors.ts';
@@ -23,6 +24,8 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
   registerHealthRoutes(app, deps.db);
 
   app.use('/api/v1/*', createAuthMiddleware(deps.config));
+
+  app.get('*', serveStatic({ root: '../web/dist' }));
 
   return app;
 }
