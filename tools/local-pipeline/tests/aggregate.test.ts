@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { IsoTimestampSchema } from '@authority/kernel';
 import type { Analyzability, Capability, Operation, Target } from '@authority/action/schema';
-import type { ActionForReplay, ObservedOutcome, ParsedSession } from '@authority/trace/schema';
+import type {
+  ActionForReplay,
+  ObservedOutcome,
+  ParsedSession,
+  ParsedToolCall,
+} from '@authority/trace/schema';
 import { computeMetrics, type ActionMeta } from '../lib/aggregate.ts';
 import { selectSamples } from '../lib/report.ts';
 
@@ -100,7 +105,29 @@ const metrics = computeMetrics({
   duplicateCount: 2,
   meta,
   classifyMs: 1000,
+  readFailureFiles: 4,
+  toolUseWithoutTimestamp: 7,
 });
+
+function toolCall(
+  toolName: string,
+  inputLength: number,
+  isInputTruncated: boolean,
+): ParsedToolCall {
+  return {
+    toolUseId: null,
+    toolName,
+    toolInputRedacted: 'x'.repeat(inputLength),
+    isInputTruncated,
+    workspaceRoot: null,
+    gitBranch: null,
+    repoRemotes: null,
+    sequence: 0,
+    isSidechain: false,
+    observedOutcome: 'executed',
+    occurredAt: IsoTimestampSchema.parse('2026-01-02T03:04:05.000Z'),
+  };
+}
 
 describe('computeMetrics', () => {
   test('counts sessions, actions, evaluation split, and duplicates', () => {
@@ -147,6 +174,57 @@ describe('computeMetrics', () => {
       { key: 'token', count: 3 },
       { key: 'email', count: 1 },
     ]);
+  });
+
+  test('counts observed outcomes, operations by capability and target kind', () => {
+    expect(metrics.observedOutcomes).toEqual({
+      executed: 5,
+      rejected_by_human: 1,
+      blocked_by_runtime: 0,
+      unknown: 0,
+    });
+    expect(metrics.operationsByCapability).toEqual([
+      { key: 'execute', count: 4 },
+      { key: 'read', count: 1 },
+      { key: 'write', count: 1 },
+    ]);
+    expect(metrics.operationsByTargetKind).toEqual([
+      { key: 'unknown', count: 3 },
+      { key: 'path', count: 2 },
+      { key: 'mcp', count: 1 },
+    ]);
+  });
+
+  test('passes through raw-scan counts and defaults empty bash lengths to zero', () => {
+    expect(metrics.readFailureFiles).toBe(4);
+    expect(metrics.toolUseWithoutTimestamp).toBe(7);
+    expect(metrics.inputTruncatedCount).toBe(0);
+    expect(metrics.bashInputLengthMedian).toBe(0);
+    expect(metrics.bashInputLengthP90).toBe(0);
+  });
+
+  test('derives bash input length percentiles and input_truncated count from tool calls', () => {
+    const withCalls: ParsedSession = {
+      ...session(),
+      toolCalls: [
+        toolCall('Bash', 10, false),
+        toolCall('Bash', 20, false),
+        toolCall('Bash', 30, true),
+        toolCall('Read', 999, false),
+      ],
+    };
+    const m = computeMetrics({
+      sessions: [withCalls],
+      actions,
+      duplicateCount: 0,
+      meta,
+      classifyMs: 1000,
+      readFailureFiles: 0,
+      toolUseWithoutTimestamp: 0,
+    });
+    expect(m.bashInputLengthMedian).toBe(20);
+    expect(m.bashInputLengthP90).toBe(30);
+    expect(m.inputTruncatedCount).toBe(1);
   });
 
   test('computes ratios and throughput from the counts', () => {

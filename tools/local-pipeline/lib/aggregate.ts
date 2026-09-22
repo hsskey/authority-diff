@@ -13,6 +13,15 @@ export interface MeasureInput {
   readonly duplicateCount: number;
   readonly meta: ReadonlyMap<string, ActionMeta>;
   readonly classifyMs: number;
+  readonly readFailureFiles: number;
+  readonly toolUseWithoutTimestamp: number;
+}
+
+export interface ObservedOutcomeCounts {
+  readonly executed: number;
+  readonly rejected_by_human: number;
+  readonly blocked_by_runtime: number;
+  readonly unknown: number;
 }
 
 export interface Count {
@@ -54,6 +63,14 @@ export interface Metrics {
   readonly unparsedLineRatio: number;
   readonly redactionsByKind: readonly Count[];
   readonly humanRejectedActions: number;
+  readonly observedOutcomes: ObservedOutcomeCounts;
+  readonly operationsByCapability: readonly Count[];
+  readonly operationsByTargetKind: readonly Count[];
+  readonly bashInputLengthMedian: number;
+  readonly bashInputLengthP90: number;
+  readonly inputTruncatedCount: number;
+  readonly toolUseWithoutTimestamp: number;
+  readonly readFailureFiles: number;
   readonly mcpServers: readonly Count[];
   readonly classifyActionsPerSecond: number;
   readonly topNoneSignals: readonly Count[];
@@ -64,6 +81,17 @@ const INLINE_SIGNALS: ReadonlySet<string> = new Set(['inline_code', 'heredoc']);
 
 function ratio(part: number, whole: number): number {
   return whole === 0 ? 0 : part / whole;
+}
+
+// Nearest-rank percentile over a copy sorted ascending; 0 when empty.
+function percentile(values: readonly number[], fraction: number): number {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const rank = Math.ceil(fraction * sorted.length);
+  const index = Math.min(sorted.length - 1, Math.max(0, rank - 1));
+  return sorted[index] ?? 0;
 }
 
 function topCounts(counts: ReadonlyMap<string, number>, limit: number): Count[] {
@@ -107,6 +135,14 @@ export function computeMetrics(input: MeasureInput): Metrics {
   const programs = new Map<string, number>();
   const mcpServers = new Map<string, number>();
   const noneSignals = new Map<string, number>();
+  const operationsByCapability = new Map<string, number>();
+  const operationsByTargetKind = new Map<string, number>();
+  const observedOutcomes: Record<string, number> = {
+    executed: 0,
+    rejected_by_human: 0,
+    blocked_by_runtime: 0,
+    unknown: 0,
+  };
   const operationAnalyzability: Analyzability[] = [];
   const actionAnalyzabilityValues: Analyzability[] = [];
   const bashActionAnalyzability: Analyzability[] = [];
@@ -132,6 +168,7 @@ export function computeMetrics(input: MeasureInput): Metrics {
     if (action.observedOutcome === 'rejected_by_human') {
       humanRejectedActions++;
     }
+    observedOutcomes[action.observedOutcome] = (observedOutcomes[action.observedOutcome] ?? 0) + 1;
     if (action.operations.length === 0) {
       increment(excludedByTool, tool);
       continue;
@@ -146,6 +183,8 @@ export function computeMetrics(input: MeasureInput): Metrics {
     }
     for (const operation of action.operations) {
       operationAnalyzability.push(operation.analyzability);
+      increment(operationsByCapability, operation.capability);
+      increment(operationsByTargetKind, operation.target.kind);
       if (operation.program !== null) {
         increment(programs, operation.program);
       }
@@ -176,6 +215,19 @@ export function computeMetrics(input: MeasureInput): Metrics {
   const totalLines = sessions.reduce((sum, session) => sum + session.totalLineCount, 0);
   const totalOperations = operationAnalyzability.length;
 
+  const bashInputLengths: number[] = [];
+  let inputTruncatedCount = 0;
+  for (const session of sessions) {
+    for (const toolCall of session.toolCalls) {
+      if (toolCall.toolName === 'Bash') {
+        bashInputLengths.push(toolCall.toolInputRedacted.length);
+      }
+      if (toolCall.isInputTruncated) {
+        inputTruncatedCount++;
+      }
+    }
+  }
+
   return {
     sessions: sessions.length,
     toolCallsBeforeDedup,
@@ -204,6 +256,19 @@ export function computeMetrics(input: MeasureInput): Metrics {
     unparsedLineRatio: ratio(unparsedLines, totalLines),
     redactionsByKind: topCounts(redactions, redactions.size),
     humanRejectedActions,
+    observedOutcomes: {
+      executed: observedOutcomes.executed ?? 0,
+      rejected_by_human: observedOutcomes.rejected_by_human ?? 0,
+      blocked_by_runtime: observedOutcomes.blocked_by_runtime ?? 0,
+      unknown: observedOutcomes.unknown ?? 0,
+    },
+    operationsByCapability: topCounts(operationsByCapability, operationsByCapability.size),
+    operationsByTargetKind: topCounts(operationsByTargetKind, operationsByTargetKind.size),
+    bashInputLengthMedian: percentile(bashInputLengths, 0.5),
+    bashInputLengthP90: percentile(bashInputLengths, 0.9),
+    inputTruncatedCount,
+    toolUseWithoutTimestamp: input.toolUseWithoutTimestamp,
+    readFailureFiles: input.readFailureFiles,
     mcpServers: topCounts(mcpServers, mcpServers.size),
     classifyActionsPerSecond:
       input.classifyMs === 0 ? 0 : (actions.length * 1000) / input.classifyMs,

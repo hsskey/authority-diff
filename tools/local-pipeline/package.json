@@ -9,6 +9,8 @@
   "dependencies": {
     "@authority/action": "workspace:*",
     "@authority/kernel": "workspace:*",
+    "@authority/policy": "workspace:*",
+    "@authority/replay": "workspace:*",
     "@authority/trace": "workspace:*"
   }
 }
