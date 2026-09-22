@@ -62,6 +62,7 @@ const FILE_READERS: ReadonlySet<string> = new Set([
   'md5sum',
   'sha256sum',
   'sha1sum',
+  'shasum',
   'cksum',
 ]);
 /** Readers that take no path (or only manipulate strings): read the cwd. */
@@ -107,6 +108,12 @@ const NO_FILE_READERS: ReadonlySet<string> = new Set([
   'dirname',
   'basename',
   'env',
+  'pgrep',
+  'sysctl',
+  'read',
+  'break',
+  'continue',
+  'exit',
 ]);
 /** POSIX shells invoked without `-c`: opaque execution of stdin or a script. */
 const SHELLS: ReadonlySet<string> = new Set(['bash', 'sh', 'dash', 'zsh', 'ksh']);
@@ -208,7 +215,22 @@ const BUILD_RUNNERS: ReadonlySet<string> = new Set([
   'bazel',
   'rake',
   'sbt',
+  'corepack',
+  'nvm',
+  'volta',
 ]);
+/** Programs that take inner code or a command and cannot be re-parsed here. */
+const OPAQUE_EXEC: ReadonlySet<string> = new Set([
+  'tmux',
+  'screen',
+  'sqlite3',
+  'psql',
+  'mysql',
+  'claude',
+  'eval',
+]);
+/** Process-signalling programs: affect a running process, not the filesystem. */
+const PROCESS_SIGNALLERS: ReadonlySet<string> = new Set(['kill', 'pkill', 'killall']);
 const PKG_MANAGERS: ReadonlySet<string> = new Set(['pnpm', 'npm', 'yarn', 'bun']);
 const PKG_EXEC: ReadonlySet<string> = new Set(['npx', 'pnpx', 'bunx', 'pnpm-exec']);
 const INSTALL_SUBS: ReadonlySet<string> = new Set([
@@ -271,6 +293,10 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (p === 'source' || p === '.') return [runnerDraft('execute', cmd, 'partial')];
   if (SHELLS.has(p))
     return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['inline_code'])];
+  if (OPAQUE_EXEC.has(p))
+    return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['inline_code'])];
+  if (PROCESS_SIGNALLERS.has(p)) return [runnerDraft('execute', cmd, 'partial')];
+  if (p === 'mktemp') return [runnerDraft('write', cmd, 'partial')];
   if (p === 'sed') return sedOps(cmd);
   if (NO_FILE_READERS.has(p)) return [runnerDraft('read', cmd, 'full')];
   if (WRITERS.has(p))
