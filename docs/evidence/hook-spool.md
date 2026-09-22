@@ -1,7 +1,7 @@
 # Hook spool known limitations (V3 observation)
 
 이 문서는 `authority hook`과 `authority install-hooks`의 pre-bundle 동작에서 알려진 한계를 기록한다.
-판정이나 server 전송은 범위 밖이고, 관측 data가 쌓이기만 한다.
+판정은 범위 밖이고, 관측 data는 `authority spool-flush`로 server에 전송된다.
 
 ## tsx startup
 

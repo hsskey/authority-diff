@@ -8,6 +8,9 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'auth.token_invalid': 401,
   'auth.role_forbidden': 403,
   'validation.invalid_request': 422,
+  'trace.redaction_missing': 422,
+  'trace.batch_too_large': 413,
+  'trace.action_not_found': 404,
   'platform.database_unavailable': 503,
   'internal.unexpected': 500,
 };
@@ -50,6 +53,36 @@ export function authTokenInvalid(): AppError {
   return {
     code: 'auth.token_invalid',
     message: 'the bearer token is invalid',
+    isRetryable: false,
+    details: null,
+    cause: null,
+  };
+}
+
+export function validationInvalidRequest(details: Record<string, unknown> | null): AppError {
+  return {
+    code: 'validation.invalid_request',
+    message: 'the request body is invalid',
+    isRetryable: false,
+    details,
+    cause: null,
+  };
+}
+
+export function traceBatchTooLarge(): AppError {
+  return {
+    code: 'trace.batch_too_large',
+    message: 'the import exceeds the maximum tool call count',
+    isRetryable: false,
+    details: null,
+    cause: null,
+  };
+}
+
+export function traceActionNotFound(): AppError {
+  return {
+    code: 'trace.action_not_found',
+    message: 'no Action exists for the given action key',
     isRetryable: false,
     details: null,
     cause: null,

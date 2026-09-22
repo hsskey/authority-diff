@@ -1,5 +1,5 @@
 import type { AppError, IdGenerator, Logger, Result } from '@authority/kernel';
-import type { Config } from '@authority/platform';
+import type { Config, Database } from '@authority/platform';
 
 export interface AppEnv {
   readonly Variables: { requestId: string };
@@ -13,5 +13,5 @@ export interface ServerDeps {
   readonly config: Config;
   readonly logger: Logger;
   readonly idGenerator: IdGenerator;
-  readonly db: ReadinessProbe;
+  readonly db: Database;
 }

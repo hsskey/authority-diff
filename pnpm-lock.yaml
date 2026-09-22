@@ -207,18 +207,30 @@ importers:
 
   apps/cli:
     dependencies:
+      '@authority/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@authority/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@authority/trace':
+        specifier: workspace:*
+        version: link:../../packages/trace
 
   apps/server:
     dependencies:
+      '@authority/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@authority/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
       '@authority/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@authority/trace':
+        specifier: workspace:*
+        version: link:../../packages/trace
       '@hono/node-server':
         specifier: 2.1.1
         version: 2.1.1(hono@4.13.8)
@@ -405,6 +417,12 @@ importers:
       '@authority/kernel':
         specifier: workspace:*
         version: link:../kernel
+      '@authority/platform':
+        specifier: workspace:*
+        version: link:../platform
+      drizzle-orm:
+        specifier: 0.45.3
+        version: 0.45.3(postgres@3.4.9)
       zod:
         specifier: ^4.6.5
         version: 4.6.5

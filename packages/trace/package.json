@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./index.ts",
     "./schema": "./schema.ts",
-    "./client": "./client.ts"
+    "./client": "./client.ts",
+    "./testing": "./testing.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -13,6 +15,8 @@
   "dependencies": {
     "@authority/action": "workspace:*",
     "@authority/kernel": "workspace:*",
+    "@authority/platform": "workspace:*",
+    "drizzle-orm": "0.45.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
