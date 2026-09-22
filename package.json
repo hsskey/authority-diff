@@ -18,6 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev:measure": "tsx tools/local-pipeline/measure.ts",
+    "authority": "tsx apps/cli/src/main.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:boundaries && pnpm lint:prove && pnpm test"
   },
   "devDependencies": {
