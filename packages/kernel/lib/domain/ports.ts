@@ -14,3 +14,11 @@ export interface Logger {
   warn(msg: string, fields?: Record<string, unknown>): void;
   error(msg: string, fields?: Record<string, unknown>): void;
 }
+
+export interface Transaction {
+  readonly __brand: 'authority.transaction';
+}
+
+export interface TransactionRunner {
+  run<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
+}

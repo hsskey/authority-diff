@@ -9,4 +9,10 @@ export {
 export type { Effect, IsoTimestamp } from './lib/domain/schemas.ts';
 export { invariant, assertNever } from './lib/domain/errors.ts';
 export type { AppError } from './lib/domain/errors.ts';
-export type { Clock, IdGenerator, Logger } from './lib/domain/ports.ts';
+export type {
+  Clock,
+  IdGenerator,
+  Logger,
+  Transaction,
+  TransactionRunner,
+} from './lib/domain/ports.ts';

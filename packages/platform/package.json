@@ -1,0 +1,20 @@
+{
+  "name": "@authority/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./testing": "./testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@authority/kernel": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pino": "10.3.1",
+    "postgres": "3.4.9",
+    "zod": "^4.6.5"
+  }
+}

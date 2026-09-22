@@ -2,5 +2,5 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
   "proseWrap": "preserve",
-  "ignorePatterns": ["**/*.md", "docs/**", "pnpm-lock.yaml"]
+  "ignorePatterns": ["**/*.md", "docs/**", "pnpm-lock.yaml", "drizzle/**"]
 }

@@ -18,3 +18,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm lint:boundaries:prove
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the stack and wait for readiness
+        run: docker compose up -d --build --wait
+      - name: Probe the readiness endpoint
+        run: |
+          code=$(curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8787/readyz)
+          test "$code" = "200"
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

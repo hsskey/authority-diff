@@ -12,6 +12,9 @@ allowBuilds:
 # dependency-cruiser resolves types through the TypeScript compiler API and does
 # not support TypeScript 7; give it TypeScript 6.0.3 while the root stays on the
 # exact latest 7.x. See docs/acr/0002-typescript7-oxlint-toolchain.md.
+minimumReleaseAgeExclude:
+  - drizzle-orm@0.45.3
+  - drizzle-kit@0.31.11
 packageExtensions:
   dependency-cruiser:
     dependencies:
