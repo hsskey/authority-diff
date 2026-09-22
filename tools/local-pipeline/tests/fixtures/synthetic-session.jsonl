@@ -1,0 +1,2 @@
+{"type":"summary","summary":"synthetic non-tool line","timestamp":"2026-01-02T03:04:05.000Z"}
+{"type":"assistant","timestamp":"2026-01-02T03:04:05.101Z","cwd":"/Users/synth/proj","gitBranch":"feature/synthetic","version":"9.9.9-synthetic","isSidechain":false}
