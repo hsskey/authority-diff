@@ -21,7 +21,7 @@ const RULE_EXAMPLES: ReadonlyArray<readonly [string, Operation, Effect]> = [
   ],
   [
     'ask_agent_config_change',
-    makeOperation({ capability: 'write', target: pathTarget('.claude/settings.json', true) }),
+    makeOperation({ capability: 'write', target: pathTarget('~/.claude/settings.json', false) }),
     'ask',
   ],
   [
@@ -124,6 +124,46 @@ describe('evaluateAction', () => {
     ]);
     expect(decision?.operations[0]?.decidingRuleId).toBe('ask_irreversible_local');
     expect(decision?.effect).toBe('ask');
+  });
+});
+
+describe('default template environment resolution', () => {
+  test('an agent config path under any directory resolves to agent_config and asks', () => {
+    const decision = evaluateAction(
+      [
+        makeOperation({
+          capability: 'write',
+          target: pathTarget('~/proj/.claude/settings.json', true),
+        }),
+      ],
+      DEFAULT_POLICY_DOCUMENT,
+    );
+    expect(decision?.operations[0]?.zone).toBe('agent_config');
+    expect(decision?.operations[0]?.effect).toBe('ask');
+  });
+
+  test('an .mcp.json under any directory resolves to agent_config and asks', () => {
+    const decision = evaluateAction(
+      [makeOperation({ capability: 'write', target: pathTarget('~/proj/.mcp.json', true) })],
+      DEFAULT_POLICY_DOCUMENT,
+    );
+    expect(decision?.operations[0]?.zone).toBe('agent_config');
+    expect(decision?.operations[0]?.effect).toBe('ask');
+  });
+
+  test('installing from the npm registry resolves to trusted_remote and is allowed', () => {
+    const decision = evaluateAction(
+      [
+        makeOperation({
+          capability: 'install',
+          target: { kind: 'package', ecosystem: 'npm', source: 'registry.npmjs.org' },
+        }),
+      ],
+      DEFAULT_POLICY_DOCUMENT,
+    );
+    expect(decision?.operations[0]?.zone).toBe('trusted_remote');
+    expect(decision?.operations[0]?.effect).toBe('allow');
+    expect(decision?.operations[0]?.matchedRuleIds).toContain('allow_trusted_fetch');
   });
 });
 

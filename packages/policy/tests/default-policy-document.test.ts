@@ -29,7 +29,7 @@ describe('DEFAULT_POLICY_DOCUMENT', () => {
   test('populates every Environment Profile list', () => {
     const { environment } = DEFAULT_POLICY_DOCUMENT;
     expect(environment.credentialPaths.length).toBeGreaterThan(0);
-    expect(environment.agentConfigPaths).toContain('.claude/**');
+    expect(environment.agentConfigPaths).toContain('~/.claude/**');
     expect(environment.trustedRemotes.length).toBeGreaterThan(0);
     expect(environment.publicRemotes.length).toBeGreaterThan(0);
     expect(environment.protectedBranches).toContain('main');

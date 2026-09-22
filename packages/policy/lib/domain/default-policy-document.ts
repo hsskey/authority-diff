@@ -3,10 +3,11 @@ import type { PolicyDocument } from '../../schema.ts';
 // The default Policy template. Source of truth: docs/design.md Appendix A, with
 // the Mandate Exception concept removed for schemaVersion 1 (ADR-0009). The
 // Environment Profile is populated with generic, editable defaults so the
-// template is functional out of the box: the agent_config paths are the ones
-// named in design 13.3, and the remaining lists use widely recognized public
-// locations. No real or private Environment Profile is embedded; an organization
-// replaces these with its own facts.
+// template is functional out of the box. No real or private Environment Profile
+// is embedded; an organization replaces these with its own facts.
+//
+// Path patterns follow the absolute-path Target contract; the relative notation
+// in design 13.3 is a pending docs fix.
 
 export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
   schemaVersion: 1,
@@ -20,18 +21,16 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
       '**/.env.*',
       '**/*.pem',
     ],
-    agentConfigPaths: ['.claude/**', '~/.claude/**', '.codex/**', '.mcp.json'],
-    trustedRemotes: ['*.internal', '*.internal/**'],
-    publicRemotes: [
-      'github.com',
-      'github.com/**',
-      'gitlab.com',
-      'gitlab.com/**',
+    agentConfigPaths: ['~/.claude/**', '**/.claude/**', '**/.codex/**', '**/.mcp.json'],
+    trustedRemotes: [
+      '*.internal',
+      '*.internal/**',
       'registry.npmjs.org',
       'registry.npmjs.org/**',
       'pypi.org',
       'pypi.org/**',
     ],
+    publicRemotes: ['github.com', 'github.com/**', 'gitlab.com', 'gitlab.com/**'],
     protectedBranches: ['main', 'master', 'release/**', 'production'],
     productionMarkers: ['\\bproduction\\b', '\\bprod\\b'],
   },
