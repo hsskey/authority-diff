@@ -11,6 +11,7 @@ import { registerHealthRoutes } from './routes/health.ts';
 import { registerActionsRoutes } from './routes/actions.routes.ts';
 import { registerRuntimeObservationsRoutes } from './routes/runtime-observations.routes.ts';
 import { registerTraceImportsRoutes } from './routes/trace-imports.routes.ts';
+import { registerReplayModule } from '../modules/replay.wiring.ts';
 
 export function createApp(deps: ServerDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -38,6 +39,13 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
   registerTraceImportsRoutes(app, trace);
   registerRuntimeObservationsRoutes(app, trace);
   registerActionsRoutes(app, trace);
+
+  registerReplayModule(app, {
+    trace,
+    database: deps.db,
+    clock: createSystemClock(),
+    idGenerator: deps.idGenerator,
+  });
 
   app.get('*', serveStatic({ root: '../web/dist' }));
 

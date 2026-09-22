@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./index.ts",
     "./schema": "./schema.ts",
     "./diff": "./diff.ts"
   },
@@ -13,8 +14,10 @@
   "dependencies": {
     "@authority/action": "workspace:*",
     "@authority/kernel": "workspace:*",
+    "@authority/platform": "workspace:*",
     "@authority/policy": "workspace:*",
     "@authority/trace": "workspace:*",
+    "drizzle-orm": "0.45.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
