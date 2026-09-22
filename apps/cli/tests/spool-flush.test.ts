@@ -1,11 +1,11 @@
 import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { runSpoolFlush } from '../src/commands/spool-flush.command.ts';
 import { makeTempHome } from './support/harness.ts';
 import { isRecord, readNullableString } from './support/record.ts';
+import { restoreEnv, setEnv, snapshotEnv } from './support/env.config.ts';
 
 // A synthetic spool line in exactly the shape the hook writer appends.
 function observationLine(sessionId: string): string {
@@ -62,7 +62,11 @@ async function startStubServer(): Promise<StubServer> {
     });
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as AddressInfo;
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error('stub server did not bind a TCP port');
+  }
+  const { port } = address;
   return {
     url: `http://127.0.0.1:${port}`,
     receivedSessionIds: () => [...received],
@@ -75,7 +79,7 @@ async function startStubServer(): Promise<StubServer> {
 
 describe('authority spool-flush fail-open', () => {
   let stub: StubServer;
-  const savedEnv = { ...process.env };
+  const savedEnv = snapshotEnv();
 
   beforeEach(async () => {
     stub = await startStubServer();
@@ -84,7 +88,7 @@ describe('authority spool-flush fail-open', () => {
 
   afterEach(async () => {
     await stub.close();
-    process.env = { ...savedEnv };
+    restoreEnv(savedEnv);
     process.exitCode = undefined;
     vi.restoreAllMocks();
   });
@@ -117,9 +121,11 @@ describe('authority spool-flush fail-open', () => {
     mkdirSync(join(directory, 'c-baddir.jsonl')); // readFileSync -> EISDIR
     writeFileSync(join(directory, 'd-good.jsonl'), `${observationLine('sess-d')}\n`);
 
-    process.env.HOME = home;
-    process.env.AUTHORITY_CLI_TOKEN = 'test-token';
-    process.env.AUTHORITY_CLI_SERVER_URL = stub.url;
+    setEnv({
+      HOME: home,
+      AUTHORITY_CLI_TOKEN: 'test-token',
+      AUTHORITY_CLI_SERVER_URL: stub.url,
+    });
 
     const stdout: string[] = [];
     vi.spyOn(console, 'log').mockImplementation((line: string) => {
