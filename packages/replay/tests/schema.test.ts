@@ -5,6 +5,9 @@ import { ActionForReplaySchema, type ActionForReplay } from '@authority/trace/sc
 import { PolicyDocumentSchema, type PolicyDocument } from '@authority/policy/schema';
 import {
   DiffResultSchema,
+  ReplayRunSchema,
+  StoredChangedActionSchema,
+  StoredDiffGroupSchema,
   type ComputeDiff,
   type DeriveTargetKey,
   type DiffResult,
@@ -111,5 +114,48 @@ describe('replay schema', () => {
         readonly candidate: PolicyDocument;
       }) => DiffResult
     >();
+  });
+});
+
+const ULID = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const HASH = 'a'.repeat(64);
+const TS = '2026-01-02T03:04:05.006Z';
+
+describe('replay storage schema round-trip', () => {
+  test('accepts a completed Replay Run', () => {
+    const value = {
+      id: `rpl_${ULID}`,
+      baselineVersionId: `pver_${ULID}`,
+      candidateVersionId: `pver_${ULID}`,
+      windowFrom: TS,
+      windowTo: TS,
+      status: 'completed',
+      classifierVersion: 'c1',
+      inputsHash: HASH,
+      resultHash: HASH,
+      stats: validDiffResult.stats,
+      errorCode: null,
+      createdAt: TS,
+      startedAt: TS,
+      completedAt: TS,
+    };
+    expect(ReplayRunSchema.parse(value)).toEqual(value);
+  });
+
+  test('accepts a stored Diff Group and changed Action tied to a run', () => {
+    const storedGroup = {
+      ...validDiffResult.groups[0],
+      replayRunId: `rpl_${ULID}`,
+    };
+    expect(StoredDiffGroupSchema.parse(storedGroup)).toEqual(storedGroup);
+
+    const changed = {
+      replayRunId: `rpl_${ULID}`,
+      actionKey: HASH,
+      groupKey: validDiffResult.groups[0]?.groupKey,
+      fromEffect: 'ask',
+      toEffect: 'allow',
+    };
+    expect(StoredChangedActionSchema.parse(changed)).toEqual(changed);
   });
 });
