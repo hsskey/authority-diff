@@ -30,6 +30,7 @@ function buildRecord(
 ): SpoolRecord | null {
   const sessionId = readString(input, 'session_id');
   const cwd = readString(input, 'cwd');
+  const toolUseId = readString(input, 'tool_use_id');
   if (sessionId === null || cwd === null) {
     return null;
   }
@@ -46,6 +47,7 @@ function buildRecord(
       sessionId,
       toolName,
       toolInputHash,
+      toolUseId,
       cwd,
       runtimeVersion: runtimeVersion(),
     };
@@ -57,6 +59,7 @@ function buildRecord(
     sessionId,
     toolName: null,
     toolInputHash: null,
+    toolUseId,
     cwd,
     runtimeVersion: runtimeVersion(),
   };

@@ -6,6 +6,7 @@ export interface SpoolRecord {
   readonly sessionId: string;
   readonly toolName: string | null;
   readonly toolInputHash: string | null;
+  readonly toolUseId: string | null;
   readonly cwd: string;
   readonly runtimeVersion: string | null;
 }
