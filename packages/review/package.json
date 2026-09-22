@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./index.ts",
     "./schema": "./schema.ts"
   },
   "scripts": {
@@ -11,8 +12,10 @@
   },
   "dependencies": {
     "@authority/kernel": "workspace:*",
+    "@authority/platform": "workspace:*",
     "@authority/policy": "workspace:*",
     "@authority/replay": "workspace:*",
+    "drizzle-orm": "0.45.3",
     "zod": "^4.6.5"
   }
 }
