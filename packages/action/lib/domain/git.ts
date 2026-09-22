@@ -43,7 +43,6 @@ const READ_SUBS: ReadonlySet<string> = new Set([
   'hash-object',
   'show-ref',
   'merge-tree',
-  'format-patch',
   'archive',
 ]);
 const COMMIT_SUBS: ReadonlySet<string> = new Set([
@@ -64,6 +63,7 @@ const COMMIT_SUBS: ReadonlySet<string> = new Set([
   'init',
   'commit-tree',
   'update-ref',
+  'format-patch',
 ]);
 const FETCH_SUBS: ReadonlySet<string> = new Set(['clone', 'fetch', 'pull', 'ls-remote']);
 const FORCE_FLAGS: readonly string[] = [

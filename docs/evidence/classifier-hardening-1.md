@@ -88,9 +88,11 @@ and adversarial corpus entries cover the dangerous forms (`tmux send-keys`,
 ## Step 2: git subcommands added
 
 - Read: `merge-base`, `check-ignore`, `check-attr`, `ls-tree`, `hash-object`,
-  `show-ref`, `merge-tree`, `format-patch`, `archive`.
+  `show-ref`, `merge-tree`, `archive`.
 - Fetch (contacts a remote): `ls-remote`.
-- Commit (local repository state): `init`, `commit-tree`, `update-ref`.
+- Commit (local repository state or working-tree files): `init`, `commit-tree`,
+  `update-ref`, `format-patch`. `format-patch` writes `NNNN-*.patch` files to the
+  working directory by default, so it is not a `read`.
 
 An unknown git subcommand still classifies `execute`/`none` with signal
 `git_subcommand_unknown`, never `read`.
