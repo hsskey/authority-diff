@@ -89,7 +89,7 @@ describe('capability rule table', () => {
     // send
     ['curl -d @body.json https://api.example.com/x', 'send', 'host'],
     ['curl -X POST https://api.example.com/x', 'send', 'host'],
-    ['scp file.txt user@host.example.com:/tmp/', 'send', 'unknown'],
+    ['scp file.txt user@host.example.com:/tmp/', 'send', 'host'],
     // commit
     ['git add .', 'commit', 'path'],
     ['git commit -m msg', 'commit', 'path'],
@@ -98,8 +98,8 @@ describe('capability rule table', () => {
     ['git tag v1.0.0', 'commit', 'path'],
     // push
     ['git push origin main', 'push', 'vcs_remote'],
-    ['docker push registry.example.com/app:1', 'push', 'path'],
-    ['npm publish', 'push', 'path'],
+    ['docker push registry.example.com/app:1', 'push', 'host'],
+    ['npm publish', 'push', 'package'],
     // rewrite
     ['git push --force origin main', 'rewrite', 'vcs_remote'],
     ['git push -f origin main', 'rewrite', 'vcs_remote'],
@@ -152,7 +152,7 @@ describe('analyzability', () => {
       kind: 'vcs_remote',
       remoteName: null,
       remoteKey: null,
-      branch: 'main',
+      branch: null,
     });
     expect(op?.signals).toContain('remote_unparsed');
   });

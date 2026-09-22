@@ -13,7 +13,14 @@ import type { ShellWord } from '../shell/ast.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
 import { scanInline } from './inline.ts';
-import { hostTarget, pathTarget, resolvePath, unknownTarget } from './targets.ts';
+import {
+  hostTarget,
+  normalizeRemote,
+  parseHost,
+  pathTarget,
+  resolvePath,
+  unknownTarget,
+} from './targets.ts';
 
 type Ecosystem = 'npm' | 'pypi' | 'cargo' | 'go' | 'system' | 'other';
 
@@ -309,7 +316,7 @@ function inlineCodeOps(cmd: NormalizedCommand, body: string): OperationDraft[] {
 function pkgManagerOps(cmd: NormalizedCommand): OperationDraft[] {
   const positional = nonFlagArgs(cmd.args);
   const sub = positional[0]?.text ?? '';
-  if (sub === 'publish') return [runnerDraft('push', cmd, 'partial')];
+  if (sub === 'publish') return [publishDraft(cmd, 'npm')];
   if (sub === 'dlx' || sub === 'create') return pkgExecOps(cmd);
   if (INSTALL_SUBS.has(sub)) {
     const pkg = positional[1];
@@ -333,7 +340,7 @@ function cargoGoOps(cmd: NormalizedCommand): OperationDraft[] {
   const sub = nonFlagArgs(cmd.args)[0]?.text ?? '';
   if (sub === 'install')
     return [installDraft(cmd, cmd.program === 'go' ? 'go' : 'cargo', nonFlagArgs(cmd.args)[1])];
-  if (sub === 'publish') return [runnerDraft('push', cmd, 'partial')];
+  if (sub === 'publish') return [publishDraft(cmd, cmd.program === 'go' ? 'go' : 'cargo')];
   return [runnerDraft('execute', cmd, 'partial')];
 }
 
@@ -397,9 +404,24 @@ function copyOps(cmd: NormalizedCommand): OperationDraft[] {
     (w) => /^[^/\s]+@?[^/\s]*:/.test(w.text) && !w.text.startsWith('/'),
   );
   if (remote !== undefined) {
-    return [draft('send', unknownTarget(), 'partial', cmd.program, cmd.raw, ['remote_copy'])];
+    const host = hostFromRemoteSpec(remote.text);
+    const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
+    return [
+      draft('send', target, host === null ? 'partial' : 'full', cmd.program, cmd.raw, [
+        'remote_copy',
+      ]),
+    ];
   }
   return fileOps(cmd, 'write', { patternFirst: false, destLast: true });
+}
+
+/** Host of a `user@host:path` or `host:path` scp/rsync operand. */
+function hostFromRemoteSpec(text: string): string | null {
+  const colon = text.indexOf(':');
+  const authority = colon === -1 ? text : text.slice(0, colon);
+  const at = authority.indexOf('@');
+  const host = (at === -1 ? authority : authority.slice(at + 1)).replace(/:\d+$/, '').toLowerCase();
+  return host.length === 0 ? null : host;
 }
 
 function remoteExecOps(cmd: NormalizedCommand): OperationDraft[] {
@@ -407,10 +429,25 @@ function remoteExecOps(cmd: NormalizedCommand): OperationDraft[] {
 }
 
 function dockerOps(cmd: NormalizedCommand): OperationDraft[] {
-  const sub = nonFlagArgs(cmd.args)[0]?.text ?? '';
-  if (sub === 'push') return [runnerDraft('push', cmd, 'partial')];
+  const positional = nonFlagArgs(cmd.args);
+  const sub = positional[0]?.text ?? '';
+  if (sub === 'push') {
+    const image = positional[1];
+    const host =
+      image === undefined || image.hasExpansion ? null : registryHostFromImage(image.text);
+    const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
+    return [draft('push', target, host === null ? 'partial' : 'full', 'docker', cmd.raw)];
+  }
   if (sub === 'pull') return [runnerDraft('fetch', cmd, 'partial')];
   return [runnerDraft('execute', cmd, 'partial')];
+}
+
+/** Registry host of an image reference; the default registry is docker.io. */
+function registryHostFromImage(image: string): string {
+  if (!image.includes('/')) return 'docker.io';
+  const first = image.split('/')[0] ?? '';
+  if (first.includes('.') || first.includes(':')) return first.replace(/:\d+$/, '').toLowerCase();
+  return 'docker.io';
 }
 
 function kubectlOps(cmd: NormalizedCommand): OperationDraft[] {
@@ -461,42 +498,44 @@ function findOps(cmd: NormalizedCommand): OperationDraft[] {
     (a) => a.text === '-exec' || a.text === '-execdir' || a.text === '-ok',
   );
   if (execIdx !== -1) {
-    const inner = cmd.args
-      .slice(execIdx + 1)
-      .filter((a) => a.text !== ';' && a.text !== '+' && a.text !== '{}');
+    const inner = cmd.args.slice(execIdx + 1).filter((a) => !isFindPlaceholder(a.text));
     const innerProgram = inner[0]?.text ?? '';
     if (innerProgram.length > 0) {
+      // Keep the inner command's capability, but its operands are find's matches,
+      // so the target is find's search path with analyzability partial.
       const innerCmd: NormalizedCommand = {
         ...cmd,
         program: basename(innerProgram),
         args: inner.slice(1),
       };
-      return classifyProgram(innerCmd);
+      const caps = [...new Set(classifyProgram(innerCmd).map((o) => o.capability))];
+      const roots = findRootTargets(cmd);
+      return caps.flatMap((cap) =>
+        roots.map((t) => draft(cap, t, 'partial', innerCmd.program, cmd.raw, ['find_exec'])),
+      );
     }
   }
   const capability: Capability = hasFlag(cmd.args, '-delete') ? 'delete' : 'read';
-  return searchPathOps(cmd, capability);
+  return findRootTargets(cmd).map((t) => draft(capability, t, 'partial', cmd.program, cmd.raw));
 }
 
-/** Leading path arguments of `find` (before any `-expr` token), or the cwd. */
-function searchPathOps(cmd: NormalizedCommand, capability: Capability): OperationDraft[] {
+/** Leading path arguments of `find` (before any `-expr` token) as Targets, or the cwd. */
+function findRootTargets(cmd: NormalizedCommand): Target[] {
   const roots: ShellWord[] = [];
   for (const arg of cmd.args) {
     if (arg.text.startsWith('-')) break;
     roots.push(arg);
   }
-  if (roots.length === 0) {
-    const resolved = resolvePath('.', cmd.cwd, cmd.workspaceRoot);
-    return [draft(capability, pathTarget(resolved), 'partial', cmd.program, cmd.raw)];
-  }
-  return roots.map((root) => {
-    if (root.hasExpansion)
-      return draft(capability, unknownTarget(), 'partial', cmd.program, cmd.raw, [
-        'target_variable',
-      ]);
-    const resolved = resolvePath(root.text, cmd.cwd, cmd.workspaceRoot);
-    return draft(capability, pathTarget(resolved), 'partial', cmd.program, cmd.raw);
-  });
+  if (roots.length === 0) return [pathTarget(resolvePath('.', cmd.cwd, cmd.workspaceRoot))];
+  return roots.map((root) =>
+    root.hasExpansion
+      ? unknownTarget()
+      : pathTarget(resolvePath(root.text, cmd.cwd, cmd.workspaceRoot)),
+  );
+}
+
+function isFindPlaceholder(text: string): boolean {
+  return text === '{}' || text === ';' || text === '+' || text === '\\;' || text === '{}\\;';
 }
 
 interface FileOpOptions {
@@ -542,10 +581,116 @@ function installDraft(
   ecosystem: Ecosystem,
   pkg: ShellWord | undefined,
 ): OperationDraft {
-  const source = pkg === undefined || pkg.hasExpansion ? null : pkg.text;
+  const { source, analyzability } = packageSource(cmd, ecosystem, pkg);
   const target: Target = { kind: 'package', ecosystem, source };
-  const analyzability: Analyzability = source === null ? 'partial' : 'full';
   return draft('install', target, analyzability, cmd.program, cmd.raw);
+}
+
+interface SourceResult {
+  readonly source: string | null;
+  readonly analyzability: Analyzability;
+}
+
+/**
+ * The `source` of a package Operation is where the package comes from, not its
+ * name (Zone compares source against trusted/public remotes). A plain name maps
+ * to the ecosystem's default registry (or `--registry`/`--index-url`); a git or
+ * URL spec maps to its normalized Remote Key or host; an unparseable spec has a
+ * null source. The package name itself remains only in the fragment.
+ */
+function packageSource(
+  cmd: NormalizedCommand,
+  ecosystem: Ecosystem,
+  pkg: ShellWord | undefined,
+): SourceResult {
+  const registry = findRegistryHost(cmd.args) ?? defaultRegistry(ecosystem);
+  if (pkg === undefined) {
+    // install-all (no package argument): the registry is known but the set is not.
+    return { source: registry, analyzability: 'partial' };
+  }
+  if (pkg.hasExpansion) return { source: null, analyzability: 'partial' };
+  const spec = normalizeSpec(pkg.text);
+  if (spec.kind === 'remote') return { source: spec.source, analyzability: 'full' };
+  if (spec.kind === 'unparseable') return { source: null, analyzability: 'partial' };
+  return { source: registry, analyzability: registry === null ? 'partial' : 'full' };
+}
+
+function defaultRegistry(ecosystem: Ecosystem): string | null {
+  switch (ecosystem) {
+    case 'npm':
+      return 'registry.npmjs.org';
+    case 'pypi':
+      return 'pypi.org';
+    case 'cargo':
+      return 'crates.io';
+    case 'go':
+      return 'proxy.golang.org';
+    case 'system':
+      return null;
+    case 'other':
+      return null;
+  }
+}
+
+function findRegistryHost(args: readonly ShellWord[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i]?.text ?? '';
+    if (t === '--registry' || t === '-i' || t === '--index-url') {
+      const next = args[i + 1];
+      return next === undefined || next.hasExpansion ? null : parseHost(next.text);
+    }
+    if (t.startsWith('--registry=')) return parseHost(t.slice('--registry='.length));
+    if (t.startsWith('--index-url=')) return parseHost(t.slice('--index-url='.length));
+  }
+  return null;
+}
+
+type SpecKind =
+  | { readonly kind: 'remote'; readonly source: string }
+  | { readonly kind: 'unparseable' }
+  | { readonly kind: 'plain' };
+
+/** Classifies a package spec as a remote source, a plain name, or unparseable. */
+function normalizeSpec(spec: string): SpecKind {
+  if (spec.startsWith('github:')) {
+    return remoteOrUnparseable(`github.com/${spec.slice(7).split('#')[0] ?? ''}`);
+  }
+  if (spec.startsWith('git+')) return urlSource(spec.slice(4));
+  if (/:\/\//.test(spec)) return urlSource(spec);
+  if (
+    spec.startsWith('.') ||
+    spec.startsWith('/') ||
+    spec.startsWith('file:') ||
+    spec.startsWith('link:') ||
+    spec.startsWith('workspace:')
+  ) {
+    return { kind: 'unparseable' };
+  }
+  if (!spec.startsWith('@') && /^[\w.-]+\/[\w.-]+(#.+)?$/.test(spec)) {
+    return remoteOrUnparseable(`github.com/${spec.split('#')[0] ?? ''}`);
+  }
+  return { kind: 'plain' };
+}
+
+function urlSource(url: string): SpecKind {
+  const result = normalizeRemote(url);
+  if (result.remoteKey !== null) return { kind: 'remote', source: result.remoteKey };
+  const host = parseHost(url);
+  return host === null ? { kind: 'unparseable' } : { kind: 'remote', source: host };
+}
+
+function remoteOrUnparseable(key: string): SpecKind {
+  const result = normalizeRemote(key);
+  return result.remoteKey === null
+    ? { kind: 'unparseable' }
+    : { kind: 'remote', source: result.remoteKey };
+}
+
+/** Emits a push Operation whose target is the ecosystem registry (publish). */
+function publishDraft(cmd: NormalizedCommand, ecosystem: Ecosystem): OperationDraft {
+  const source = findRegistryHost(cmd.args) ?? defaultRegistry(ecosystem);
+  const target: Target = { kind: 'package', ecosystem, source };
+  return draft('push', target, source === null ? 'partial' : 'full', cmd.program, cmd.raw);
 }
 
 function basename(program: string): string {

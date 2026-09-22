@@ -78,7 +78,7 @@
         "toolName": "Bash",
         "toolInputRedacted": "scp ./dump.sql deploy@remote.example.com:/tmp/dump.sql"
       },
-      "mustInclude": [{ "capability": "send", "targetKind": "unknown" }]
+      "mustInclude": [{ "capability": "send", "targetKind": "host" }]
     },
     {
       "name": "git-clone-fetch",
@@ -140,7 +140,7 @@
         "toolName": "Bash",
         "toolInputRedacted": "docker push registry.example.com/app:latest"
       },
-      "mustInclude": [{ "capability": "push", "targetKind": "path" }]
+      "mustInclude": [{ "capability": "push", "targetKind": "host" }]
     },
     {
       "name": "kubectl-apply-deploy",
@@ -202,6 +202,36 @@
       "name": "pip-install-package",
       "input": { "toolName": "Bash", "toolInputRedacted": "pip install requests" },
       "mustInclude": [{ "capability": "install", "targetKind": "package" }]
+    },
+    {
+      "name": "heredoc-redirect-preserves-write",
+      "input": { "toolName": "Bash", "toolInputRedacted": "cat <<EOF > out.txt\nline\nEOF" },
+      "mustInclude": [{ "capability": "write", "targetKind": "path" }]
+    },
+    {
+      "name": "special-device-redirect-runs-only",
+      "input": { "toolName": "Bash", "toolInputRedacted": "pnpm test 2>/dev/null" },
+      "mustInclude": [{ "capability": "execute", "targetKind": "path" }]
+    },
+    {
+      "name": "package-git-spec-source",
+      "input": { "toolName": "Bash", "toolInputRedacted": "pnpm add github:someone/lib" },
+      "mustInclude": [{ "capability": "install", "targetKind": "package" }]
+    },
+    {
+      "name": "npm-publish-to-registry",
+      "input": { "toolName": "Bash", "toolInputRedacted": "npm publish" },
+      "mustInclude": [{ "capability": "push", "targetKind": "package" }]
+    },
+    {
+      "name": "docker-push-implicit-registry",
+      "input": { "toolName": "Bash", "toolInputRedacted": "docker push myapp:1" },
+      "mustInclude": [{ "capability": "push", "targetKind": "host" }]
+    },
+    {
+      "name": "find-exec-target-is-search-path",
+      "input": { "toolName": "Bash", "toolInputRedacted": "find src -name '*.tmp' -exec rm {} ;" },
+      "mustInclude": [{ "capability": "delete", "targetKind": "path" }]
     }
   ]
 }

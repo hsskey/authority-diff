@@ -166,6 +166,8 @@ function redirectWrites(
   for (const r of command.redirects) {
     if (r.kind !== 'write' && r.kind !== 'append') continue;
     if (r.target === null) continue;
+    // Special devices and fd forms discard or route output and are not writes.
+    if (!r.target.hasExpansion && isSpecialDevice(r.target.text)) continue;
     if (r.target.hasExpansion) {
       ops.push(
         draft('write', unknownTarget(), 'partial', program, command.raw, [
@@ -179,6 +181,19 @@ function redirectWrites(
     ops.push(draft('write', pathTarget(resolved), 'full', program, command.raw, ['redirect']));
   }
   return ops;
+}
+
+/** Redirect targets that discard or route output rather than writing a file. */
+function isSpecialDevice(path: string): boolean {
+  return (
+    path === '/dev/null' ||
+    path === '/dev/stdout' ||
+    path === '/dev/stderr' ||
+    path === '/dev/tty' ||
+    path === '/dev/zero' ||
+    path.startsWith('/dev/fd/') ||
+    path.startsWith('&')
+  );
 }
 
 function heredocBodies(command: ShellCommand): string[] {

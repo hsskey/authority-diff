@@ -185,11 +185,13 @@ function remoteOp(
     }
   }
 
+  // Only push (without an explicit refspec) targets the current branch; clone,
+  // fetch, and pull leave branch null unless a refspec is given.
   const target: Target = {
     kind: 'vcs_remote',
     remoteName,
     remoteKey,
-    branch: cmd.gitBranch,
+    branch: sub === 'push' ? cmd.gitBranch : null,
   };
   return draft(capability, target, analyzability, 'git', cmd.raw, signals);
 }

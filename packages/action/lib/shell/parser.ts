@@ -124,7 +124,13 @@ function commandArgs(node: Node): ShellWord[] {
     if (child === null) continue;
     if (nameNode !== null && child.id === nameNode.id) continue;
     if (child.type === 'variable_assignment') continue;
-    if (child.type === 'file_redirect' || child.type === 'heredoc_redirect') continue;
+    if (
+      child.type === 'file_redirect' ||
+      child.type === 'heredoc_redirect' ||
+      child.type === 'herestring_redirect'
+    ) {
+      continue;
+    }
     words.push(readWord(child));
   }
   return words;
@@ -136,18 +142,28 @@ function collectRedirects(node: Node): ShellRedirect[] {
   for (const child of container.namedChildren) {
     if (child === null) continue;
     if (child.type === 'file_redirect') {
-      // A file-descriptor duplication (`2>&1`, `>&2`, `1>&2`) redirects one fd to
-      // another and writes no file, so it yields no Operation.
-      if (isFdDuplication(child)) continue;
-      const op = fileRedirectOperator(child);
-      const kind = op.includes('>>') ? 'append' : op.startsWith('<') ? 'read' : 'write';
-      const target = redirectTarget(child);
-      if (target !== null) redirects.push({ kind, target, heredocBody: null });
+      addFileRedirect(child, redirects);
     } else if (child.type === 'heredoc_redirect') {
       redirects.push({ kind: 'heredoc', target: null, heredocBody: heredocBody(child) });
+      // tree-sitter nests a following file redirect (for example `<<EOF > a.txt`)
+      // inside the heredoc_redirect, so scan for it here too.
+      for (const inner of child.namedChildren) {
+        if (inner !== null && inner.type === 'file_redirect') addFileRedirect(inner, redirects);
+      }
     }
+    // A herestring_redirect (`<<<`) is input and yields no Operation.
   }
   return redirects;
+}
+
+function addFileRedirect(node: Node, redirects: ShellRedirect[]): void {
+  // A file-descriptor duplication (`2>&1`, `>&2`, `1>&2`) redirects one fd to
+  // another and writes no file, so it yields no Operation.
+  if (isFdDuplication(node)) return;
+  const op = fileRedirectOperator(node);
+  const kind = op.includes('>>') ? 'append' : op.startsWith('<') ? 'read' : 'write';
+  const target = redirectTarget(node);
+  if (target !== null) redirects.push({ kind, target, heredocBody: null });
 }
 
 function fileRedirectOperator(node: Node): string {

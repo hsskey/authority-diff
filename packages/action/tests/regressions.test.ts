@@ -100,3 +100,115 @@ describe('force-push refspec detection', () => {
     expect(withCap(classify(bash('git push origin main')), 'rewrite')).toBeUndefined();
   });
 });
+
+describe('package Operation source is the registry or remote, not the name', () => {
+  test('pnpm add lodash uses the default npm registry as source', () => {
+    const op = withCap(classify(bash('pnpm add lodash')), 'install');
+    expect(op?.target).toEqual({ kind: 'package', ecosystem: 'npm', source: 'registry.npmjs.org' });
+    expect(op?.analyzability).toBe('full');
+  });
+
+  test('pnpm add github:someone/lib normalizes the git spec to a Remote Key', () => {
+    const op = withCap(classify(bash('pnpm add github:someone/lib')), 'install');
+    expect(op?.target).toEqual({
+      kind: 'package',
+      ecosystem: 'npm',
+      source: 'github.com/someone/lib',
+    });
+  });
+
+  test('pip install requests uses the PyPI registry as source', () => {
+    const op = withCap(classify(bash('pip install requests')), 'install');
+    expect(op?.target).toEqual({ kind: 'package', ecosystem: 'pypi', source: 'pypi.org' });
+  });
+
+  test('an explicit --registry overrides the default', () => {
+    const op = withCap(
+      classify(bash('npm install --registry https://npm.internal.example.com left-pad')),
+      'install',
+    );
+    if (op?.target.kind === 'package') expect(op.target.source).toBe('npm.internal.example.com');
+  });
+});
+
+describe('special-device redirects create no write', () => {
+  test('pnpm test 2>/dev/null produces no write Operation', () => {
+    expect(withCap(classify(bash('pnpm test 2>/dev/null')), 'write')).toBeUndefined();
+  });
+
+  test('a command to /dev/stdout produces no write Operation', () => {
+    expect(withCap(classify(bash('cat report.txt > /dev/stdout')), 'write')).toBeUndefined();
+  });
+});
+
+describe('heredoc and herestring operands', () => {
+  test('cat <<EOF > a.txt still writes a.txt', () => {
+    const ops = classify(bash('cat <<EOF > a.txt\nhi\nEOF'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/a.txt',
+      isInsideWorkspace: true,
+    });
+  });
+
+  test('a herestring operand is not read as a path', () => {
+    const ops = classify(bash('base64 -d <<< QUFB'));
+    expect(pathTargets(ops)).not.toContain('/work/repo/QUFB');
+    expect(pathTargets(ops)).not.toContain('QUFB');
+  });
+
+  test('heredoc to an interpreter stays opaque execution', () => {
+    const ops = classify(bash('python3 <<EOF\nimport os\nEOF'));
+    expect(withCap(ops, 'execute')?.analyzability).toBe('none');
+  });
+});
+
+describe('find -exec inner command targets the search path', () => {
+  test('find src -exec rm places the delete on the search path, not a placeholder', () => {
+    const ops = classify(bash('find src -name "*.tmp" -exec rm {} ;'));
+    const del = withCap(ops, 'delete');
+    expect(del?.target).toEqual({ kind: 'path', path: '/work/repo/src', isInsideWorkspace: true });
+    expect(del?.analyzability).toBe('partial');
+    expect(pathTargets(ops).some((p) => p.includes('{}') || p.includes(';'))).toBe(false);
+  });
+});
+
+describe('publish, docker push, and remote copy targets', () => {
+  test('npm publish pushes to the registry package target', () => {
+    const op = withCap(classify(bash('npm publish')), 'push');
+    expect(op?.target).toEqual({ kind: 'package', ecosystem: 'npm', source: 'registry.npmjs.org' });
+  });
+
+  test('docker push to a registry host uses that host', () => {
+    const op = withCap(classify(bash('docker push ghcr.io/acme/img:1')), 'push');
+    expect(op?.target).toEqual({ kind: 'host', host: 'ghcr.io', scheme: null });
+  });
+
+  test('docker push without a registry defaults to docker.io', () => {
+    const op = withCap(classify(bash('docker push myapp:1')), 'push');
+    expect(op?.target).toEqual({ kind: 'host', host: 'docker.io', scheme: null });
+  });
+
+  test('scp to a remote extracts the host', () => {
+    const op = withCap(classify(bash('scp dump.sql user@host.example.com:/tmp/x')), 'send');
+    expect(op?.target).toEqual({ kind: 'host', host: 'host.example.com', scheme: null });
+  });
+});
+
+describe('clone/fetch/pull branch is null; push uses the current branch', () => {
+  test('git clone sets branch null', () => {
+    const op = withCap(classify(bash('git clone https://github.com/acme/toolkit.git')), 'fetch');
+    if (op?.target.kind === 'vcs_remote') expect(op.target.branch).toBeNull();
+  });
+
+  test('git fetch origin sets branch null', () => {
+    const op = withCap(classify(bash('git fetch origin')), 'fetch');
+    if (op?.target.kind === 'vcs_remote') expect(op.target.branch).toBeNull();
+  });
+
+  test('git push uses the current branch', () => {
+    const op = withCap(classify(bash('git push origin main')), 'push');
+    if (op?.target.kind === 'vcs_remote') expect(op.target.branch).toBe('main');
+  });
+});
