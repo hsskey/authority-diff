@@ -188,6 +188,6 @@ describe('policy store', () => {
     const { policy, initialVersion } = await createDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     const error = expectErr(await repository.transitionVersion(draft.id, 'accept'));
-    expect(error.code).toBe('policy.invalid_transition');
+    expect(error.code).toBe('policy.transition_not_allowed');
   });
 });

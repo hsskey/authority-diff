@@ -21,7 +21,7 @@ export function nextStatus(
   const rule = TRANSITIONS[transition];
   if (current !== rule.from) {
     return err({
-      code: 'policy.invalid_transition',
+      code: 'policy.transition_not_allowed',
       message: `a policy version in status ${current} cannot ${transition}`,
       isRetryable: false,
       details: { current, transition },

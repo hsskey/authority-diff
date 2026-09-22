@@ -22,6 +22,6 @@ describe('nextStatus', () => {
     ['accepted', 'withdraw'],
   ] as const)('%s cannot %s', (from, transition) => {
     const error = expectErr(nextStatus(from, transition));
-    expect(error.code).toBe('policy.invalid_transition');
+    expect(error.code).toBe('policy.transition_not_allowed');
   });
 });

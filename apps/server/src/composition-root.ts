@@ -24,6 +24,7 @@ export function buildServerDeps(config: Config): PolicyWiringDeps {
 }
 
 // One line per module. Later milestones add their own wiring call here.
-export function composeModules(app: Hono<AppEnv>, deps: PolicyWiringDeps): void {
+export function composeModules(app: Hono<AppEnv>, config: Config): void {
+  const deps = buildServerDeps(config);
   wirePolicy(app, deps);
 }
