@@ -310,6 +310,12 @@ importers:
         specifier: 4.10.2
         version: 4.10.2
 
+  tools/local-pipeline:
+    dependencies:
+      '@authority/trace':
+        specifier: workspace:*
+        version: link:../../packages/trace
+
 packages:
 
   '@drizzle-team/brocli@0.10.2':
