@@ -35,7 +35,7 @@ function buildRecord(
     return null;
   }
 
-  if (event === 'permission_request') {
+  if (event === 'permission_request' || event === 'pre_tool_use') {
     const toolName = readString(input, 'tool_name');
     const toolInputHash = hashToolInput(input.tool_input);
     if (toolName === null || toolInputHash === null) {

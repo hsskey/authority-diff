@@ -12,6 +12,7 @@ function settingsPath(home: string): string {
   return join(home, '.claude', 'settings.json');
 }
 
+const PRE_TOOL_USE_COMMAND = resolveHookCommand('pre-tool-use');
 const PERMISSION_REQUEST_COMMAND = resolveHookCommand('permission-request');
 const SESSION_END_COMMAND = resolveHookCommand('session-end');
 
@@ -47,6 +48,12 @@ describe('authority install-hooks', () => {
     const settings: unknown = JSON.parse(readFileSync(settingsPath(home), 'utf8'));
     expect(settings).toEqual({
       hooks: {
+        PreToolUse: [
+          {
+            matcher: '*',
+            hooks: [{ type: 'command', command: PRE_TOOL_USE_COMMAND }],
+          },
+        ],
         PermissionRequest: [
           {
             matcher: 'Bash',
@@ -105,6 +112,10 @@ describe('authority install-hooks', () => {
             matcher: 'Bash',
             hooks: [{ type: 'command', command: 'echo pre' }],
           },
+          {
+            matcher: '*',
+            hooks: [{ type: 'command', command: PRE_TOOL_USE_COMMAND }],
+          },
         ],
         PermissionRequest: [
           {
@@ -157,6 +168,12 @@ describe('authority install-hooks', () => {
     const settings: unknown = JSON.parse(readFileSync(settingsPath(home), 'utf8'));
     expect(settings).toEqual({
       hooks: {
+        PreToolUse: [
+          {
+            matcher: '*',
+            hooks: [{ type: 'command', command: PRE_TOOL_USE_COMMAND }],
+          },
+        ],
         PermissionRequest: [
           {
             matcher: '*',
@@ -181,6 +198,12 @@ describe('authority install-hooks', () => {
 
     const change: unknown = JSON.parse(dryRun.stdout.trim());
     expect(change).toEqual({
+      PreToolUse: [
+        {
+          matcher: '*',
+          hooks: [{ type: 'command', command: PRE_TOOL_USE_COMMAND }],
+        },
+      ],
       PermissionRequest: [
         {
           matcher: '*',
@@ -207,6 +230,17 @@ describe('authority install-hooks', () => {
     expect(dryRun.status).toBe(0);
     const change: unknown = JSON.parse(dryRun.stdout.trim());
     expect(change).toEqual({
+      PreToolUse: [
+        {
+          matcher: '*',
+          hooks: [
+            {
+              type: 'command',
+              command: '/custom/node /custom/tsx /custom/main.ts hook pre-tool-use',
+            },
+          ],
+        },
+      ],
       PermissionRequest: [
         {
           matcher: '*',

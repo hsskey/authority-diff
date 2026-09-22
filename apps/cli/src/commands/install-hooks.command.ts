@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { claudeSettingsPath } from '../config.ts';
 import {
   isManagedPermissionRequestCommand,
+  isManagedPreToolUseCommand,
   isManagedSessionEndCommand,
   resolveHookCommand,
   resolveRepoRoot,
@@ -26,11 +27,13 @@ interface SessionEndHookGroup {
 
 interface HookInstallChange {
   readonly warnings?: readonly string[];
+  readonly PreToolUse?: readonly MatcherHookGroup[];
   readonly PermissionRequest?: readonly MatcherHookGroup[];
   readonly SessionEnd?: readonly SessionEndHookGroup[];
 }
 
 interface ResolvedHookCommands {
+  readonly preToolUse: string;
   readonly permissionRequest: string;
   readonly sessionEnd: string;
 }
@@ -42,6 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function resolveCommands(commandOverride?: string): ResolvedHookCommands {
   const options = commandOverride === undefined ? undefined : { commandOverride };
   return {
+    preToolUse: resolveHookCommand('pre-tool-use', options),
     permissionRequest: resolveHookCommand('permission-request', options),
     sessionEnd: resolveHookCommand('session-end', options),
   };
@@ -113,7 +117,7 @@ function normalizeHookGroups(
   return { groups: nextGroups, changed };
 }
 
-function permissionRequestEntry(command: string): MatcherHookGroup {
+function matcherEntry(command: string): MatcherHookGroup {
   return {
     matcher: '*',
     hooks: [{ type: 'command', command }],
@@ -126,6 +130,25 @@ function sessionEndEntry(command: string): SessionEndHookGroup {
   };
 }
 
+// Merge a matcher-based section (PreToolUse, PermissionRequest): normalize any managed
+// commands to the target and append the canonical `*` entry when it is absent.
+function mergeMatcherSection(
+  existing: readonly unknown[],
+  isManaged: (command: string) => boolean,
+  command: string,
+): { readonly groups: readonly unknown[]; readonly entry: MatcherHookGroup | undefined } {
+  const normalized = normalizeHookGroups(existing, isManaged, command);
+  let groups = normalized.groups;
+  let entry = normalized.changed ? matcherEntry(command) : undefined;
+
+  if (!arrayContainsCommand(groups, command)) {
+    entry = matcherEntry(command);
+    groups = [...groups, entry];
+  }
+
+  return { groups, entry };
+}
+
 function mergeHooks(
   document: Record<string, unknown>,
   commands: ResolvedHookCommands,
@@ -134,6 +157,9 @@ function mergeHooks(
   readonly change: HookInstallChange;
 } {
   const hooksValue = isRecord(document.hooks) ? document.hooks : {};
+  const existingPreToolUse: readonly unknown[] = Array.isArray(hooksValue.PreToolUse)
+    ? hooksValue.PreToolUse
+    : [];
   const existingPermissionRequest: readonly unknown[] = Array.isArray(hooksValue.PermissionRequest)
     ? hooksValue.PermissionRequest
     : [];
@@ -142,28 +168,26 @@ function mergeHooks(
     : [];
 
   let change: HookInstallChange = {};
-  let nextPermissionRequest = existingPermissionRequest;
-  let nextSessionEnd = existingSessionEnd;
 
-  const normalizedPermissionRequest = normalizeHookGroups(
+  const preToolUse = mergeMatcherSection(
+    existingPreToolUse,
+    isManagedPreToolUseCommand,
+    commands.preToolUse,
+  );
+  if (preToolUse.entry !== undefined) {
+    change = { ...change, PreToolUse: [preToolUse.entry] };
+  }
+
+  const permissionRequest = mergeMatcherSection(
     existingPermissionRequest,
     isManagedPermissionRequestCommand,
     commands.permissionRequest,
   );
-  nextPermissionRequest = normalizedPermissionRequest.groups;
-  if (normalizedPermissionRequest.changed) {
-    change = {
-      ...change,
-      PermissionRequest: [permissionRequestEntry(commands.permissionRequest)],
-    };
+  if (permissionRequest.entry !== undefined) {
+    change = { ...change, PermissionRequest: [permissionRequest.entry] };
   }
 
-  if (!arrayContainsCommand(nextPermissionRequest, commands.permissionRequest)) {
-    const entry = permissionRequestEntry(commands.permissionRequest);
-    nextPermissionRequest = [...nextPermissionRequest, entry];
-    change = { ...change, PermissionRequest: [entry] };
-  }
-
+  let nextSessionEnd = existingSessionEnd;
   const normalizedSessionEnd = normalizeHookGroups(
     existingSessionEnd,
     isManagedSessionEndCommand,
@@ -185,7 +209,8 @@ function mergeHooks(
       ...document,
       hooks: {
         ...hooksValue,
-        PermissionRequest: nextPermissionRequest,
+        PreToolUse: preToolUse.groups,
+        PermissionRequest: permissionRequest.groups,
         SessionEnd: nextSessionEnd,
       },
     },
@@ -219,7 +244,11 @@ function writeSettingsFile(document: Record<string, unknown>): void {
 }
 
 function hasChange(change: HookInstallChange): boolean {
-  return change.PermissionRequest !== undefined || change.SessionEnd !== undefined;
+  return (
+    change.PreToolUse !== undefined ||
+    change.PermissionRequest !== undefined ||
+    change.SessionEnd !== undefined
+  );
 }
 
 function buildPrintOutput(change: HookInstallChange): HookInstallChange | null {

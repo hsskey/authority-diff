@@ -21,6 +21,8 @@ const args = process.argv.slice(2);
 
 if (args[0] === 'hook' && args[1] === 'permission-request') {
   runHook('permission_request');
+} else if (args[0] === 'hook' && args[1] === 'pre-tool-use') {
+  runHook('pre_tool_use');
 } else if (args[0] === 'hook' && args[1] === 'session-end') {
   runHook('session_end');
 } else if (args[0] === 'install-hooks') {
