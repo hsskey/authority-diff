@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./schema": "./schema.ts"
+    "./schema": "./schema.ts",
+    "./client": "./client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -13,5 +14,8 @@
     "@authority/action": "workspace:*",
     "@authority/kernel": "workspace:*",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "fast-check": "4.10.2"
   }
 }
