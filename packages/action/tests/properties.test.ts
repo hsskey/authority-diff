@@ -81,54 +81,23 @@ describe('I4 classifier invariants', () => {
   });
 
   test('unrecognized programs are never laundered into read', () => {
-    // A random program name is almost never a recognized reader; assert that an
-    // opaque command never produces a read Operation.
+    // The classifier marks an opaque program with the `program_unrecognized`
+    // signal (schema.ts: such a command is "never classified as read"). Assert
+    // the invariant only on names the classifier itself treats as unrecognized,
+    // so this stays robust as the recognition tables grow instead of mirroring
+    // them in a local list that silently drifts out of sync (that drift made the
+    // old fixed-list filter fail whenever a seed happened to draw a recognized
+    // reader such as `uname`).
     fc.assert(
-      fc.property(
-        fc.stringMatching(/^[a-z][a-z0-9_-]{3,15}$/).filter((p) => !RECOGNIZED.has(p)),
-        (program) => {
-          const ops = classify(toolCall('Bash', `${program} --do-something arg`, false));
-          expect(ops.every((o) => o.capability !== 'read')).toBe(true);
-        },
-      ),
+      fc.property(fc.stringMatching(/^[a-z][a-z0-9_-]{3,15}$/), (program) => {
+        const ops = classify(toolCall('Bash', `${program} --do-something arg`, false));
+        fc.pre(ops.some((o) => o.signals.includes('program_unrecognized')));
+        expect(ops.every((o) => o.capability !== 'read')).toBe(true);
+      }),
       { numRuns: 200 },
     );
   });
 });
-
-// A small set of recognized program names to exclude from the laundering probe.
-const RECOGNIZED = new Set([
-  'cat',
-  'grep',
-  'less',
-  'more',
-  'sort',
-  'uniq',
-  'head',
-  'tail',
-  'base',
-  'echo',
-  'true',
-  'test',
-  'find',
-  'curl',
-  'wget',
-  'make',
-  'node',
-  'ruby',
-  'perl',
-  'bash',
-  'sudo',
-  'time',
-  'nice',
-  'exec',
-  'env',
-  'file',
-  'stat',
-  'diff',
-  'tree',
-  'date',
-]);
 
 const SHELL_KEYWORDS = new Set([
   'if',
