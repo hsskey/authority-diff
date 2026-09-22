@@ -132,9 +132,9 @@ function buildCommand(node: Node, depth: number): ShellCommand {
   const nameNode = node.childForFieldName('name');
   const name = nameNode === null ? null : readWord(nameNode);
   const args = commandArgs(node);
-  // Redirects live on the enclosing redirected_statement and are attached to the
-  // command by `collect`, so a bare command starts with none.
-  return { name, args, redirects: [], raw: node.text, depth };
+  // A command's own direct (for example leading) redirects are captured here;
+  // redirects on an enclosing redirected_statement are attached by `collect`.
+  return { name, args, redirects: extractDirectRedirects(node), raw: node.text, depth };
 }
 
 /** Words after the command name, skipping env assignments and redirects. */
