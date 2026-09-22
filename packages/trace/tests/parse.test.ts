@@ -231,6 +231,47 @@ describe('parseTranscript tool input', () => {
     expect(call?.toolInputRedacted.length).toBe(16000);
     expect(call?.isInputTruncated).toBe(true);
   });
+
+  test('redacts prefix-free credential values in canonical JSON keyed by a secret name', () => {
+    const parsed = parseTranscript({
+      sessionExternalId: 's',
+      lines: [
+        assistantLine({
+          id: 't',
+          name: 'McpNotify',
+          toolInput: { password: 'hunter2synthetic0001', apiKey: 'randomsynth7654321' },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    const redacted = parsed.toolCalls[0]?.toolInputRedacted ?? '';
+    expect(redacted.includes('hunter2synthetic0001')).toBe(false);
+    expect(redacted.includes('randomsynth7654321')).toBe(false);
+    expect(redacted).toContain('__REDACTED_SECRET_ASSIGNMENT__');
+    expect(parsed.redactions).toContainEqual({ kind: 'secret_assignment', count: 2 });
+  });
+
+  test('redacts a large single-token command in linear time and leaves no credential match', () => {
+    const command = 'a'.repeat(400000);
+    const started = performance.now();
+    const parsed = parseTranscript({
+      sessionExternalId: 's',
+      lines: [
+        assistantLine({
+          id: 't',
+          name: 'Bash',
+          toolInput: { command },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    const elapsedMs = performance.now() - started;
+    const call = parsed.toolCalls[0];
+    expect(call?.isInputTruncated).toBe(true);
+    expect(call?.toolInputRedacted.length).toBe(16000);
+    expect(parsed.redactions).toEqual([]);
+    expect(elapsedMs).toBeLessThan(5000);
+  });
 });
 
 describe('parseTranscript line handling', () => {

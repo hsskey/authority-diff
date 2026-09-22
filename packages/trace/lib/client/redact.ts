@@ -67,13 +67,13 @@ const RULES: readonly RedactionRule[] = [
   },
   {
     kind: 'url_userinfo',
-    pattern: /([A-Za-z][A-Za-z0-9+.-]*:\/\/)(?!__REDACTED_)[^\s/@:]+(?::[^\s/@]*)?@/g,
+    pattern: /([A-Za-z][A-Za-z0-9+.-]{0,63}:\/\/)(?!__REDACTED_)[^\s/@:]+(?::[^\s/@]*)?@/g,
     replacement: '$1__REDACTED_URL_USERINFO__@',
   },
   {
     kind: 'secret_assignment',
     pattern:
-      /([A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*)(\s*[:=]\s*)(?!__REDACTED_)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
+      /\b(?=[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD))([A-Za-z0-9_]+)(["']?\s*[:=]\s*)(?!["']?__REDACTED_)(?:"[^"]*"|'[^']*'|[^\s"']+)/gi,
     replacement: '$1$2__REDACTED_SECRET_ASSIGNMENT__',
   },
 ];
