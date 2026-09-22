@@ -284,7 +284,10 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
 
 function interpreterOps(cmd: NormalizedCommand): OperationDraft[] {
   const inlineIdx = cmd.args.findIndex((a) => INLINE_FLAGS.has(a.text));
-  const inlineBody = inlineIdx === -1 ? null : (cmd.args[inlineIdx + 1]?.text ?? '');
+  const inlineBody =
+    inlineIdx === -1
+      ? null
+      : (cmd.args.slice(inlineIdx + 1).find((a) => !a.text.startsWith('-'))?.text ?? '');
   const heredoc = cmd.heredocBodies[0] ?? null;
   const body = inlineBody ?? heredoc;
   if (body !== null) return inlineCodeOps(cmd, body);
@@ -488,7 +491,7 @@ function wranglerOps(cmd: NormalizedCommand): OperationDraft[] {
 
 function sedOps(cmd: NormalizedCommand): OperationDraft[] {
   const inPlace = cmd.args.some(
-    (a) => a.text === '-i' || a.text.startsWith('-i') || a.text === '--in-place',
+    (a) => a.text.startsWith('-i') || a.text.startsWith('--in-place'),
   );
   return fileOps(cmd, inPlace ? 'write' : 'read', { patternFirst: true, destLast: false });
 }

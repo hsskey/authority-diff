@@ -106,7 +106,7 @@ export function classifyGit(cmd: NormalizedCommand): OperationDraft[] {
     return [remoteOp('fetch', gitCmd, sub, rest)];
   }
   if (sub === 'push') {
-    const forced = hasFlag(args, ...FORCE_FLAGS) || hasPlusRefspec(rest);
+    const forced = hasForceFlag(args) || hasPlusRefspec(rest);
     return [remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest)];
   }
   if (sub === 'reset') {
@@ -194,6 +194,16 @@ function remoteOp(
     branch: sub === 'push' ? cmd.gitBranch : null,
   };
   return draft(capability, target, analyzability, 'git', cmd.raw, signals);
+}
+
+function hasForceFlag(args: readonly ShellWord[]): boolean {
+  // `--force-with-lease` and `--force-if-includes` also take a `=<ref>` value form.
+  return args.some(
+    (a) =>
+      FORCE_FLAGS.includes(a.text) ||
+      a.text.startsWith('--force-with-lease=') ||
+      a.text.startsWith('--force-if-includes='),
+  );
 }
 
 function hasPlusRefspec(args: readonly ShellWord[]): boolean {
