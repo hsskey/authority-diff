@@ -1,11 +1,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { claudeSettingsPath } from '../config.ts';
 import {
-  PERMISSION_REQUEST_HOOK_COMMAND,
-  SESSION_END_HOOK_COMMAND,
-  claudeSettingsPath,
-} from '../config.ts';
+  isManagedPermissionRequestCommand,
+  isManagedSessionEndCommand,
+  resolveHookCommand,
+  resolveRepoRoot,
+} from '../hook-command.ts';
 import { writeStdout } from '../output.ts';
+import { workspaceLinkWarnings } from '../workspace-link.ts';
 
 interface HookCommand {
   readonly type: 'command';
@@ -22,12 +25,26 @@ interface SessionEndHookGroup {
 }
 
 interface HookInstallChange {
+  readonly warnings?: readonly string[];
   readonly PermissionRequest?: readonly MatcherHookGroup[];
   readonly SessionEnd?: readonly SessionEndHookGroup[];
 }
 
+interface ResolvedHookCommands {
+  readonly permissionRequest: string;
+  readonly sessionEnd: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function resolveCommands(commandOverride?: string): ResolvedHookCommands {
+  const options = commandOverride === undefined ? undefined : { commandOverride };
+  return {
+    permissionRequest: resolveHookCommand('permission-request', options),
+    sessionEnd: resolveHookCommand('session-end', options),
+  };
 }
 
 function arrayContainsCommand(value: unknown, command: string): boolean {
@@ -42,20 +59,77 @@ function arrayContainsCommand(value: unknown, command: string): boolean {
   });
 }
 
-function permissionRequestEntry(): MatcherHookGroup {
+function normalizeHookGroups(
+  groups: readonly unknown[],
+  isManaged: (command: string) => boolean,
+  targetCommand: string,
+): { readonly groups: readonly unknown[]; readonly changed: boolean } {
+  let changed = false;
+  let targetSeen = false;
+  const nextGroups: unknown[] = [];
+
+  for (const group of groups) {
+    if (!isRecord(group) || !Array.isArray(group.hooks)) {
+      nextGroups.push(group);
+      continue;
+    }
+
+    const nextHooks: unknown[] = [];
+    for (const hook of group.hooks) {
+      if (!isRecord(hook) || hook.type !== 'command' || typeof hook.command !== 'string') {
+        nextHooks.push(hook);
+        continue;
+      }
+
+      if (hook.command === targetCommand) {
+        if (targetSeen) {
+          changed = true;
+          continue;
+        }
+        targetSeen = true;
+        nextHooks.push(hook);
+        continue;
+      }
+
+      if (isManaged(hook.command)) {
+        changed = true;
+        if (!targetSeen) {
+          targetSeen = true;
+          nextHooks.push({ ...hook, command: targetCommand });
+        }
+        continue;
+      }
+
+      nextHooks.push(hook);
+    }
+
+    if (nextHooks.length > 0) {
+      nextGroups.push({ ...group, hooks: nextHooks });
+    } else if (group.hooks.length > 0) {
+      changed = true;
+    }
+  }
+
+  return { groups: nextGroups, changed };
+}
+
+function permissionRequestEntry(command: string): MatcherHookGroup {
   return {
     matcher: '*',
-    hooks: [{ type: 'command', command: PERMISSION_REQUEST_HOOK_COMMAND }],
+    hooks: [{ type: 'command', command }],
   };
 }
 
-function sessionEndEntry(): SessionEndHookGroup {
+function sessionEndEntry(command: string): SessionEndHookGroup {
   return {
-    hooks: [{ type: 'command', command: SESSION_END_HOOK_COMMAND }],
+    hooks: [{ type: 'command', command }],
   };
 }
 
-function mergeHooks(document: Record<string, unknown>): {
+function mergeHooks(
+  document: Record<string, unknown>,
+  commands: ResolvedHookCommands,
+): {
   readonly document: Record<string, unknown>;
   readonly change: HookInstallChange;
 } {
@@ -68,18 +142,41 @@ function mergeHooks(document: Record<string, unknown>): {
     : [];
 
   let change: HookInstallChange = {};
-  let nextPermissionRequest: readonly unknown[] = existingPermissionRequest;
-  let nextSessionEnd: readonly unknown[] = existingSessionEnd;
+  let nextPermissionRequest = existingPermissionRequest;
+  let nextSessionEnd = existingSessionEnd;
 
-  if (!arrayContainsCommand(hooksValue.PermissionRequest, PERMISSION_REQUEST_HOOK_COMMAND)) {
-    const entry = permissionRequestEntry();
-    nextPermissionRequest = [...existingPermissionRequest, entry];
+  const normalizedPermissionRequest = normalizeHookGroups(
+    existingPermissionRequest,
+    isManagedPermissionRequestCommand,
+    commands.permissionRequest,
+  );
+  nextPermissionRequest = normalizedPermissionRequest.groups;
+  if (normalizedPermissionRequest.changed) {
+    change = {
+      ...change,
+      PermissionRequest: [permissionRequestEntry(commands.permissionRequest)],
+    };
+  }
+
+  if (!arrayContainsCommand(nextPermissionRequest, commands.permissionRequest)) {
+    const entry = permissionRequestEntry(commands.permissionRequest);
+    nextPermissionRequest = [...nextPermissionRequest, entry];
     change = { ...change, PermissionRequest: [entry] };
   }
 
-  if (!arrayContainsCommand(hooksValue.SessionEnd, SESSION_END_HOOK_COMMAND)) {
-    const entry = sessionEndEntry();
-    nextSessionEnd = [...existingSessionEnd, entry];
+  const normalizedSessionEnd = normalizeHookGroups(
+    existingSessionEnd,
+    isManagedSessionEndCommand,
+    commands.sessionEnd,
+  );
+  nextSessionEnd = normalizedSessionEnd.groups;
+  if (normalizedSessionEnd.changed) {
+    change = { ...change, SessionEnd: [sessionEndEntry(commands.sessionEnd)] };
+  }
+
+  if (!arrayContainsCommand(nextSessionEnd, commands.sessionEnd)) {
+    const entry = sessionEndEntry(commands.sessionEnd);
+    nextSessionEnd = [...nextSessionEnd, entry];
     change = { ...change, SessionEnd: [entry] };
   }
 
@@ -125,13 +222,27 @@ function hasChange(change: HookInstallChange): boolean {
   return change.PermissionRequest !== undefined || change.SessionEnd !== undefined;
 }
 
-export function runInstallHooks(options: { readonly printOnly: boolean }): void {
+function buildPrintOutput(change: HookInstallChange): HookInstallChange | null {
+  const warnings = workspaceLinkWarnings(resolveRepoRoot());
+  const output: HookInstallChange = warnings.length > 0 ? { ...change, warnings } : change;
+  if (!hasChange(output) && output.warnings === undefined) {
+    return null;
+  }
+  return output;
+}
+
+export function runInstallHooks(options: {
+  readonly printOnly: boolean;
+  readonly commandOverride?: string;
+}): void {
+  const commands = resolveCommands(options.commandOverride);
   const current = loadDocument();
-  const merged = mergeHooks(current);
+  const merged = mergeHooks(current, commands);
 
   if (options.printOnly) {
-    if (hasChange(merged.change)) {
-      writeStdout(JSON.stringify(merged.change, null, 2));
+    const output = buildPrintOutput(merged.change);
+    if (output !== null) {
+      writeStdout(JSON.stringify(output, null, 2));
     }
     return;
   }
