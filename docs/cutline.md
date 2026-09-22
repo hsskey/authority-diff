@@ -188,7 +188,7 @@ flowchart BT
 - `Decision`: `policyVersionId` 제거. 순수 평가 함수는 문서만 받는다.
 - `DiffGroup`: `id` 대신 `groupKey`. `zone` 대신 `fromZone`, `toZone`.
   `principalCount`, `mandateDependentCount`, `decidingRuleId` 제거.
-- `ReplayRun`: `kind`와 `DecisionSource` 제거. 저장 계약은 다음 단계에서 정한다.
+- `ReplayRun`: `kind`와 `DecisionSource` 제거. 저장 계약은 `replay/schema.ts`가 소유한다: `ReplayRun`, `StoredDiffGroup`(`DiffGroup` + `replayRunId`), `StoredChangedAction`(`replayRunId`, `actionKey`, `groupKey`, `fromEffect`, `toEffect`).
 - `PolicyVersionStatus`: `draft`, `in_review`, `accepted`, `rejected`.
 - `PolicyRule.mandateException`: schemaVersion 1에서 제거합니다.
   V1 문서에는 V1이 평가하는 개념만 들어갑니다.
