@@ -67,6 +67,26 @@ function collect(node: Node, depth: number, out: ShellCommand[], parser: Parser)
     }
     return;
   }
+  if (node.type === 'redirected_statement') {
+    // A redirection binds to the redirected_statement wrapping the body, which
+    // may be a bare command, a pipeline, or a list. Shell semantics apply it to
+    // the last simple command of the body, so collect the body first and attach
+    // the redirects to whatever command was collected last. This keeps redirect
+    // capture independent of program recognition and pipeline/chain position.
+    const before = out.length;
+    const redirects = extractDirectRedirects(node);
+    for (const child of node.namedChildren) {
+      if (child !== null) collect(child, depth, out, parser);
+    }
+    if (redirects.length > 0 && out.length > before) {
+      const lastIndex = out.length - 1;
+      const last = out[lastIndex];
+      if (last !== undefined) {
+        out[lastIndex] = { ...last, redirects: [...last.redirects, ...redirects] };
+      }
+    }
+    return;
+  }
   for (const child of node.namedChildren) {
     if (child !== null) collect(child, depth, out, parser);
   }
@@ -112,8 +132,9 @@ function buildCommand(node: Node, depth: number): ShellCommand {
   const nameNode = node.childForFieldName('name');
   const name = nameNode === null ? null : readWord(nameNode);
   const args = commandArgs(node);
-  const redirects = collectRedirects(node);
-  return { name, args, redirects, raw: node.text, depth };
+  // A command's own direct (for example leading) redirects are captured here;
+  // redirects on an enclosing redirected_statement are attached by `collect`.
+  return { name, args, redirects: extractDirectRedirects(node), raw: node.text, depth };
 }
 
 /** Words after the command name, skipping env assignments and redirects. */
@@ -136,10 +157,10 @@ function commandArgs(node: Node): ShellWord[] {
   return words;
 }
 
-function collectRedirects(node: Node): ShellRedirect[] {
+/** Direct redirects of a redirected_statement (not the body's substitutions). */
+function extractDirectRedirects(node: Node): ShellRedirect[] {
   const redirects: ShellRedirect[] = [];
-  const container = node.parent?.type === 'redirected_statement' ? node.parent : node;
-  for (const child of container.namedChildren) {
+  for (const child of node.namedChildren) {
     if (child === null) continue;
     if (child.type === 'file_redirect') {
       addFileRedirect(child, redirects);

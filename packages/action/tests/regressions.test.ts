@@ -318,3 +318,103 @@ describe('git push branch follows an explicit refspec, not the current branch', 
     expect(pushBranchOf('git push origin')).toBe('main');
   });
 });
+
+describe('redirect writes are captured across pipelines and chains', () => {
+  test('a pipe-tail redirect writes its target', () => {
+    const ops = classify(bash("git ls-files -z | tr '\\0' '\\n' > /tmp/x.txt"));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({ kind: 'path', path: '/tmp/x.txt', isInsideWorkspace: false });
+  });
+
+  test('every redirect in a repeated-command chain is captured', () => {
+    const ops = classify(bash('printf a > /tmp/a.txt && printf b > /tmp/b.txt'));
+    const writes = ops.flatMap((o) =>
+      o.capability === 'write' && o.target.kind === 'path' ? [o.target.path] : [],
+    );
+    expect(writes).toContain('/tmp/a.txt');
+    expect(writes).toContain('/tmp/b.txt');
+  });
+
+  test('an unrecognized pipe tail still captures the redirect and stays execute', () => {
+    const ops = classify(bash('frobnicate | unknownprog > /tmp/c.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({ kind: 'path', path: '/tmp/c.txt', isInsideWorkspace: false });
+    expect(withCap(ops, 'execute')?.target.kind).toBe('unknown');
+  });
+
+  test('a pipe-tail redirect to /dev/null stays a no-op', () => {
+    expect(withCap(classify(bash('sort a | uniq > /dev/null')), 'write')).toBeUndefined();
+  });
+
+  test('cd dir > /tmp/out.txt captures the redirect write', () => {
+    const ops = classify(bash('cd src > /tmp/out.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/tmp/out.txt',
+      isInsideWorkspace: false,
+    });
+  });
+
+  test('a bare wrapper redirect (exec > /tmp/log.txt) captures the write', () => {
+    const ops = classify(bash('exec > /tmp/log.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/tmp/log.txt',
+      isInsideWorkspace: false,
+    });
+  });
+
+  test('a bare env redirect (env > f) captures the write', () => {
+    const ops = classify(bash('env > f'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/f',
+      isInsideWorkspace: true,
+    });
+  });
+
+  test('a bare wrapper redirect to /dev/null stays a no-op', () => {
+    expect(withCap(classify(bash('exec > /dev/null')), 'write')).toBeUndefined();
+  });
+
+  test('a leading redirect (>out.txt echo hi) captures the write', () => {
+    const ops = classify(bash('>out.txt echo hi'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/out.txt',
+      isInsideWorkspace: true,
+    });
+  });
+
+  test('a leading fd-target redirect (2>err.txt cmd foo) captures the write', () => {
+    const ops = classify(bash('2>err.txt cmd foo'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/err.txt',
+      isInsideWorkspace: true,
+    });
+  });
+
+  test('a leading redirect and a trailing redirect are both captured', () => {
+    const writes = classify(bash('>a.txt echo hi >b.txt')).flatMap((o) =>
+      o.capability === 'write' && o.target.kind === 'path' ? [o.target.path] : [],
+    );
+    expect(writes).toContain('/work/repo/a.txt');
+    expect(writes).toContain('/work/repo/b.txt');
+  });
+
+  test('a leading redirect to /dev/null stays a no-op', () => {
+    expect(withCap(classify(bash('> /dev/null echo hi')), 'write')).toBeUndefined();
+  });
+
+  test('a leading fd duplication (2>&1 cmd) stays a no-op', () => {
+    const ops = classify(bash('2>&1 grep pattern file.txt'));
+    expect(withCap(ops, 'write')).toBeUndefined();
+    expect(pathTargets(ops)).not.toContain('/work/repo/1');
+  });
+});

@@ -129,3 +129,45 @@ const RECOGNIZED = new Set([
   'tree',
   'date',
 ]);
+
+const SHELL_KEYWORDS = new Set([
+  'if',
+  'then',
+  'else',
+  'elif',
+  'fi',
+  'for',
+  'while',
+  'do',
+  'done',
+  'case',
+  'esac',
+  'function',
+  'in',
+  'select',
+  'until',
+  'time',
+  'coproc',
+]);
+
+describe('redirect write capture is independent of program recognition', () => {
+  test('appending > <path> to a simple command always yields a write on that path', () => {
+    fc.assert(
+      fc.property(
+        fc.stringMatching(/^[a-z][a-z0-9]{2,12}$/).filter((p) => !SHELL_KEYWORDS.has(p)),
+        fc.stringMatching(/^[a-z0-9][a-z0-9._-]{0,20}$/),
+        fc.boolean(),
+        (program, base, piped) => {
+          const path = `/tmp/${base}`;
+          const command = piped ? `cat input | ${program} > ${path}` : `${program} arg > ${path}`;
+          const ops = classify(toolCall('Bash', command, false));
+          const hasWrite = ops.some(
+            (o) => o.capability === 'write' && o.target.kind === 'path' && o.target.path === path,
+          );
+          expect(hasWrite).toBe(true);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+});

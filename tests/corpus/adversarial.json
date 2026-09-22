@@ -232,6 +232,33 @@
       "name": "find-exec-target-is-search-path",
       "input": { "toolName": "Bash", "toolInputRedacted": "find src -name '*.tmp' -exec rm {} ;" },
       "mustInclude": [{ "capability": "delete", "targetKind": "path" }]
+    },
+    {
+      "name": "pipe-tail-redirect-write",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git ls-files -z | tr '\\0' '\\n' > /tmp/synthetic-x.txt"
+      },
+      "mustInclude": [{ "capability": "write", "targetKind": "path" }]
+    },
+    {
+      "name": "chain-repeated-command-both-writes",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "printf a > /tmp/synthetic-a.txt && printf b > /tmp/synthetic-b.txt"
+      },
+      "mustInclude": [{ "capability": "write", "targetKind": "path" }]
+    },
+    {
+      "name": "unknown-pipe-tail-redirect-write-and-execute",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "frobnicate | unknownprog > /tmp/synthetic-c.txt"
+      },
+      "mustInclude": [
+        { "capability": "write", "targetKind": "path" },
+        { "capability": "execute", "targetKind": "unknown" }
+      ]
     }
   ]
 }
