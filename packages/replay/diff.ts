@@ -1,16 +1,21 @@
+import { createEvaluator } from '@authority/policy/evaluate';
+import type { ComputeDiff } from './schema.ts';
+import { computeDiffWith, deriveTargetKey, renderHeadline } from './lib/domain/compute-diff.ts';
+
 /**
  * Public entry point for Replay diff computation.
  *
  * `computeDiffWith` is the deterministic core: it owns grouping, severity,
- * sorting, and hashing, and receives injected evaluators so it can be developed
- * and tested independently of the Policy evaluation package. Tests reach the
- * package only through this entry point; the core is exported here as the
- * authorized testing seam.
- *
- * The public `computeDiff: ComputeDiff` wrapper compiles the two Policy
- * Documents with `createEvaluator` from `@authority/policy/evaluate` and
- * delegates to `computeDiffWith`. That entry point is produced by the Policy
- * lane in parallel; the wrapper is wired once that package lands so the real
- * integration is exercised, rather than faking the dependency here.
+ * sorting, and hashing, and receives injected evaluators. Tests reach the
+ * package only through this entry point; the core and its helpers are exported
+ * here as the authorized testing seam.
  */
-export { computeDiffWith, deriveTargetKey, renderHeadline } from './lib/domain/compute-diff.ts';
+export { computeDiffWith, deriveTargetKey, renderHeadline };
+
+/**
+ * Computes the deterministic diff between two Policy Documents. Compiles each
+ * document once with `createEvaluator` and delegates to `computeDiffWith`; see
+ * the ComputeDiff TSDoc in schema.ts for the frozen output contract.
+ */
+export const computeDiff: ComputeDiff = ({ actions, baseline, candidate }) =>
+  computeDiffWith(createEvaluator(baseline), createEvaluator(candidate), actions);
