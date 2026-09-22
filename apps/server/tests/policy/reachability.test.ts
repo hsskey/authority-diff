@@ -24,8 +24,16 @@ const ENDPOINTS: readonly Endpoint[] = [
     method: 'POST',
     path: `/api/v1/policies/${BAD_ID}/versions`,
   },
-  { name: 'GET /api/v1/policy-versions/:id', method: 'GET', path: `/api/v1/policy-versions/${BAD_ID}` },
-  { name: 'PUT /api/v1/policy-versions/:id', method: 'PUT', path: `/api/v1/policy-versions/${BAD_ID}` },
+  {
+    name: 'GET /api/v1/policy-versions/:id',
+    method: 'GET',
+    path: `/api/v1/policy-versions/${BAD_ID}`,
+  },
+  {
+    name: 'PUT /api/v1/policy-versions/:id',
+    method: 'PUT',
+    path: `/api/v1/policy-versions/${BAD_ID}`,
+  },
   {
     name: 'POST /api/v1/policy-versions/:id/validations',
     method: 'POST',
@@ -34,23 +42,29 @@ const ENDPOINTS: readonly Endpoint[] = [
 ];
 
 describe('policy routes are wired into the real application', () => {
-  test.each(ENDPOINTS)('$name is protected by the auth middleware (401)', async ({ method, path, body }) => {
-    const app = buildApp();
-    const res = await app.request(path, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    expect(res.status).toBe(401);
-  });
+  test.each(ENDPOINTS)(
+    '$name is protected by the auth middleware (401)',
+    async ({ method, path, body }) => {
+      const app = buildApp();
+      const res = await app.request(path, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      expect(res.status).toBe(401);
+    },
+  );
 
-  test.each(ENDPOINTS)('$name reaches its handler behind auth, not a no-route 404', async ({ method, path, body }) => {
-    const app = buildApp();
-    const res = await app.request(
-      path,
-      authed({ method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }),
-    );
-    expect(res.status).not.toBe(404);
-    expect(res.status).toBe(422);
-  });
+  test.each(ENDPOINTS)(
+    '$name reaches its handler behind auth, not a no-route 404',
+    async ({ method, path, body }) => {
+      const app = buildApp();
+      const res = await app.request(
+        path,
+        authed({ method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }),
+      );
+      expect(res.status).not.toBe(404);
+      expect(res.status).toBe(422);
+    },
+  );
 });
