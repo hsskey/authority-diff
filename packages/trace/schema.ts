@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
+import { IsoTimestampSchema, Sha256Schema, prefixedId } from '@authority/kernel';
 import { OperationSchema, RuntimeSchema, ToolCallSchema } from '@authority/action/schema';
 import type { Runtime } from '@authority/action/schema';
 
@@ -102,3 +102,76 @@ export type DeriveActionKey = (input: {
   readonly toolUseId: string | null;
   readonly sequence: number;
 }) => z.infer<typeof Sha256Schema>;
+
+export const TraceImportIdSchema = prefixedId('imp', 'TraceImportId');
+export type TraceImportId = z.infer<typeof TraceImportIdSchema>;
+
+export const TraceSourceSchema = z.enum(['transcript', 'hook', 'synthetic']);
+export type TraceSource = z.infer<typeof TraceSourceSchema>;
+
+export const TraceImportSchema = z.object({
+  id: TraceImportIdSchema,
+  runtime: RuntimeSchema,
+  source: TraceSourceSchema,
+  sessionExternalId: z.string(),
+  acceptedCount: z.number().int().nonnegative(),
+  duplicateCount: z.number().int().nonnegative(),
+  rejectedCount: z.number().int().nonnegative(),
+  redactionCount: z.number().int().nonnegative(),
+  classifierVersion: z.string(),
+  createdAt: IsoTimestampSchema,
+});
+export type TraceImport = z.infer<typeof TraceImportSchema>;
+
+export const AgentSessionIdSchema = prefixedId('ses', 'AgentSessionId');
+export type AgentSessionId = z.infer<typeof AgentSessionIdSchema>;
+
+export const AgentSessionSchema = z.object({
+  id: AgentSessionIdSchema,
+  runtime: RuntimeSchema,
+  runtimeVersion: z.string().nullable(),
+  sessionExternalId: z.string(),
+  workspaceRoot: z.string().nullable(),
+  gitBranch: z.string().nullable(),
+  hasHookCoverage: z.boolean(),
+  startedAt: IsoTimestampSchema.nullable(),
+  endedAt: IsoTimestampSchema.nullable(),
+});
+export type AgentSession = z.infer<typeof AgentSessionSchema>;
+
+/**
+ * The stored form of an Action. It extends the pure replay projection with the
+ * display and provenance fields the wire and database keep. `actionKey` from
+ * ActionForReplay is the primary key; the database drops `toolInputRedacted`
+ * after its retention window while the operations remain.
+ */
+export const StoredAgentActionSchema = ActionForReplaySchema.extend({
+  toolName: z.string(),
+  toolInputRedacted: z.string().max(16000),
+  isInputTruncated: z.boolean(),
+  isSidechain: z.boolean(),
+  classifierVersion: z.string(),
+  recordedAt: IsoTimestampSchema,
+});
+export type StoredAgentAction = z.infer<typeof StoredAgentActionSchema>;
+
+export const RuntimeObservationEventSchema = z.enum(['permission_request', 'session_end']);
+export type RuntimeObservationEvent = z.infer<typeof RuntimeObservationEventSchema>;
+
+/**
+ * A runtime hook observation. `observationKey` is the server-derived sha256
+ * natural key and makes ingestion idempotent. The join to an Action is by
+ * (`sessionExternalId`, `toolName`, `toolInputHash`) because `toolUseId` is not
+ * confirmed present in the hook input (docs/design.md section 25).
+ */
+export const RuntimeObservationSchema = z.object({
+  observationKey: Sha256Schema,
+  event: RuntimeObservationEventSchema,
+  sessionExternalId: z.string(),
+  toolName: z.string().nullable(),
+  toolInputHash: Sha256Schema.nullable(),
+  cwd: z.string().nullable(),
+  runtimeVersion: z.string().nullable(),
+  occurredAt: IsoTimestampSchema,
+});
+export type RuntimeObservation = z.infer<typeof RuntimeObservationSchema>;

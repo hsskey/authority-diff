@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EffectSchema } from '@authority/kernel';
+import { EffectSchema, IsoTimestampSchema, Sha256Schema, prefixedId } from '@authority/kernel';
 import { AnalyzabilitySchema, CapabilitySchema } from '@authority/action/schema';
 import type { Operation } from '@authority/action/schema';
 
@@ -129,3 +129,37 @@ export type EvaluateAction = (
 ) => Decision | null;
 
 export type ValidatePolicyDocument = (document: PolicyDocument) => readonly PolicyIssue[];
+
+export const PolicyIdSchema = prefixedId('pol', 'PolicyId');
+export type PolicyId = z.infer<typeof PolicyIdSchema>;
+
+export const PolicySchema = z.object({
+  id: PolicyIdSchema,
+  name: z.string().min(1),
+  createdAt: IsoTimestampSchema,
+});
+export type Policy = z.infer<typeof PolicySchema>;
+
+export const PolicyVersionIdSchema = prefixedId('pver', 'PolicyVersionId');
+export type PolicyVersionId = z.infer<typeof PolicyVersionIdSchema>;
+
+export const PolicyVersionStatusSchema = z.enum(['draft', 'in_review', 'accepted', 'rejected']);
+export type PolicyVersionStatus = z.infer<typeof PolicyVersionStatusSchema>;
+
+/**
+ * A stored Policy Version. `document` is mutable only while `status` is
+ * `draft`; the repository guards updates with `content_hash` (docs/design.md
+ * section 25). `contentHash` is the sha256 of the canonical document.
+ */
+export const PolicyVersionSchema = z.object({
+  id: PolicyVersionIdSchema,
+  policyId: PolicyIdSchema,
+  versionNumber: z.number().int().positive(),
+  status: PolicyVersionStatusSchema,
+  document: PolicyDocumentSchema,
+  contentHash: Sha256Schema,
+  baseVersionId: PolicyVersionIdSchema.nullable(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
+});
+export type PolicyVersion = z.infer<typeof PolicyVersionSchema>;

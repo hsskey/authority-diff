@@ -1,13 +1,21 @@
 import { describe, expect, expectTypeOf, test } from 'vitest';
 import type { Runtime } from '@authority/action/schema';
 import {
+  AgentSessionSchema,
   ParsedSessionSchema,
+  RuntimeObservationSchema,
+  StoredAgentActionSchema,
+  TraceImportSchema,
   type DeriveActionKey,
   type ParseTranscript,
   type ParsedSession,
   type RedactText,
 } from '../schema.ts';
 import parsedSessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
+
+const ULID = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+const HASH = 'a'.repeat(64);
+const TS = '2026-01-02T03:04:05.006Z';
 
 describe('trace schema', () => {
   test('accepts the shared synthetic Parsed Session', () => {
@@ -44,5 +52,83 @@ describe('trace schema', () => {
         readonly sequence: number;
       }) => string
     >();
+  });
+});
+
+describe('trace storage schema round-trip', () => {
+  test('accepts a Trace Import', () => {
+    const value = {
+      id: `imp_${ULID}`,
+      runtime: 'claude_code',
+      source: 'transcript',
+      sessionExternalId: 'session-a',
+      acceptedCount: 3,
+      duplicateCount: 1,
+      rejectedCount: 0,
+      redactionCount: 2,
+      classifierVersion: 'c1',
+      createdAt: TS,
+    };
+    const parsed = TraceImportSchema.parse(value);
+    expect(parsed).toEqual(value);
+  });
+
+  test('accepts an Agent Session', () => {
+    const value = {
+      id: `ses_${ULID}`,
+      runtime: 'claude_code',
+      runtimeVersion: null,
+      sessionExternalId: 'session-a',
+      workspaceRoot: '~/project',
+      gitBranch: null,
+      hasHookCoverage: false,
+      startedAt: TS,
+      endedAt: null,
+    };
+    expect(AgentSessionSchema.parse(value)).toEqual(value);
+  });
+
+  test('accepts a Stored Agent Action keyed by actionKey', () => {
+    const value = {
+      actionKey: HASH,
+      sessionExternalId: 'session-a',
+      operations: [
+        {
+          index: 0,
+          capability: 'read',
+          target: { kind: 'unknown' },
+          analyzability: 'full',
+          program: null,
+          fragment: 'cat file',
+          signals: [],
+        },
+      ],
+      observedOutcome: 'executed',
+      occurredAt: TS,
+      toolName: 'Bash',
+      toolInputRedacted: 'cat file',
+      isInputTruncated: false,
+      isSidechain: false,
+      classifierVersion: 'c1',
+      recordedAt: TS,
+    };
+    expect(StoredAgentActionSchema.parse(value)).toEqual(value);
+  });
+
+  test('accepts a Runtime Observation and rejects a bad key', () => {
+    const value = {
+      observationKey: HASH,
+      event: 'permission_request',
+      sessionExternalId: 'session-a',
+      toolName: 'Bash',
+      toolInputHash: HASH,
+      cwd: '~/project',
+      runtimeVersion: null,
+      occurredAt: TS,
+    };
+    expect(RuntimeObservationSchema.parse(value)).toEqual(value);
+    expect(RuntimeObservationSchema.safeParse({ ...value, observationKey: 'nope' }).success).toBe(
+      false,
+    );
   });
 });

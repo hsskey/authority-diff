@@ -1,0 +1,21 @@
+{
+  "name": "@authority/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./schema.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@authority/action": "workspace:*",
+    "@authority/kernel": "workspace:*",
+    "@authority/policy": "workspace:*",
+    "@authority/replay": "workspace:*",
+    "@authority/review": "workspace:*",
+    "@authority/trace": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

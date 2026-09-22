@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { EffectSchema, IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
+import { EffectSchema, IsoTimestampSchema, Sha256Schema, prefixedId } from '@authority/kernel';
 import { CapabilitySchema } from '@authority/action/schema';
 import type { Target } from '@authority/action/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import { ZoneSchema } from '@authority/policy/schema';
+import { PolicyVersionIdSchema, ZoneSchema } from '@authority/policy/schema';
 import type { PolicyDocument } from '@authority/policy/schema';
 
 const TransitionSchema = z.object({
@@ -137,3 +137,49 @@ export type ComputeDiff = (input: {
   readonly baseline: PolicyDocument;
   readonly candidate: PolicyDocument;
 }) => DiffResult;
+
+export const ReplayRunIdSchema = prefixedId('rpl', 'ReplayRunId');
+export type ReplayRunId = z.infer<typeof ReplayRunIdSchema>;
+
+export const ReplayRunStatusSchema = z.enum(['queued', 'running', 'completed', 'failed']);
+export type ReplayRunStatus = z.infer<typeof ReplayRunStatusSchema>;
+
+/**
+ * A stored replay run. `inputsHash` is the natural idempotency key over
+ * (baseline, candidate, window, classifierVersion); a second request with the
+ * same hash returns the completed run instead of starting another. `resultHash`
+ * and `stats` are null until the run completes; `errorCode` is set on failure.
+ */
+export const ReplayRunSchema = z.object({
+  id: ReplayRunIdSchema,
+  baselineVersionId: PolicyVersionIdSchema,
+  candidateVersionId: PolicyVersionIdSchema,
+  windowFrom: IsoTimestampSchema,
+  windowTo: IsoTimestampSchema,
+  status: ReplayRunStatusSchema,
+  classifierVersion: z.string(),
+  inputsHash: Sha256Schema,
+  resultHash: Sha256Schema.nullable(),
+  stats: ReplayStatsSchema.nullable(),
+  errorCode: z.string().nullable(),
+  createdAt: IsoTimestampSchema,
+  startedAt: IsoTimestampSchema.nullable(),
+  completedAt: IsoTimestampSchema.nullable(),
+});
+export type ReplayRun = z.infer<typeof ReplayRunSchema>;
+
+/** The stored Diff Group is the computed group tied to its run. */
+export const StoredDiffGroupSchema = DiffGroupSchema.extend({
+  replayRunId: ReplayRunIdSchema,
+});
+export type StoredDiffGroup = z.infer<typeof StoredDiffGroupSchema>;
+
+/** One changed Action's transition within a stored run and group. */
+export const StoredChangedActionSchema = z.object({
+  replayRunId: ReplayRunIdSchema,
+  actionKey: Sha256Schema,
+  groupKey: Sha256Schema,
+  fromEffect: EffectSchema,
+  toEffect: EffectSchema,
+});
+export type StoredChangedAction = z.infer<typeof StoredChangedActionSchema>;
