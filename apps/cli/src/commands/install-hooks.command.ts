@@ -5,8 +5,10 @@ import {
   isManagedPermissionRequestCommand,
   isManagedSessionEndCommand,
   resolveHookCommand,
+  resolveRepoRoot,
 } from '../hook-command.ts';
 import { writeStdout } from '../output.ts';
+import { workspaceLinkWarnings } from '../workspace-link.ts';
 
 interface HookCommand {
   readonly type: 'command';
@@ -23,6 +25,7 @@ interface SessionEndHookGroup {
 }
 
 interface HookInstallChange {
+  readonly warnings?: readonly string[];
   readonly PermissionRequest?: readonly MatcherHookGroup[];
   readonly SessionEnd?: readonly SessionEndHookGroup[];
 }
@@ -219,6 +222,15 @@ function hasChange(change: HookInstallChange): boolean {
   return change.PermissionRequest !== undefined || change.SessionEnd !== undefined;
 }
 
+function buildPrintOutput(change: HookInstallChange): HookInstallChange | null {
+  const warnings = workspaceLinkWarnings(resolveRepoRoot());
+  const output: HookInstallChange = warnings.length > 0 ? { ...change, warnings } : change;
+  if (!hasChange(output) && output.warnings === undefined) {
+    return null;
+  }
+  return output;
+}
+
 export function runInstallHooks(options: {
   readonly printOnly: boolean;
   readonly commandOverride?: string;
@@ -228,8 +240,9 @@ export function runInstallHooks(options: {
   const merged = mergeHooks(current, commands);
 
   if (options.printOnly) {
-    if (hasChange(merged.change)) {
-      writeStdout(JSON.stringify(merged.change, null, 2));
+    const output = buildPrintOutput(merged.change);
+    if (output !== null) {
+      writeStdout(JSON.stringify(output, null, 2));
     }
     return;
   }

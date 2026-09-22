@@ -2,8 +2,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 /**
- * Hook handler logic must finish within this budget. tsx interpreter startup is
- * not counted toward the budget until the CLI is bundled (known limitation).
+ * Hook handler logic must finish within this budget. tsx interpreter startup and
+ * workspace package resolution are not counted toward the budget until the CLI is
+ * bundled (known limitations; see docs/evidence/hook-spool.md).
  */
 export const HOOK_EXIT_BUDGET_MS = 400;
 
