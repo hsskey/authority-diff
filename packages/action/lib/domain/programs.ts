@@ -166,7 +166,8 @@ const INTERPRETERS: ReadonlySet<string> = new Set([
   'tclsh',
   'groovy',
 ]);
-const INLINE_FLAGS: ReadonlySet<string> = new Set(['-c', '-e', '-p', '--eval', '--print', '-r']);
+const CODE_FLAGS: ReadonlySet<string> = new Set(['-c', '-e', '-p', '--eval', '--print']);
+const PRELOAD_VALUE_FLAGS: ReadonlySet<string> = new Set(['-r', '--require']);
 
 const BUILD_RUNNERS: ReadonlySet<string> = new Set([
   'vitest',
@@ -283,16 +284,28 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
 }
 
 function interpreterOps(cmd: NormalizedCommand): OperationDraft[] {
-  const inlineIdx = cmd.args.findIndex((a) => INLINE_FLAGS.has(a.text));
-  const inlineBody =
-    inlineIdx === -1
-      ? null
-      : (cmd.args.slice(inlineIdx + 1).find((a) => !a.text.startsWith('-'))?.text ?? '');
-  const heredoc = cmd.heredocBodies[0] ?? null;
-  const body = inlineBody ?? heredoc;
+  const body = inlineCodeBody(cmd.args) ?? cmd.heredocBodies[0] ?? null;
   if (body !== null) return inlineCodeOps(cmd, body);
   // Interpreter running a script file, or a REPL: opaque but bounded execution.
   return [runnerDraft('execute', cmd, 'partial')];
+}
+
+/**
+ * The inline-code body carried by a code flag (`-e`/`-c`/...), reading past the
+ * value of a preload flag (`-r <module>`) so the module is not taken as code.
+ */
+function inlineCodeBody(args: readonly ShellWord[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i]?.text ?? '';
+    if (PRELOAD_VALUE_FLAGS.has(t)) {
+      i += 1;
+      continue;
+    }
+    if (CODE_FLAGS.has(t)) {
+      return args.slice(i + 1).find((a) => !a.text.startsWith('-'))?.text ?? '';
+    }
+  }
+  return null;
 }
 
 /** Inline code to an interpreter: opaque execute plus literal-derived effects. */

