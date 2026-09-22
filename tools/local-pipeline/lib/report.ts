@@ -14,22 +14,33 @@ export interface SampleOperation {
 export interface SampleRecord {
   readonly actionKey: string;
   readonly toolName: string;
+  readonly toolInputRedacted: string;
   readonly occurredAt: string;
   readonly operations: readonly SampleOperation[];
+}
+
+export interface ExcludedRecord {
+  readonly toolName: string;
+  readonly toolInputRedacted: string;
 }
 
 export interface Samples {
   readonly full: readonly SampleRecord[];
   readonly none: readonly SampleRecord[];
+  readonly excluded: readonly ExcludedRecord[];
   readonly noneTopPrograms: readonly Count[];
 }
 
 const SAMPLE_LIMIT = 50;
+const EXCLUDED_PER_TOOL = 3;
 
-function toSample(action: ActionForReplay, toolName: string): SampleRecord {
+const UNKNOWN_META: ActionMeta = { toolName: 'unknown', isSidechain: false, toolInputRedacted: '' };
+
+function toSample(action: ActionForReplay, meta: ActionMeta): SampleRecord {
   return {
     actionKey: action.actionKey,
-    toolName,
+    toolName: meta.toolName,
+    toolInputRedacted: meta.toolInputRedacted,
     occurredAt: action.occurredAt,
     operations: action.operations.map((operation: Operation) => ({
       capability: operation.capability,
@@ -50,24 +61,41 @@ export function selectSamples(
   actions: readonly ActionForReplay[],
   meta: ReadonlyMap<string, ActionMeta>,
 ): Samples {
-  const toolOf = (actionKey: string): string => meta.get(actionKey)?.toolName ?? 'unknown';
+  const metaOf = (actionKey: string): ActionMeta => meta.get(actionKey) ?? UNKNOWN_META;
   const evaluated = actions.filter((action) => action.operations.length > 0);
 
   const full = [...evaluated]
     .filter(
       (action) =>
-        toolOf(action.actionKey) === 'Bash' && actionAnalyzability(action.operations) === 'full',
+        metaOf(action.actionKey).toolName === 'Bash' &&
+        actionAnalyzability(action.operations) === 'full',
     )
     .sort(byActionKey)
     .slice(0, SAMPLE_LIMIT)
-    .map((action) => toSample(action, toolOf(action.actionKey)));
+    .map((action) => toSample(action, metaOf(action.actionKey)));
 
   const noneActions = [...evaluated]
     .filter((action) => actionAnalyzability(action.operations) === 'none')
     .sort(byActionKey);
   const none = noneActions
     .slice(0, SAMPLE_LIMIT)
-    .map((action) => toSample(action, toolOf(action.actionKey)));
+    .map((action) => toSample(action, metaOf(action.actionKey)));
+
+  const excludedByTool = new Map<string, ExcludedRecord[]>();
+  for (const action of [...actions].sort(byActionKey)) {
+    if (action.operations.length > 0) {
+      continue;
+    }
+    const entry = metaOf(action.actionKey);
+    const bucket = excludedByTool.get(entry.toolName) ?? [];
+    if (bucket.length < EXCLUDED_PER_TOOL) {
+      bucket.push({ toolName: entry.toolName, toolInputRedacted: entry.toolInputRedacted });
+      excludedByTool.set(entry.toolName, bucket);
+    }
+  }
+  const excluded = [...excludedByTool.keys()]
+    .sort()
+    .flatMap((toolName) => excludedByTool.get(toolName) ?? []);
 
   const programs = new Map<string, number>();
   for (const action of noneActions) {
@@ -82,7 +110,7 @@ export function selectSamples(
     .sort((a, b) => (b.count - a.count !== 0 ? b.count - a.count : a.key < b.key ? -1 : 1))
     .slice(0, 5);
 
-  return { full, none, noneTopPrograms };
+  return { full, none, excluded, noneTopPrograms };
 }
 
 function pct(value: number): string {

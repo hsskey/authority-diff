@@ -4,6 +4,7 @@ import type { ActionForReplay, ParsedSession } from '@authority/trace/schema';
 export interface ActionMeta {
   readonly toolName: string;
   readonly isSidechain: boolean;
+  readonly toolInputRedacted: string;
 }
 
 export interface MeasureInput {

@@ -81,13 +81,17 @@ const actions: ActionForReplay[] = [
   ),
 ];
 
+function metaEntry(toolName: string, isSidechain: boolean, actionKey: string): ActionMeta {
+  return { toolName, isSidechain, toolInputRedacted: `input-${actionKey}` };
+}
+
 const meta = new Map<string, ActionMeta>([
-  ['a1', { toolName: 'Bash', isSidechain: false }],
-  ['a2', { toolName: 'Bash', isSidechain: false }],
-  ['a3', { toolName: 'Bash', isSidechain: false }],
-  ['a4', { toolName: 'mcp__files__read', isSidechain: false }],
-  ['a5', { toolName: 'Task', isSidechain: true }],
-  ['a6', { toolName: 'Bash', isSidechain: false }],
+  ['a1', metaEntry('Bash', false, 'a1')],
+  ['a2', metaEntry('Bash', false, 'a2')],
+  ['a3', metaEntry('Bash', false, 'a3')],
+  ['a4', metaEntry('mcp__files__read', false, 'a4')],
+  ['a5', metaEntry('Task', true, 'a5')],
+  ['a6', metaEntry('Bash', false, 'a6')],
 ]);
 
 const metrics = computeMetrics({
@@ -163,6 +167,41 @@ describe('selectSamples', () => {
     expect(samples.noneTopPrograms).toEqual([{ key: 'python3', count: 1 }]);
   });
 
+  test('carries the redacted tool input on every full and none record', () => {
+    const samples = selectSamples(actions, meta);
+    expect(samples.full.map((record) => record.toolInputRedacted)).toEqual([
+      'input-a1',
+      'input-a6',
+    ]);
+    expect(samples.none.map((record) => record.toolInputRedacted)).toEqual([
+      'input-a2',
+      'input-a3',
+    ]);
+  });
+
+  test('emits excluded records per tool with the redacted input', () => {
+    const samples = selectSamples(actions, meta);
+    expect(samples.excluded).toEqual([{ toolName: 'Task', toolInputRedacted: 'input-a5' }]);
+  });
+
+  test('caps excluded records at three per tool', () => {
+    const excludedActions: ActionForReplay[] = Array.from({ length: 5 }, (_value, i) =>
+      action(`t${i}`, '2026-01-02T03:04:05.000Z', []),
+    ).concat(action('b0', '2026-01-02T03:04:05.000Z', []));
+    const excludedMeta = new Map<string, ActionMeta>([
+      ...excludedActions
+        .slice(0, 5)
+        .map((record): [string, ActionMeta] => [
+          record.actionKey,
+          metaEntry('Task', true, record.actionKey),
+        ]),
+      ['b0', metaEntry('Bash', false, 'b0')],
+    ]);
+    const samples = selectSamples(excludedActions, excludedMeta);
+    expect(samples.excluded.filter((record) => record.toolName === 'Task')).toHaveLength(3);
+    expect(samples.excluded.filter((record) => record.toolName === 'Bash')).toHaveLength(1);
+  });
+
   test('tallies noneTopPrograms over the whole population, not the 50-record sample', () => {
     const many: ActionForReplay[] = Array.from({ length: 60 }, (_value, i) => {
       const key = String(i).padStart(2, '0');
@@ -172,7 +211,7 @@ describe('selectSamples', () => {
       ]);
     });
     const manyMeta = new Map<string, ActionMeta>(
-      many.map((record) => [record.actionKey, { toolName: 'Bash', isSidechain: false }]),
+      many.map((record) => [record.actionKey, metaEntry('Bash', false, record.actionKey)]),
     );
     const samples = selectSamples(many, manyMeta);
     // The 50 human-reading records are the first 50 by actionKey, all 'common'.

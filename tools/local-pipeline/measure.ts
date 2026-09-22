@@ -43,7 +43,11 @@ export function buildActionMeta(sessions: readonly ParsedSession[]): Map<string,
         sequence: toolCall.sequence,
       });
       if (!meta.has(actionKey)) {
-        meta.set(actionKey, { toolName: toolCall.toolName, isSidechain: toolCall.isSidechain });
+        meta.set(actionKey, {
+          toolName: toolCall.toolName,
+          isSidechain: toolCall.isSidechain,
+          toolInputRedacted: toolCall.toolInputRedacted,
+        });
       }
     }
   }
@@ -78,6 +82,10 @@ async function main(): Promise<void> {
   writeFileSync(
     join(outDir, 'samples-none.json'),
     `${JSON.stringify({ records: samples.none, topPrograms: samples.noneTopPrograms }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(outDir, 'samples-excluded.json'),
+    `${JSON.stringify(samples.excluded, null, 2)}\n`,
   );
 
   const none = metrics.analyzabilityByAction;
