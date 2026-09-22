@@ -618,7 +618,7 @@ _Avoid_: drift, incident, alert
 
 - Session은 Mandate를 여러 개 가지고 Mandate는 Action을 여러 개 가집니다.
 - Action은 Operation을 0개 이상 가집니다.
-  0개인 Action(예: subagent 호출)은 평가에서 제외합니다.
+  0개인 Action은 평가에서 제외합니다.
 - Decision의 Effect는 Operation별 Effect 중 가장 제한적인 값입니다.
 - Precedent는 Scenario의 부분집합입니다.
 - Change Review는 Replay Run 1개와 Probe Run 0~1개를 참조합니다.
@@ -1117,7 +1117,7 @@ flowchart BT
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `kernel` | 공용 최소 타입 | `Result`, branded id, `IsoTimestamp`, `Effect`, error 기본형, port(`Clock`, `IdGenerator`, `Logger`, `TransactionRunner`, `EventSink`, `JobQueue`) | 없음 | `index.ts` | 없음 | 없음 | 모든 package | 업무 개념 |
 | `platform` | 기술 기반 | config, db client, logger, job queue, http client, clock, id 구현 | `jobs`(pg-boss 소유), `api_tokens`, `idempotency_keys` | `index.ts`, `testing.ts` | 없음 | `kernel` | 업무 package | `process.env`, driver 객체 |
-| `action` | tool call을 Operation으로 분류 | Action, Operation, Capability, Target, Analyzability | 없음 | `index.ts`(`classifyToolCall`, `CLASSIFIER_VERSION`), `schema.ts` | 없음 | `kernel` | `platform`, I/O 전부 | tree-sitter node, parser 내부 구조 |
+| `action` | tool call을 Operation으로 분류 | Action, Operation, Capability, Target, Analyzability | 없음 | `index.ts`(`createClassifier`, `CLASSIFIER_VERSION`, `CONTROL_TOOL_NAMES`), `schema.ts` | 없음 | `kernel` | `platform`, I/O 전부 | tree-sitter node, parser 내부 구조 |
 | `trace` | 기록 수집과 조회 | Session, Mandate, Principal, Disposition 원자료 | `trace_imports`, `agent_sessions`, `mandates`, `agent_actions`, `runtime_observations` | `index.ts`(`importTrace`, `recordObservations`, `ActionReader`), `client.ts`(transcript parser, redactor), `schema.ts`, `events.ts` | `trace.import.completed`, `trace.observation.recorded` | `kernel`, `action`, `platform` | `policy`, `replay`, `review`, `probe` | transcript 원문 형식, redaction 전 문자열 |
 | `policy` | 권한 명세와 평가 | Policy, Policy Version, Rule, Zone, Reversibility, Environment Profile, Decision | `policies`, `policy_versions`, `policy_activations` | `index.ts`(`evaluateAction`, version CRUD, `transitionVersion`, `exportClaudeCodeSettings`, `renderPolicyProse`), `schema.ts`, `events.ts` | `policy.version.*` | `kernel`, `action`, `platform` | `trace`, `replay`, `review`, `probe` | Claude Code rule 문법(export 결과물 안에만 존재) |
 | `replay` | 두 Decision Source 비교 | Replay Run, Diff Group, Conformance Finding | `replay_runs`, `replay_diff_groups`, `replay_changed_actions`, `conformance_findings` | `index.ts`(`requestReplay`, `getReplayRun`, `listDiffGroups`, finding 조회), `schema.ts`, `events.ts` | `replay.run.*`, `conformance.finding.detected` | `kernel`, `action`, `policy`, `trace`, `platform` | `review`, `probe` | Action 원문을 복제 저장하지 않음(id만 참조) |
@@ -1457,9 +1457,12 @@ export const ToolCallSchema = z.object({  // classify 입력. CLI가 보내는 �
   repoRemotes: z.record(z.string(), z.string()).nullable(), // remote 이름 -> URL. import 시점 값이라 근사치
 });
 
-// packages/action/index.ts
+// packages/action/index.ts — as-built 계약과 상세 규칙은 이 파일의 TSDoc, 근거는 ACR-0003
 export const CLASSIFIER_VERSION: string;                    // 분류 규칙이 바뀌면 올림
-export function classifyToolCall(call: ToolCall): readonly Operation[]; // 순수 함수. 실패하지 않음. 모르면 execute + none
+export const CONTROL_TOOL_NAMES: readonly string[];         // Operation 0개를 내는 control tool 이름
+// WASM grammar를 한 번 load하고 동기 ClassifyToolCall((call: ToolCall) => readonly Operation[])을 돌려준다.
+// 반환된 classifier는 순수 함수이고 실패하지 않는다. 모르면 execute + none.
+export function createClassifier(): Promise<ClassifyToolCall>;
 ```
 
 ### 24.3 trace

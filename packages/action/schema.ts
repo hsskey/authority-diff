@@ -84,6 +84,17 @@ export type Operation = z.infer<typeof OperationSchema>;
 export const ToolCallSchema = z.object({
   toolUseId: z.string().nullable(),
   toolName: z.string(),
+  /**
+   * Redacted tool input in a per-tool format.
+   *
+   * When toolName is `Bash`, this is `input.command` verbatim with redaction
+   * applied: a secret value is replaced by a `__REDACTED_<KIND>__` token.
+   *
+   * For every other tool, this is the canonical JSON string of the input
+   * object; a string value longer than 500 characters is replaced by
+   * `__ELIDED_<length>__`. Input that does not parse as JSON is classified
+   * conservatively as `execute`, target `unknown`, analyzability `none`.
+   */
   toolInputRedacted: z.string().max(16000),
   isInputTruncated: z.boolean(),
   workspaceRoot: z.string().nullable(),

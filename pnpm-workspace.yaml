@@ -4,6 +4,10 @@ packages:
   - 'tools/*'
 allowBuilds:
   esbuild: true
+  # The classifier uses only the prebuilt tree-sitter-bash WASM grammar, never
+  # the native node binding, so its install build script is not run. See
+  # docs/acr/0003-tree-sitter-shell-parser.md.
+  tree-sitter-bash: false
   unrs-resolver: true
 # dependency-cruiser resolves types through the TypeScript compiler API and does
 # not support TypeScript 7; give it TypeScript 6.0.3 while the root stays on the
