@@ -267,7 +267,7 @@ ADR과 이 표가 자리 예약입니다.
 | `contracts` | 구현(축소) | ingest, policy, replay, review endpoint만 | server, web, CLI 세 client가 같은 계약을 compile 시점에 공유 |
 | `action` | 구현(전부) | 없음 | classifier가 순수 함수. corpus와 property test로 검증 가능 |
 | `trace` | 구현(축소) | observation, hook, `mandates` 없음. 재분류 추가 | redaction 전 문자열이 단말 밖으로 나가지 않음 |
-| `policy` | 구현(축소) | 활성화, rollback, export 없음. 순수 entry `evaluate.ts`와 semantic probe용 `prose.ts` 추가 | `draft`가 아닌 문서는 불변 |
+| `policy` | 구현(축소) | 활성화, rollback, export, prose 없음. 순수 entry `evaluate.ts` 추가 | `draft`가 아닌 문서는 불변 |
 | `replay` | 구현(축소) | `version_diff`만. 순수 entry `diff.ts` 추가. R1 반영 | replay 결과는 한 번 쓰고 바꾸지 않음. 사람의 판정을 모름 |
 | `review` | 구현(축소) | probe blocker, stale 없음. report 생성과 `review_decisions` 추가 | 바뀌는 상태(Verdict, 결정)가 replay 결과와 섞이지 않음 |
 | `probe` | Tier 2에 도달하면 최소 구현. 아니면 만들지 않음 | calibration, provider 상태, LLM baseline 없음 | 해당 없음 |
@@ -368,14 +368,14 @@ push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같�
 - Scenario는 `tests/corpus/scenarios.json` 파일 하나입니다.
   사람이 30~50개를 쓰고 `expectedEffect`와 `targetRuleId`를 붙입니다.
   table, CRUD, 화면은 없습니다.
-- CLI `authority probe --policy <json> [--scenarios <file>] [--provider jev|fixture]`: 전체 Scenario를 돌려 `.local/probe/<contentHash>.md`를 만듭니다.
-  margin 오름차순 표로, 기대 Effect와 다른 항목을 표시하고 각 행에 `allow` / `ask` / `deny` 분포와 `mandate_reading` 분포를 함께 적습니다.
+- CLI `authority probe --policy-version <id>`: 전체 Scenario를 돌려 `docs/evidence/probe-<contentHash>.md`를 만듭니다.
+  margin 오름차순 표, 기대 Effect와 다른 항목 표시, 하위 5개에는 Rule 문장, Scenario 문장, `allow` / `ask` / `deny` 분포, `mandate_reading` 분포를 함께 적습니다.
   "독자에 따라 allow 0.41, ask 0.59로 읽힘"처럼 사람이 읽을 수 있는 설명이 결과물입니다.
 - Evidence report에는 같은 `contentHash`의 probe 결과가 있을 때만 "참고: 정책 문장 해석 점검" 절이 붙습니다.
   gate blocker가 아닙니다.
 - threshold, calibration, provider 상태, LLM baseline, schedule은 없습니다.
   순위만 보여 주고 자르는 기준을 두지 않습니다.
-- 결과물 첫 줄에 "exploratory semantic-policy evaluation, n=<N>. 이 표본 수로는 일치율 95%를 주장할 수 없음"을 적습니다.
+- 결과물 첫 줄에 "exploratory semantic-policy evaluation, n=<N>. 이 표본 수로는 일치율 95%를 주장할 수 없음(30/30이어도 Wilson 하한 0.887)"을 적습니다.
 - test: 기록한 응답으로 돌리는 adapter contract test, probe 입력 타입에 trace 타입이 없다는 test.
 
 ### V1에서 완전히 빼는 조건
