@@ -117,20 +117,25 @@ export async function runImport(dir: string): Promise<void> {
   let failedSessions = 0;
 
   for (const session of sessions) {
-    const response = await fetch(`${base}/api/v1/trace-imports`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify(session),
-    });
-    if (!response.ok) {
+    try {
+      const response = await fetch(`${base}/api/v1/trace-imports`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(session),
+      });
+      if (!response.ok) {
+        failedSessions++;
+        writeStderr(`import failed for ${session.sessionExternalId}: HTTP ${response.status}`);
+        continue;
+      }
+      const body = ImportTraceResponseSchema.parse(await response.json());
+      acceptedCount += body.acceptedCount;
+      duplicateCount += body.duplicateCount;
+      rejectedCount += body.rejectedCount;
+    } catch {
       failedSessions++;
-      writeStderr(`import failed for ${session.sessionExternalId}: HTTP ${response.status}`);
-      continue;
+      writeStderr(`import failed for ${session.sessionExternalId}`);
     }
-    const body = ImportTraceResponseSchema.parse(await response.json());
-    acceptedCount += body.acceptedCount;
-    duplicateCount += body.duplicateCount;
-    rejectedCount += body.rejectedCount;
   }
 
   writeStdout(
