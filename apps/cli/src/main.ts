@@ -28,6 +28,10 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
 } else if (args[0] === 'install-hooks') {
   const installArgs = parseInstallHooksArgs(args.slice(1));
   runInstallHooks(installArgs);
+} else if (args[0] === 'probe') {
+  void import('./commands/probe.command.ts').then(({ runProbeCommand }) =>
+    runProbeCommand(args.slice(1)),
+  );
 } else {
   process.exit(1);
 }

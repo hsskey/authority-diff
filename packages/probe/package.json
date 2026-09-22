@@ -1,0 +1,19 @@
+{
+  "name": "@authority/probe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./schema.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@authority/action": "workspace:*",
+    "@authority/kernel": "workspace:*",
+    "@authority/policy": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}
