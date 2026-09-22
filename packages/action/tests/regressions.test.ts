@@ -291,3 +291,22 @@ describe('clone/fetch/pull branch is null; push uses the current branch', () => 
     if (op?.target.kind === 'vcs_remote') expect(op.target.branch).toBe('main');
   });
 });
+
+describe('git push branch follows an explicit refspec, not the current branch', () => {
+  function pushBranchOf(command: string): string | null | undefined {
+    const op = withCap(classify(bash(command)), 'push');
+    return op?.target.kind === 'vcs_remote' ? op.target.branch : undefined;
+  }
+
+  test('git push origin release-2 targets release-2, not the current main', () => {
+    expect(pushBranchOf('git push origin release-2')).toBe('release-2');
+  });
+
+  test('git push origin HEAD:refs/heads/prod targets the destination prod', () => {
+    expect(pushBranchOf('git push origin HEAD:refs/heads/prod')).toBe('prod');
+  });
+
+  test('git push with no refspec falls back to the current branch', () => {
+    expect(pushBranchOf('git push origin')).toBe('main');
+  });
+});

@@ -191,9 +191,24 @@ function remoteOp(
     kind: 'vcs_remote',
     remoteName,
     remoteKey,
-    branch: sub === 'push' ? cmd.gitBranch : null,
+    branch: sub === 'push' ? pushBranch(positional, cmd.gitBranch) : null,
   };
   return draft(capability, target, analyzability, 'git', cmd.raw, signals);
+}
+
+/**
+ * The branch a push updates: the destination side of an explicit refspec, the
+ * current branch when no refspec is given, or null when a refspec is present but
+ * its destination cannot be resolved.
+ */
+function pushBranch(positional: readonly ShellWord[], gitBranch: string | null): string | null {
+  const refspec = positional[1];
+  if (refspec === undefined) return gitBranch;
+  if (refspec.hasExpansion) return null;
+  const spec = refspec.text.startsWith('+') ? refspec.text.slice(1) : refspec.text;
+  const colon = spec.indexOf(':');
+  const dest = (colon === -1 ? spec : spec.slice(colon + 1)).replace(/^refs\/heads\//, '');
+  return dest.length === 0 || dest === 'HEAD' ? null : dest;
 }
 
 function hasForceFlag(args: readonly ShellWord[]): boolean {
