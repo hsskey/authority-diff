@@ -287,10 +287,35 @@ describe('tool routing', () => {
 
   test('invalid JSON for a non-Bash tool is conservative execute/unknown/none', () => {
     const ops = classify(call({ toolName: 'Read', toolInputRedacted: 'not json' }));
-    expect(ops[0]?.capability).toBe('read');
+    expect(ops[0]?.capability).toBe('execute');
     expect(ops[0]?.target.kind).toBe('unknown');
-    expect(ops[0]?.analyzability).toBe('partial');
+    expect(ops[0]?.analyzability).toBe('none');
     expect(ops[0]?.signals).toContain('input_unparsed');
+  });
+
+  test('invalid JSON for WebSearch is conservative execute/unknown/none', () => {
+    const ops = classify(call({ toolName: 'WebSearch', toolInputRedacted: 'not json' }));
+    expect(ops[0]?.capability).toBe('execute');
+    expect(ops[0]?.target.kind).toBe('unknown');
+    expect(ops[0]?.analyzability).toBe('none');
+    expect(ops[0]?.signals).toContain('input_unparsed');
+  });
+
+  test('non-object JSON for a non-Bash tool is conservative execute/unknown/none', () => {
+    const ops = classify(call({ toolName: 'Read', toolInputRedacted: '[1,2,3]' }));
+    expect(ops[0]?.capability).toBe('execute');
+    expect(ops[0]?.target.kind).toBe('unknown');
+    expect(ops[0]?.analyzability).toBe('none');
+    expect(ops[0]?.signals).toContain('input_unparsed');
+  });
+
+  test('valid JSON for WebSearch stays a partial fetch', () => {
+    const op = withCap(
+      classify(call({ toolName: 'WebSearch', toolInputRedacted: '{"query":"synthetic"}' })),
+      'fetch',
+    );
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.target.kind).toBe('unknown');
   });
 });
 

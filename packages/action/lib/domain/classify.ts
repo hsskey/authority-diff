@@ -88,8 +88,8 @@ function bashDrafts(call: ToolCall, parser: BashParser): OperationDraft[] {
 
 function toolDraft(call: ToolCall, name: string, mapping: ToolMapping): OperationDraft {
   const input = parseJson(call.toolInputRedacted);
-  if (input === null && mapping.fields.length > 0) {
-    return draft(mapping.capability, unknownTarget(), 'partial', name, call.toolInputRedacted, [
+  if (input === null) {
+    return draft('execute', unknownTarget(), 'none', name, call.toolInputRedacted, [
       'input_unparsed',
     ]);
   }
