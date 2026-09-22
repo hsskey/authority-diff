@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 // Injects one deliberate violation per preserved lint behavior, confirms Oxlint
@@ -180,10 +180,22 @@ function runOxlint(proof: Proof): string {
 let allPassed = true;
 for (const proof of PROOFS) {
   const abs = join(root, proof.path);
+  // Collision preflight: never overwrite an existing path. A leftover fixture from an
+  // interrupted run is refused rather than clobbering whatever now lives there.
+  if (existsSync(abs)) {
+    allPassed = false;
+    console.error(`FAIL ${proof.id}`);
+    console.error(`  refusing to overwrite an existing path: ${proof.path}`);
+    continue;
+  }
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, proof.content);
-  const output = runOxlint(proof);
-  rmSync(abs, { force: true });
+  let output = '';
+  try {
+    output = runOxlint(proof);
+  } finally {
+    rmSync(abs, { force: true });
+  }
   if (output.includes(`(${proof.rule})`)) {
     console.log(`PASS ${proof.id} (fired: ${proof.rule})`);
   } else {
