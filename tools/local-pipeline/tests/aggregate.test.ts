@@ -162,4 +162,26 @@ describe('selectSamples', () => {
     expect(samples.none.map((record) => record.actionKey)).toEqual(['a2', 'a3']);
     expect(samples.noneTopPrograms).toEqual([{ key: 'python3', count: 1 }]);
   });
+
+  test('tallies noneTopPrograms over the whole population, not the 50-record sample', () => {
+    const many: ActionForReplay[] = Array.from({ length: 60 }, (_value, i) => {
+      const key = String(i).padStart(2, '0');
+      const program = i < 50 ? 'common' : 'rareprog';
+      return action(key, '2026-01-02T03:04:05.000Z', [
+        op(0, 'execute', UNKNOWN, 'none', program, ['parse_error']),
+      ]);
+    });
+    const manyMeta = new Map<string, ActionMeta>(
+      many.map((record) => [record.actionKey, { toolName: 'Bash', isSidechain: false }]),
+    );
+    const samples = selectSamples(many, manyMeta);
+    // The 50 human-reading records are the first 50 by actionKey, all 'common'.
+    expect(samples.none).toHaveLength(50);
+    // rareprog appears only in records 50-59, outside the sampled 50; a sample-scoped
+    // tally would drop it, so its presence proves whole-population aggregation.
+    expect(samples.noneTopPrograms).toEqual([
+      { key: 'common', count: 50 },
+      { key: 'rareprog', count: 10 },
+    ]);
+  });
 });

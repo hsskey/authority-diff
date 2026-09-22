@@ -62,15 +62,16 @@ export function selectSamples(
     .slice(0, SAMPLE_LIMIT)
     .map((action) => toSample(action, toolOf(action.actionKey)));
 
-  const none = [...evaluated]
+  const noneActions = [...evaluated]
     .filter((action) => actionAnalyzability(action.operations) === 'none')
-    .sort(byActionKey)
+    .sort(byActionKey);
+  const none = noneActions
     .slice(0, SAMPLE_LIMIT)
     .map((action) => toSample(action, toolOf(action.actionKey)));
 
   const programs = new Map<string, number>();
-  for (const record of none) {
-    for (const operation of record.operations) {
+  for (const action of noneActions) {
+    for (const operation of action.operations) {
       if (operation.program !== null) {
         programs.set(operation.program, (programs.get(operation.program) ?? 0) + 1);
       }
