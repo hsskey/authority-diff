@@ -121,3 +121,8 @@ runtime이 실행 전에 막은 호출은 `is_error: true`인 `tool_result`에 �
 - subagent가 실행한 tool 호출은 별도 파일이 아니라 부모 transcript 파일 안에 `isSidechain: true`로 기록된다.
 - 표본에서 sidechain tool 호출은 약 173건이었다.
 - `ParsedToolCall`은 이 값을 그대로 담는다. Action 제외 여부(Operation 0개)는 classifier와 소비자의 판단이며 parser는 기록만 한다.
+
+## 알려진 한계
+
+`Write`나 `Edit`의 `content` 문자열 안에 JSON이 들어 있으면 그 안쪽은 구조적 마스킹이 아니라 정규식이 처리하므로 안쪽 JSON 형태가 깨질 수 있습니다.
+secret은 제거되고 classifier는 `file_path`만 읽으므로 V1에는 영향이 없습니다.
