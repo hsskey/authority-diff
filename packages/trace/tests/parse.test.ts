@@ -278,7 +278,10 @@ describe('parseTranscript tool input', () => {
 });
 
 describe('parseTranscript structural credential masking', () => {
-  function maskedInput(toolInput: unknown): { redacted: string; parsed: ReturnType<typeof parseTranscript> } {
+  function maskedInput(toolInput: unknown): {
+    redacted: string;
+    parsed: ReturnType<typeof parseTranscript>;
+  } {
     const parsed = parseTranscript({
       sessionExternalId: 's',
       lines: [
