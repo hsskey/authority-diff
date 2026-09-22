@@ -125,6 +125,22 @@ export type ActionResponse = z.infer<typeof ActionResponseSchema>;
 export const ListActionsResponseSchema = pageOf(ActionResponseSchema);
 export type ListActionsResponse = z.infer<typeof ListActionsResponseSchema>;
 
+// POST /actions/reclassify
+// Added in the trace-storage change: `authority reclassify` is a CLI that calls
+// this endpoint, not a server-side job. It re-runs the current classifier over
+// the Actions in the window whose stored classifier version is stale.
+export const ReclassifyActionsRequestSchema = z.object({
+  windowFrom: IsoTimestampSchema,
+  windowTo: IsoTimestampSchema,
+});
+export type ReclassifyActionsRequest = z.infer<typeof ReclassifyActionsRequestSchema>;
+
+export const ReclassifyActionsResponseSchema = z.object({
+  reclassifiedCount: z.number().int().nonnegative(),
+  classifierVersion: z.string(),
+});
+export type ReclassifyActionsResponse = z.infer<typeof ReclassifyActionsResponseSchema>;
+
 // GET /policies, POST /policies
 export const PolicyResponseSchema = PolicySchema;
 export type PolicyResponse = z.infer<typeof PolicyResponseSchema>;

@@ -31,3 +31,19 @@ export function runtimeVersion(): string | null {
   }
   return null;
 }
+
+export function serverBaseUrl(): string {
+  const url = process.env.AUTHORITY_CLI_SERVER_URL;
+  if (typeof url === 'string' && url.length > 0) {
+    return url.replace(/\/+$/, '');
+  }
+  return 'http://localhost:8787';
+}
+
+export function authToken(): string | null {
+  const token = process.env.AUTHORITY_CLI_TOKEN;
+  if (typeof token === 'string' && token.length > 0) {
+    return token;
+  }
+  return null;
+}

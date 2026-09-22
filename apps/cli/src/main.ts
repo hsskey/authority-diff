@@ -1,5 +1,15 @@
 import { runHook } from './commands/hook.command.ts';
+import { runImport } from './commands/import.command.ts';
 import { runInstallHooks } from './commands/install-hooks.command.ts';
+import { runSpoolFlush } from './commands/spool-flush.command.ts';
+import { writeStderr } from './output.ts';
+
+function runAsync(task: Promise<void>): void {
+  task.catch((error: unknown) => {
+    writeStderr(String(error));
+    process.exit(1);
+  });
+}
 
 function parseInstallHooksArgs(args: readonly string[]): {
   readonly printOnly: boolean;
@@ -32,6 +42,14 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
   void import('./commands/probe.command.ts').then(({ runProbeCommand }) =>
     runProbeCommand(args.slice(1)),
   );
+} else if (args[0] === 'import') {
+  const dir = args[1];
+  if (dir === undefined || dir.length === 0) {
+    process.exit(1);
+  }
+  runAsync(runImport(dir));
+} else if (args[0] === 'spool-flush') {
+  runAsync(runSpoolFlush());
 } else {
   process.exit(1);
 }
