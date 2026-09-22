@@ -2,9 +2,10 @@ import { execPath } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
-export type HookCliEvent = 'permission-request' | 'session-end';
+export type HookCliEvent = 'permission-request' | 'pre-tool-use' | 'session-end';
 
 export const LEGACY_PERMISSION_REQUEST_COMMAND = 'authority hook permission-request';
+export const LEGACY_PRE_TOOL_USE_COMMAND = 'authority hook pre-tool-use';
 export const LEGACY_SESSION_END_COMMAND = 'authority hook session-end';
 
 const CLI_SRC_DIR = dirname(fileURLToPath(import.meta.url));
@@ -32,7 +33,7 @@ export function resolveHookCommand(
       return override;
     }
     if (override.endsWith(' hook permission-request')) {
-      return `${override.slice(0, -' hook permission-request'.length)} hook session-end`;
+      return `${override.slice(0, -' hook permission-request'.length)} hook ${event}`;
     }
   }
 
@@ -51,6 +52,13 @@ export function isManagedPermissionRequestCommand(command: string): boolean {
   return (
     command === LEGACY_PERMISSION_REQUEST_COMMAND ||
     (referencesMainEntry(command) && command.endsWith(' hook permission-request'))
+  );
+}
+
+export function isManagedPreToolUseCommand(command: string): boolean {
+  return (
+    command === LEGACY_PRE_TOOL_USE_COMMAND ||
+    (referencesMainEntry(command) && command.endsWith(' hook pre-tool-use'))
   );
 }
 

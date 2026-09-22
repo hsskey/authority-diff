@@ -30,11 +30,12 @@ function buildRecord(
 ): SpoolRecord | null {
   const sessionId = readString(input, 'session_id');
   const cwd = readString(input, 'cwd');
+  const toolUseId = readString(input, 'tool_use_id');
   if (sessionId === null || cwd === null) {
     return null;
   }
 
-  if (event === 'permission_request') {
+  if (event === 'permission_request' || event === 'pre_tool_use') {
     const toolName = readString(input, 'tool_name');
     const toolInputHash = hashToolInput(input.tool_input);
     if (toolName === null || toolInputHash === null) {
@@ -46,6 +47,7 @@ function buildRecord(
       sessionId,
       toolName,
       toolInputHash,
+      toolUseId,
       cwd,
       runtimeVersion: runtimeVersion(),
     };
@@ -57,6 +59,7 @@ function buildRecord(
     sessionId,
     toolName: null,
     toolInputHash: null,
+    toolUseId,
     cwd,
     runtimeVersion: runtimeVersion(),
   };

@@ -1,4 +1,4 @@
-export type HookEvent = 'permission_request' | 'session_end';
+export type HookEvent = 'permission_request' | 'pre_tool_use' | 'session_end';
 
 export interface SpoolRecord {
   readonly event: HookEvent;
@@ -6,6 +6,7 @@ export interface SpoolRecord {
   readonly sessionId: string;
   readonly toolName: string | null;
   readonly toolInputHash: string | null;
+  readonly toolUseId: string | null;
   readonly cwd: string;
   readonly runtimeVersion: string | null;
 }

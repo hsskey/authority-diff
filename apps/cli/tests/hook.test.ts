@@ -51,6 +51,7 @@ describe('authority hook', () => {
       hook_event_name: 'PermissionRequest',
       tool_name: 'Bash',
       tool_input: toolInput,
+      tool_use_id: 'tool-use-1',
     });
 
     const result = runAuthority(['hook', 'permission-request'], {
@@ -78,9 +79,51 @@ describe('authority hook', () => {
     expect(readString(record, 'sessionId')).toBe('session-1');
     expect(readString(record, 'toolName')).toBe('Bash');
     expect(readString(record, 'toolInputHash')).toBe(sha256Hex(canonicalJson(toolInput)));
+    expect(readString(record, 'toolUseId')).toBe('tool-use-1');
     expect(readString(record, 'cwd')).toBe('/tmp/project');
     expect(readString(record, 'runtimeVersion')).toBe('2.1.0');
     expect(JSON.stringify(record)).not.toContain('npm test');
+  });
+
+  test('records a pre-tool-use attempt with tool_use_id and no decision output', () => {
+    const home = makeTempHome();
+    const toolInput = { command: 'curl https://example.test', description: 'Fetch' };
+    const input = JSON.stringify({
+      session_id: 'session-pre',
+      cwd: '/tmp/project',
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: toolInput,
+      tool_use_id: 'toolu_pre_1',
+    });
+
+    const result = runAuthority(['hook', 'pre-tool-use'], {
+      home,
+      input,
+      env: { CLAUDE_CODE_VERSION: '2.1.0' },
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('');
+
+    const lines = readSpoolLines(home);
+    expect(lines).toHaveLength(1);
+    const line = lines[0];
+    if (line === undefined) {
+      throw new Error('expected one spool line');
+    }
+
+    const record: unknown = JSON.parse(line);
+    if (!isRecord(record)) {
+      throw new Error('expected spool record object');
+    }
+    expect(readString(record, 'event')).toBe('pre_tool_use');
+    expect(readString(record, 'sessionId')).toBe('session-pre');
+    expect(readString(record, 'toolName')).toBe('Bash');
+    expect(readString(record, 'toolInputHash')).toBe(sha256Hex(canonicalJson(toolInput)));
+    expect(readString(record, 'toolUseId')).toBe('toolu_pre_1');
+    expect(readString(record, 'cwd')).toBe('/tmp/project');
+    expect(JSON.stringify(record)).not.toContain('curl');
   });
 
   test('appends one spool line for session-end', () => {
@@ -113,6 +156,7 @@ describe('authority hook', () => {
     expect(readString(record, 'sessionId')).toBe('session-2');
     expect(readNullableString(record, 'toolName')).toBeNull();
     expect(readNullableString(record, 'toolInputHash')).toBeNull();
+    expect(readNullableString(record, 'toolUseId')).toBeNull();
     expect(readString(record, 'cwd')).toBe('/tmp/project');
     expect(readNullableString(record, 'runtimeVersion')).toBeNull();
   });
