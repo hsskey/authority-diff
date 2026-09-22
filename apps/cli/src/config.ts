@@ -1,10 +1,11 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+/**
+ * Hook handler logic must finish within this budget. tsx interpreter startup is
+ * not counted toward the budget until the CLI is bundled (known limitation).
+ */
 export const HOOK_EXIT_BUDGET_MS = 400;
-
-export const PERMISSION_REQUEST_HOOK_COMMAND = 'authority hook permission-request';
-export const SESSION_END_HOOK_COMMAND = 'authority hook session-end';
 
 export function resolveHome(): string {
   const fromEnv = process.env.HOME;

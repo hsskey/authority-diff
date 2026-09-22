@@ -1,6 +1,22 @@
 import { runHook } from './commands/hook.command.ts';
 import { runInstallHooks } from './commands/install-hooks.command.ts';
 
+function parseInstallHooksArgs(args: readonly string[]): {
+  readonly printOnly: boolean;
+  readonly commandOverride?: string;
+} {
+  const printOnly = args.includes('--print');
+  const commandIndex = args.indexOf('--command');
+  if (commandIndex === -1) {
+    return { printOnly };
+  }
+  const commandOverride = args[commandIndex + 1];
+  if (commandOverride === undefined || commandOverride.length === 0) {
+    process.exit(1);
+  }
+  return { printOnly, commandOverride };
+}
+
 const args = process.argv.slice(2);
 
 if (args[0] === 'hook' && args[1] === 'permission-request') {
@@ -8,7 +24,8 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
 } else if (args[0] === 'hook' && args[1] === 'session-end') {
   runHook('session_end');
 } else if (args[0] === 'install-hooks') {
-  runInstallHooks({ printOnly: args.includes('--print') });
+  const installArgs = parseInstallHooksArgs(args.slice(1));
+  runInstallHooks(installArgs);
 } else {
   process.exit(1);
 }

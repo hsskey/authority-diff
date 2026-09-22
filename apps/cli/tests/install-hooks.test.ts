@@ -1,12 +1,19 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { PERMISSION_REQUEST_HOOK_COMMAND, SESSION_END_HOOK_COMMAND } from '../src/config.ts';
+import {
+  LEGACY_PERMISSION_REQUEST_COMMAND,
+  LEGACY_SESSION_END_COMMAND,
+  resolveHookCommand,
+} from '../src/hook-command.ts';
 import { makeTempHome, runAuthority } from './support/harness.ts';
 
 function settingsPath(home: string): string {
   return join(home, '.claude', 'settings.json');
 }
+
+const PERMISSION_REQUEST_COMMAND = resolveHookCommand('permission-request');
+const SESSION_END_COMMAND = resolveHookCommand('session-end');
 
 describe('authority install-hooks', () => {
   test('is idempotent and preserves existing hooks', () => {
@@ -47,12 +54,12 @@ describe('authority install-hooks', () => {
           },
           {
             matcher: '*',
-            hooks: [{ type: 'command', command: PERMISSION_REQUEST_HOOK_COMMAND }],
+            hooks: [{ type: 'command', command: PERMISSION_REQUEST_COMMAND }],
           },
         ],
         SessionEnd: [
           {
-            hooks: [{ type: 'command', command: SESSION_END_HOOK_COMMAND }],
+            hooks: [{ type: 'command', command: SESSION_END_COMMAND }],
           },
         ],
       },
@@ -102,12 +109,63 @@ describe('authority install-hooks', () => {
         PermissionRequest: [
           {
             matcher: '*',
-            hooks: [{ type: 'command', command: PERMISSION_REQUEST_HOOK_COMMAND }],
+            hooks: [{ type: 'command', command: PERMISSION_REQUEST_COMMAND }],
           },
         ],
         SessionEnd: [
           {
-            hooks: [{ type: 'command', command: SESSION_END_HOOK_COMMAND }],
+            hooks: [{ type: 'command', command: SESSION_END_COMMAND }],
+          },
+        ],
+      },
+    });
+  });
+
+  test('replaces legacy authority hook commands with absolute paths', () => {
+    const home = makeTempHome();
+    mkdirSync(join(home, '.claude'), { recursive: true });
+    writeFileSync(
+      settingsPath(home),
+      `${JSON.stringify(
+        {
+          hooks: {
+            PermissionRequest: [
+              {
+                matcher: '*',
+                hooks: [{ type: 'command', command: LEGACY_PERMISSION_REQUEST_COMMAND }],
+              },
+            ],
+            SessionEnd: [
+              {
+                hooks: [{ type: 'command', command: LEGACY_SESSION_END_COMMAND }],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+
+    const first = runAuthority(['install-hooks'], { home });
+    const second = runAuthority(['install-hooks'], { home });
+
+    expect(first.status).toBe(0);
+    expect(second.status).toBe(0);
+
+    const settings: unknown = JSON.parse(readFileSync(settingsPath(home), 'utf8'));
+    expect(settings).toEqual({
+      hooks: {
+        PermissionRequest: [
+          {
+            matcher: '*',
+            hooks: [{ type: 'command', command: PERMISSION_REQUEST_COMMAND }],
+          },
+        ],
+        SessionEnd: [
+          {
+            hooks: [{ type: 'command', command: SESSION_END_COMMAND }],
           },
         ],
       },
@@ -126,12 +184,12 @@ describe('authority install-hooks', () => {
       PermissionRequest: [
         {
           matcher: '*',
-          hooks: [{ type: 'command', command: PERMISSION_REQUEST_HOOK_COMMAND }],
+          hooks: [{ type: 'command', command: PERMISSION_REQUEST_COMMAND }],
         },
       ],
       SessionEnd: [
         {
-          hooks: [{ type: 'command', command: SESSION_END_HOOK_COMMAND }],
+          hooks: [{ type: 'command', command: SESSION_END_COMMAND }],
         },
       ],
     });
@@ -139,5 +197,32 @@ describe('authority install-hooks', () => {
     runAuthority(['install-hooks'], { home });
     const afterInstall = runAuthority(['install-hooks', '--print'], { home });
     expect(afterInstall.stdout).toBe('');
+  });
+
+  test('--command override is printed verbatim', () => {
+    const home = makeTempHome();
+    const override = '/custom/node /custom/tsx /custom/main.ts hook permission-request';
+    const dryRun = runAuthority(['install-hooks', '--print', '--command', override], { home });
+
+    expect(dryRun.status).toBe(0);
+    const change: unknown = JSON.parse(dryRun.stdout.trim());
+    expect(change).toEqual({
+      PermissionRequest: [
+        {
+          matcher: '*',
+          hooks: [{ type: 'command', command: override }],
+        },
+      ],
+      SessionEnd: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: '/custom/node /custom/tsx /custom/main.ts hook session-end',
+            },
+          ],
+        },
+      ],
+    });
   });
 });
