@@ -138,6 +138,6 @@ _Avoid_: approval document, audit report
 
 - Session은 Action을 여러 개 가집니다.
 - Action은 Operation을 0개 이상 가집니다.
-  0개인 Action(예: subagent 호출)은 평가에서 제외합니다.
+  0개인 Action은 평가에서 제외합니다.
 - Decision의 Effect는 Operation별 Effect 중 가장 제한적인 값입니다.
 - Change Review는 Replay Run 1개를 참조합니다.
