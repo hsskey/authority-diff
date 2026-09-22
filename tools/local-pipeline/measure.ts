@@ -1,10 +1,13 @@
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClassifier } from '@authority/action';
-import { buildActionsForReplay, deriveActionKey, parseTranscript } from '@authority/trace/client';
+import { buildActionsForReplay, deriveActionKey } from '@authority/trace/client';
 import type { ParsedSession } from '@authority/trace/schema';
 import { computeMetrics, type ActionMeta } from './lib/aggregate.ts';
+import { parseArgs } from './lib/args.ts';
+import { readCorpus } from './lib/corpus.ts';
+import { enrichRepoRemotes } from './lib/enrich.ts';
 import { renderMeasureMarkdown, selectSamples } from './lib/report.ts';
 
 export function discoverTranscripts(root: string): string[] {
@@ -24,12 +27,7 @@ export function discoverTranscripts(root: string): string[] {
 }
 
 export function parseSessions(files: readonly string[]): ParsedSession[] {
-  return files.map((file) =>
-    parseTranscript({
-      sessionExternalId: basename(file, '.jsonl'),
-      lines: readFileSync(file, 'utf8').split('\n'),
-    }),
-  );
+  return readCorpus(files).sessions;
 }
 
 export function buildActionMeta(sessions: readonly ParsedSession[]): Map<string, ActionMeta> {
@@ -55,9 +53,10 @@ export function buildActionMeta(sessions: readonly ParsedSession[]): Map<string,
 }
 
 async function main(): Promise<void> {
-  const root = process.argv[2];
+  const { positionals, flags } = parseArgs(process.argv.slice(2));
+  const root = positionals[0];
   if (root === undefined) {
-    console.error('usage: pnpm dev:measure <transcript-directory>');
+    console.error('usage: pnpm dev:measure <transcript-directory> [--out <dir>] [--seed <n>]');
     process.exit(2);
   }
   if (statSync(root, { throwIfNoEntry: false })?.isDirectory() !== true) {
@@ -65,17 +64,28 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const sessions = parseSessions(discoverTranscripts(root));
+  // --seed keeps sample selection reproducible; selection is already a stable
+  // sort, so the flag is accepted for a stable interface and honored trivially.
+  const corpus = readCorpus(discoverTranscripts(root));
+  const sessions = enrichRepoRemotes(corpus.sessions);
   const meta = buildActionMeta(sessions);
   const classify = await createClassifier();
   const startedAt = Date.now();
   const { actions, duplicateCount } = buildActionsForReplay(sessions, classify);
   const classifyMs = Date.now() - startedAt;
 
-  const metrics = computeMetrics({ sessions, actions, duplicateCount, meta, classifyMs });
+  const metrics = computeMetrics({
+    sessions,
+    actions,
+    duplicateCount,
+    meta,
+    classifyMs,
+    readFailureFiles: corpus.readFailureFiles,
+    toolUseWithoutTimestamp: corpus.toolUseWithoutTimestamp,
+  });
   const samples = selectSamples(actions, meta);
 
-  const outDir = join(process.cwd(), '.local', 'measure');
+  const outDir = flags.get('out') ?? join(process.cwd(), '.local', 'measure');
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'measure.md'), renderMeasureMarkdown(metrics));
   writeFileSync(join(outDir, 'samples-full.json'), `${JSON.stringify(samples.full, null, 2)}\n`);

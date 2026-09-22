@@ -1,0 +1,8 @@
+{
+  "credentialPaths": ["~/.aws/**"],
+  "agentConfigPaths": ["~/.claude/**"],
+  "trustedRemotes": ["registry.npmjs.org"],
+  "publicRemotes": ["github.com"],
+  "protectedBranches": ["main"],
+  "productionMarkers": ["\\bprod\\b"]
+}

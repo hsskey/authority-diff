@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "credentialPaths": ["~/.ssh/**"],
+    "agentConfigPaths": [],
+    "trustedRemotes": [],
+    "publicRemotes": [],
+    "protectedBranches": [],
+    "productionMarkers": []
+  },
+  "rules": [
+    {
+      "ruleId": "allow_credentials_access",
+      "match": {
+        "capabilities": "*",
+        "zones": ["credentials"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Candidate widens credentials access to allow for this replay scenario."
+    }
+  ]
+}

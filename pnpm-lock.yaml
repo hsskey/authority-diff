@@ -324,6 +324,12 @@ importers:
       '@authority/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@authority/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
+      '@authority/replay':
+        specifier: workspace:*
+        version: link:../../packages/replay
       '@authority/trace':
         specifier: workspace:*
         version: link:../../packages/trace
