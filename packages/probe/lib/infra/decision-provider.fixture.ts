@@ -24,6 +24,8 @@ function replayResponse(
   if (input.signal.aborted) {
     return err(fixtureError('probe.aborted', 'probe request was aborted'));
   }
+  // Match a full context line, not a substring: 'Scenario id: public_release' must not
+  // prefix-match 'Scenario id: public_release_v2' and return the wrong recorded response.
   const contextLines = input.context.split('\n');
   const response = responses.find((item) => contextLines.includes(item.contextIncludes));
   if (response === undefined) {
