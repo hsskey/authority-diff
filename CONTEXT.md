@@ -134,6 +134,18 @@ _Avoid_: approval, activation
 Change Review의 결정과 근거 hash를 담아 조직장이 읽는 Markdown 산출물.
 _Avoid_: approval document, audit report
 
+**Trace Import**:
+transcript 파일 하나를 server에 적재한 기록 1건. 수용, 중복, 거부, redaction 건수를 가진다.
+_Avoid_: upload, ingest batch
+
+**Runtime Observation**:
+runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다.
+_Avoid_: event, log entry
+
+**Gate**:
+Change Review를 수락할 수 있는지 계산한 결과. blocker 목록이 비어 있으면 열린다. 사람이 아니라 규칙이 계산한다.
+_Avoid_: approval check, guard
+
 관계:
 
 - Session은 Action을 여러 개 가집니다.
