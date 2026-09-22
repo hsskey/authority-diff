@@ -205,6 +205,12 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  apps/cli:
+    dependencies:
+      '@authority/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+
   apps/server:
     dependencies:
       '@authority/kernel':
