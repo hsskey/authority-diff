@@ -345,4 +345,38 @@ describe('redirect writes are captured across pipelines and chains', () => {
   test('a pipe-tail redirect to /dev/null stays a no-op', () => {
     expect(withCap(classify(bash('sort a | uniq > /dev/null')), 'write')).toBeUndefined();
   });
+
+  test('cd dir > /tmp/out.txt captures the redirect write', () => {
+    const ops = classify(bash('cd src > /tmp/out.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/tmp/out.txt',
+      isInsideWorkspace: false,
+    });
+  });
+
+  test('a bare wrapper redirect (exec > /tmp/log.txt) captures the write', () => {
+    const ops = classify(bash('exec > /tmp/log.txt'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/tmp/log.txt',
+      isInsideWorkspace: false,
+    });
+  });
+
+  test('a bare env redirect (env > f) captures the write', () => {
+    const ops = classify(bash('env > f'));
+    const write = withCap(ops, 'write');
+    expect(write?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/f',
+      isInsideWorkspace: true,
+    });
+  });
+
+  test('a bare wrapper redirect to /dev/null stays a no-op', () => {
+    expect(withCap(classify(bash('exec > /dev/null')), 'write')).toBeUndefined();
+  });
 });

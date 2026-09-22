@@ -55,6 +55,7 @@ export function classifyBash(parse: ShellParse, call: ToolCall): OperationDraft[
     if (program === 'cd') {
       const result = classifyCd(command, cwd, call.workspaceRoot);
       ops.push(result.op);
+      ops.push(...redirectWrites(command, cwd, call.workspaceRoot, program));
       cwd = result.cwd;
       continue;
     }
@@ -64,6 +65,7 @@ export function classifyBash(parse: ShellParse, call: ToolCall): OperationDraft[
       // A wrapper with no inner command (for example bare `env`): a read.
       const resolved = resolvePath('.', cwd, call.workspaceRoot);
       ops.push(draft('read', pathTarget(resolved), 'full', program, command.raw));
+      ops.push(...redirectWrites(command, cwd, call.workspaceRoot, program));
       continue;
     }
 
