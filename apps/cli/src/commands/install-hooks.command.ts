@@ -60,10 +60,12 @@ function mergeHooks(document: Record<string, unknown>): {
   readonly change: HookInstallChange;
 } {
   const hooksValue = isRecord(document.hooks) ? document.hooks : {};
-  const existingPermissionRequest = Array.isArray(hooksValue.PermissionRequest)
+  const existingPermissionRequest: readonly unknown[] = Array.isArray(hooksValue.PermissionRequest)
     ? hooksValue.PermissionRequest
     : [];
-  const existingSessionEnd = Array.isArray(hooksValue.SessionEnd) ? hooksValue.SessionEnd : [];
+  const existingSessionEnd: readonly unknown[] = Array.isArray(hooksValue.SessionEnd)
+    ? hooksValue.SessionEnd
+    : [];
 
   let change: HookInstallChange = {};
   let nextPermissionRequest: readonly unknown[] = existingPermissionRequest;
