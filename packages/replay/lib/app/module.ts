@@ -1,5 +1,5 @@
 import { err, ok } from '@authority/kernel';
-import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
+import type { AppError, Clock, IdGenerator, IsoTimestamp, Logger, Result } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import { createEvaluator } from '@authority/policy/evaluate';
 import type { Decision, PolicyDocument, PolicyVersionId } from '@authority/policy/schema';
@@ -177,6 +177,7 @@ export interface AssembleReplayModuleDeps {
   readonly policy: PolicyReader;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
+  readonly logger: Logger;
   readonly classifierVersion: string;
 }
 
@@ -270,19 +271,33 @@ async function collectActions(
 }
 
 export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModule {
-  const { store, reader, policy, clock, idGenerator, classifierVersion } = deps;
+  const { store, reader, policy, clock, idGenerator, logger, classifierVersion } = deps;
 
   const execute = async (
     run: ReplayRun,
     compute: () => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
   ): Promise<void> => {
+    let errorCode = 'replay.execution_failed';
     try {
       await store.markRunning(run.id, clock.now());
-      await store.recordCompletion({ ...compute(), replayRunId: run.id, completedAt: clock.now() });
-    } catch {
+      const completion = compute();
+      errorCode = 'replay.persist_failed';
+      await store.recordCompletion({
+        ...completion,
+        replayRunId: run.id,
+        completedAt: clock.now(),
+      });
+    } catch (cause) {
       // The failure is durable state, not a thrown error: the run is marked
       // failed in the DB and the fire-and-forget promise always resolves.
-      await store.markFailed(run.id, 'replay.execution_failed', clock.now()).catch(() => {});
+      logger.error('replay run failed', { runId: run.id, errorCode, cause });
+      await store.markFailed(run.id, errorCode, clock.now()).catch((markCause: unknown) => {
+        logger.error('replay run could not be marked failed', {
+          runId: run.id,
+          errorCode,
+          cause: markCause,
+        });
+      });
     }
   };
 

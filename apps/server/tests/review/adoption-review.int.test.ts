@@ -10,13 +10,16 @@ import {
 import type { Database } from '@authority/platform';
 import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyDocument, PolicyId, PolicyVersionId } from '@authority/policy/schema';
+import { createMemoryLogger } from '@authority/platform/testing';
 import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
-import { ParsedSessionSchema } from '@authority/trace/schema';
+import type { ActionReader } from '@authority/trace';
+import { ActionForReplaySchema, ParsedSessionSchema } from '@authority/trace/schema';
 import { createReviewModule, verifyAuditChain } from '@authority/review';
 import type { ChangeReviewView, PolicyReviewRepository, ReviewModule } from '@authority/review';
 import type { ChangeReviewId } from '@authority/review/schema';
+import actionFixture from '../../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import sessionFixture from '../../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
@@ -156,6 +159,7 @@ beforeAll(async () => {
     policy: makePolicyReader(repository),
     clock,
     idGenerator,
+    logger: createMemoryLogger(),
     classifierVersion: trace.classifierVersion,
   });
   review = createReviewModule({
@@ -515,4 +519,169 @@ test('a verdict on an adoption review is refused for a group its run does not ha
   });
 
   expect(!recorded.ok && recorded.error.code).toBe('replay.group_not_found');
+});
+
+// A repeated actionKey is a defect the replay computation refuses, which ends the run failed.
+function duplicateActionReader(): ActionReader {
+  const [action] = ActionForReplaySchema.array().parse(actionFixture);
+  if (action === undefined) {
+    throw new Error('the action fixture is empty');
+  }
+  return {
+    getActions: () => Promise.resolve([]),
+    streamActions: async function* () {
+      await Promise.resolve();
+      yield [action, action];
+    },
+    countStaleClassifications: () => Promise.resolve(0),
+    listObservationSessions: () => Promise.resolve([]),
+    getObservations: () => Promise.resolve([]),
+  };
+}
+
+test('a failed replay fails the review, returns the candidate to draft, and frees the Policy for a new review', async () => {
+  const logger = createMemoryLogger();
+  const failingReview = createReviewModule({
+    database,
+    replay: createReplayModule({
+      database,
+      reader: duplicateActionReader(),
+      policy: makePolicyReader(repository),
+      clock,
+      idGenerator,
+      logger,
+      classifierVersion: 'synthetic-classifier',
+    }),
+    policy: makePolicyReviewRepository(repository),
+    clock,
+    idGenerator,
+  });
+  const candidateId = await createDraftVersionOne();
+  const created = await failingReview.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+
+  let failed: ChangeReviewView | null = null;
+  for (let attempt = 0; attempt < 200 && failed === null; attempt++) {
+    const view = await failingReview.getChangeReview(created.value.review.id);
+    failed = view.ok && view.value.review.status === 'failed' ? view.value : null;
+    await sleep(25);
+  }
+
+  expect(failed?.replaySummary.status).toBe('failed');
+  const candidate = await repository.getVersion(candidateId);
+  expect(candidate.ok && candidate.value.status).toBe('draft');
+  expect(logger.records.map((record) => record.fields?.errorCode)).toEqual([
+    'replay.execution_failed',
+  ]);
+
+  const retry = await createReview(candidateId);
+  await waitReady(retry.review.id);
+  expect(retry.review.status).not.toBe('failed');
+});
+
+function gate(): { promise: Promise<void>; open: () => void } {
+  let open!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { promise, open };
+}
+
+test('a stale repeated sync does not withdraw a candidate a new review has claimed', async () => {
+  const failingReplay = createReplayModule({
+    database,
+    reader: duplicateActionReader(),
+    policy: makePolicyReader(repository),
+    clock,
+    idGenerator,
+    logger: createMemoryLogger(),
+    classifierVersion: 'synthetic-classifier',
+  });
+
+  // Both concurrent syncs read the review as `computing`; the second sync's
+  // failReview is held inside its getRun until a new review claims the candidate.
+  let racedRunId: string | null = null;
+  let armed = false;
+  let failedGetRunCalls = 0;
+  const bothReachedGetRun = gate();
+  const secondSyncMayProceed = gate();
+
+  const gatedReplay: ReplayModule = {
+    ...failingReplay,
+    async getRun(id) {
+      const run = await failingReplay.getRun(id);
+      if (armed && id === racedRunId && run?.status === 'failed') {
+        failedGetRunCalls += 1;
+        if (failedGetRunCalls === 1) {
+          await bothReachedGetRun.promise;
+        } else if (failedGetRunCalls === 2) {
+          bothReachedGetRun.open();
+          await secondSyncMayProceed.promise;
+        }
+      }
+      return run;
+    },
+  };
+  const gatedReview = createReviewModule({
+    database,
+    replay: gatedReplay,
+    policy: makePolicyReviewRepository(repository),
+    clock,
+    idGenerator,
+  });
+
+  const candidateId = await createDraftVersionOne();
+  const created = await gatedReview.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  const runId = created.value.replaySummary.replayRunId;
+  if (runId === null) {
+    throw new Error('expected a replay run');
+  }
+  racedRunId = runId;
+
+  // Let the run fail without syncing the review, so it stays `computing`.
+  let runFailed = false;
+  for (let attempt = 0; attempt < 200 && !runFailed; attempt++) {
+    const run = await failingReplay.getRun(runId);
+    runFailed = run?.status === 'failed';
+    if (!runFailed) {
+      await sleep(25);
+    }
+  }
+  if (!runFailed) {
+    throw new Error('timed out waiting for the replay run to fail');
+  }
+
+  armed = true;
+  const firstSync = gatedReview.listDiffGroups(created.value.review.id, { limit: 200 });
+  const secondSync = gatedReview.listDiffGroups(created.value.review.id, { limit: 200 });
+
+  const first = await Promise.race([firstSync, secondSync]);
+  if (!first.ok) {
+    throw new Error(first.error.code);
+  }
+  const withdrawn = await repository.getVersion(candidateId);
+  expect(withdrawn.ok && withdrawn.value.status).toBe('draft');
+
+  const claiming = await createReview(candidateId);
+  const claimed = await repository.getVersion(candidateId);
+  expect(claimed.ok && claimed.value.status).toBe('in_review');
+
+  secondSyncMayProceed.open();
+  await Promise.all([firstSync, secondSync]);
+
+  const afterStaleSync = await repository.getVersion(candidateId);
+  expect(afterStaleSync.ok && afterStaleSync.value.status).toBe('in_review');
+  const claimingView = await review.getChangeReview(claiming.review.id);
+  expect(claimingView.ok && claimingView.value.review.status).not.toBe('failed');
 });

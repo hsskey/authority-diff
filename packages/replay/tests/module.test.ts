@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { IsoTimestampSchema } from '@authority/kernel';
-import { createFixedClock, createSequentialIdGenerator } from '@authority/platform/testing';
+import {
+  createFixedClock,
+  createMemoryLogger,
+  createSequentialIdGenerator,
+} from '@authority/platform/testing';
 import { PolicyDocumentSchema, PolicyVersionIdSchema } from '@authority/policy/schema';
 import type { PolicyVersionId, PolicyVersionStatus } from '@authority/policy/schema';
 import type { ActionReader } from '@authority/trace';
@@ -252,14 +256,17 @@ function makeModule(
   parts: { store?: FakeStore; reader?: ActionReader; policy?: PolicyReader } = {},
 ) {
   const store = parts.store ?? makeStore();
+  const logger = createMemoryLogger();
   return {
     store,
+    logger,
     module: assembleReplayModule({
       store,
       reader: parts.reader ?? makeReader(),
       policy: parts.policy ?? makePolicy(),
       clock: createFixedClock(NOW),
       idGenerator: createSequentialIdGenerator(),
+      logger,
       classifierVersion: CLASSIFIER_VERSION,
     }),
   };
@@ -279,6 +286,27 @@ async function runToCompletion(module: ReturnType<typeof makeModule>['module']) 
 }
 
 describe('replay module', () => {
+  test('a run whose persist fails is marked replay.persist_failed and logs the cause', async () => {
+    const cause = new Error('too many bind parameters');
+    const failingStore: FakeStore = {
+      ...makeStore(),
+      recordCompletion: () => Promise.reject(cause),
+    };
+    const { module, logger } = makeModule({ store: failingStore });
+
+    const { run } = await runToCompletion(module);
+    const stored = await module.getRun(run.id);
+
+    expect([stored?.status, stored?.errorCode]).toEqual(['failed', 'replay.persist_failed']);
+    expect(logger.records.filter((record) => record.level === 'error')).toEqual([
+      {
+        level: 'error',
+        msg: 'replay run failed',
+        fields: { runId: run.id, errorCode: 'replay.persist_failed', cause },
+      },
+    ]);
+  });
+
   test('stores the same resultHash as the local diff pipeline for the same input', async () => {
     const { module } = makeModule();
     const local = computeDiff({

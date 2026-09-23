@@ -37,6 +37,7 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
     database: deps.db,
     clock: createSystemClock(),
     idGenerator: deps.idGenerator,
+    logger: deps.logger,
   });
 
   registerReviewModule(app, {
@@ -44,6 +45,7 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
     database: deps.db,
     clock: createSystemClock(),
     idGenerator: deps.idGenerator,
+    logger: deps.logger,
   });
 
   registerAuditRoutes(app, deps.db);

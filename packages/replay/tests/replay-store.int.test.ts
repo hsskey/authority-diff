@@ -12,14 +12,19 @@ import {
   DEFAULT_POLICY_DOCUMENT,
   EMPTY_POLICY_DOCUMENT,
 } from '@authority/policy';
+import { PolicyDocumentSchema } from '@authority/policy/schema';
 import type { PolicyVersionId } from '@authority/policy/schema';
 import { createTraceModule } from '@authority/trace';
+import type { ActionReader } from '@authority/trace';
 import { ParsedSessionSchema } from '@authority/trace/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
+import { countRowsByRun, createMemoryLogger } from '@authority/platform/testing';
 import { createReplayModule } from '../index.ts';
 import type { PolicyReader } from '../index.ts';
 import { createEvaluator } from '@authority/policy/evaluate';
 import { computeAdoption, computeConformanceWith, computeDiff } from '../diff.ts';
+import baselineFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
+import candidateFixture from '../../../tests/fixtures/candidate-policy.json' with { type: 'json' };
 import sessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
@@ -130,6 +135,7 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
     policy: makePolicyReader(repository),
     clock,
     idGenerator,
+    logger: createMemoryLogger(),
     classifierVersion: trace.classifierVersion,
   });
 
@@ -274,6 +280,7 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
     policy: makePolicyReader(repository),
     clock,
     idGenerator,
+    logger: createMemoryLogger(),
     classifierVersion: trace.classifierVersion,
   });
 
@@ -331,6 +338,7 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
     policy: makePolicyReader(repository),
     clock,
     idGenerator,
+    logger: createMemoryLogger(),
     classifierVersion: trace.classifierVersion,
   });
 
@@ -396,4 +404,117 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
 
   const map = await replay.getAuthorityMap();
   expect(map.run?.replayRunId).not.toBe(first.value.run.id);
+});
+
+// Above the 16,383 rows a single statement of a four-column table can carry.
+const ACTION_COUNT = 20_000;
+
+function syntheticPushActions(count: number): ActionForReplay[] {
+  return Array.from({ length: count }, (_, index) => ({
+    actionKey: index.toString(16).padStart(64, '0'),
+    sessionExternalId: `synthetic-session-${index % 50}`,
+    operations: [
+      {
+        index: 0,
+        capability: 'push' as const,
+        target: {
+          kind: 'vcs_remote' as const,
+          remoteName: 'origin',
+          remoteKey: 'example.invalid/synthetic/project',
+          branch: `feature/synthetic-${index}`,
+        },
+        analyzability: 'full' as const,
+        program: 'git',
+        fragment: 'synthetic redacted publish',
+        signals: [],
+      },
+    ],
+    observedOutcome: 'executed' as const,
+    occurredAt: IsoTimestampSchema.parse('2026-01-02T03:04:05.006Z'),
+  }));
+}
+
+function syntheticReader(actions: readonly ActionForReplay[]): ActionReader {
+  return {
+    getActions: () => Promise.resolve([]),
+    streamActions: async function* () {
+      await Promise.resolve();
+      yield actions;
+    },
+    countStaleClassifications: () => Promise.resolve(0),
+    listObservationSessions: () => Promise.resolve([]),
+    getObservations: () => Promise.resolve([]),
+  };
+}
+
+test('a run persists more assignments and changed actions than one statement can bind', async () => {
+  const clock = createSystemClock();
+  const idGenerator = createUlidGenerator();
+  const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
+  const seeded = await repository.seedAcceptedPolicy({
+    name: idGenerator.next('policy'),
+    document: PolicyDocumentSchema.parse(baselineFixture),
+  });
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
+  }
+  const baseline = seeded.value.version;
+  const draft = await repository.createDraftVersion(seeded.value.policy.id, baseline.id);
+  if (!draft.ok) {
+    throw new Error('createDraftVersion failed');
+  }
+  const widened = await repository.updateDraftDocument(
+    draft.value.id,
+    draft.value.contentHash,
+    PolicyDocumentSchema.parse(candidateFixture),
+  );
+  if (!widened.ok) {
+    throw new Error('updateDraftDocument failed');
+  }
+  const actions = syntheticPushActions(ACTION_COUNT);
+  const window = freshWindow();
+  const replay = createReplayModule({
+    database,
+    reader: syntheticReader(actions),
+    policy: makePolicyReader(repository),
+    clock,
+    idGenerator,
+    logger: createMemoryLogger(),
+    classifierVersion: 'synthetic-classifier',
+  });
+  const askOrDeny = computeAdoption({ actions, candidate: baseline.document }).groups.reduce(
+    (sum, group) => sum + group.actionCount,
+    0,
+  );
+  const changed = computeDiff({
+    actions,
+    baseline: baseline.document,
+    candidate: widened.value.document,
+  }).changedActions.length;
+  expect(Math.min(askOrDeny, changed)).toBeGreaterThan(16_384);
+
+  const adoption = await replay.requestAdoptionReplay({
+    candidateVersionId: baseline.id,
+    ...window,
+  });
+  const diff = await replay.requestReplay({
+    baselineVersionId: baseline.id,
+    candidateVersionId: widened.value.id,
+    ...window,
+  });
+  if (!adoption.ok || !diff.ok) {
+    throw new Error('replay request failed');
+  }
+  await Promise.all([adoption.value.execution, diff.value.execution]);
+
+  expect([
+    (await replay.getRun(adoption.value.run.id))?.status,
+    (await replay.getRun(diff.value.run.id))?.status,
+  ]).toEqual(['completed', 'completed']);
+  expect(
+    await countRowsByRun(database.db, 'replay_adoption_assignments', adoption.value.run.id),
+  ).toBe(askOrDeny);
+  expect(await countRowsByRun(database.db, 'replay_changed_actions', diff.value.run.id)).toBe(
+    changed,
+  );
 });

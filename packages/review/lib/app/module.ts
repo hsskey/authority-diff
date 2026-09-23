@@ -376,7 +376,10 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       return { ...review, status: 'ready' };
     }
     if (run.status === 'failed') {
-      await store.updateStatus(review.id, 'failed');
+      await store.failReview({
+        changeReviewId: review.id,
+        candidateVersionId: review.candidateVersionId,
+      });
       return { ...review, status: 'failed' };
     }
     return review;

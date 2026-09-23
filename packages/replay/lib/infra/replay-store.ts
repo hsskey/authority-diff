@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, gt, lt, sql } from 'drizzle-orm';
+import type { PgTable } from 'drizzle-orm/pg-core';
 import type { IsoTimestamp } from '@authority/kernel';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
@@ -167,6 +168,28 @@ function findingInsertValues(finding: StoredConformanceFinding): FindingRow {
   };
 }
 
+// Postgres accepts at most 65,534 bind parameters per statement, so a table
+// with many columns needs fewer rows per statement than a narrow one.
+const MAX_BIND_PARAMETERS = 65_534;
+const MAX_ROWS_PER_INSERT = 5_000;
+
+type DrizzleTransaction = ReturnType<typeof narrowTransaction>;
+
+/** Inserts sequentially in chunks that keep every statement under the bind parameter limit. */
+async function insertInChunks<Table extends PgTable>(
+  tx: DrizzleTransaction,
+  table: Table,
+  rows: readonly Table['$inferInsert'][],
+): Promise<void> {
+  const rowsPerInsert = Math.min(
+    MAX_ROWS_PER_INSERT,
+    Math.floor(MAX_BIND_PARAMETERS / Object.keys(getTableColumns(table)).length),
+  );
+  for (let start = 0; start < rows.length; start += rowsPerInsert) {
+    await tx.insert(table).values(rows.slice(start, start + rowsPerInsert));
+  }
+}
+
 /** The drizzle-backed {@link ReplayStore}. */
 export function createReplayStore(database: Database): ReplayStore {
   const db = database.db;
@@ -200,33 +223,29 @@ export function createReplayStore(database: Database): ReplayStore {
     async recordCompletion(input: RecordCompletionInput): Promise<void> {
       await database.transactionRunner.run(async (transaction) => {
         const tx = narrowTransaction(transaction);
-        if (input.groups.length > 0) {
-          await tx.insert(replayDiffGroups).values(input.groups.map(groupInsertValues));
-        }
-        if (input.changedActions.length > 0) {
-          await tx.insert(replayChangedActions).values(
-            input.changedActions.map((changed) => ({
-              replayRunId: changed.replayRunId,
-              actionKey: changed.actionKey,
-              groupKey: changed.groupKey,
-              fromEffect: changed.fromEffect,
-              toEffect: changed.toEffect,
-            })),
-          );
-        }
-        if (input.findings.length > 0) {
-          await tx.insert(conformanceFindings).values(input.findings.map(findingInsertValues));
-        }
-        if (input.adoptionGroups.length > 0) {
-          await tx
-            .insert(replayAdoptionGroups)
-            .values(input.adoptionGroups.map(adoptionGroupInsertValues));
-        }
-        if (input.adoptionAssignments.length > 0) {
-          await tx
-            .insert(replayAdoptionAssignments)
-            .values(input.adoptionAssignments.map(adoptionAssignmentInsertValues));
-        }
+        await insertInChunks(tx, replayDiffGroups, input.groups.map(groupInsertValues));
+        await insertInChunks(
+          tx,
+          replayChangedActions,
+          input.changedActions.map((changed) => ({
+            replayRunId: changed.replayRunId,
+            actionKey: changed.actionKey,
+            groupKey: changed.groupKey,
+            fromEffect: changed.fromEffect,
+            toEffect: changed.toEffect,
+          })),
+        );
+        await insertInChunks(tx, conformanceFindings, input.findings.map(findingInsertValues));
+        await insertInChunks(
+          tx,
+          replayAdoptionGroups,
+          input.adoptionGroups.map(adoptionGroupInsertValues),
+        );
+        await insertInChunks(
+          tx,
+          replayAdoptionAssignments,
+          input.adoptionAssignments.map(adoptionAssignmentInsertValues),
+        );
         await tx
           .update(replayRuns)
           .set({

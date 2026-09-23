@@ -42,4 +42,13 @@ describe('createLogger', () => {
 
     expect(sink.lines).toEqual([]);
   });
+
+  test('serializes an Error passed as a cause with its message and chain', () => {
+    const sink = capture();
+    const logger = createLogger(configWith('info'), { destination: sink.destination });
+
+    logger.error('failed', { cause: new Error('outer', { cause: new Error('inner') }) });
+
+    expect(sink.lines.join('')).toContain('"message":"outer: inner"');
+  });
 });
