@@ -27,7 +27,7 @@ export function createTraceModule(deps: CreateTraceModuleDeps) {
 }
 
 export type { TraceModule } from './lib/app/module.ts';
-export type { ActionReader } from './lib/app/ports.ts';
+export type { ActionReader, WindowQuery } from './lib/app/ports.ts';
 export type { ImportTraceResult } from './lib/app/import-trace.ts';
 export type {
   IngestObservationsInput,

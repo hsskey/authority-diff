@@ -1,15 +1,21 @@
 import { describe, expect, expectTypeOf, test } from 'vitest';
 import type { Runtime } from '@authority/action/schema';
+import type { Analyzability, Capability } from '@authority/action/schema';
 import {
+  ActivityOverviewSchema,
   AgentSessionSchema,
   ParsedSessionSchema,
   RuntimeObservationSchema,
   StoredAgentActionSchema,
   TraceImportSchema,
+  type ActionForReplay,
+  type ActivityOverview,
+  type BuildActivityOverview,
   type DeriveActionKey,
   type ParseTranscript,
   type ParsedSession,
   type RedactText,
+  type TargetKind,
 } from '../schema.ts';
 import parsedSessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
@@ -52,6 +58,82 @@ describe('trace schema', () => {
         readonly sequence: number;
       }) => string
     >();
+  });
+});
+
+describe('Activity Overview contract', () => {
+  test('locks the overview shape: counts per key, no Effect or Zone', () => {
+    expectTypeOf<ActivityOverview>().toEqualTypeOf<{
+      sessionCount: number;
+      actionCount: number;
+      evaluableActionCount: number;
+      capabilityCounts: Record<Capability, number>;
+      targetKindCounts: Record<TargetKind, number>;
+      analyzability: Record<Analyzability, number>;
+      topPrograms: { program: string; count: number }[];
+      topRemoteKeys: { remoteKey: string; count: number }[];
+    }>();
+    expectTypeOf<TargetKind>().toEqualTypeOf<
+      | 'workspace_path'
+      | 'other_path'
+      | 'vcs_remote'
+      | 'host'
+      | 'package'
+      | 'mcp'
+      | 'deploy_target'
+      | 'unknown'
+    >();
+    expectTypeOf<BuildActivityOverview>().toEqualTypeOf<
+      (actions: readonly ActionForReplay[]) => ActivityOverview
+    >();
+  });
+
+  test('rejects an overview missing a capability key or over twenty programs', () => {
+    const zero = (keys: readonly string[]) => Object.fromEntries(keys.map((key) => [key, 0]));
+    const capabilities = [
+      'read',
+      'write',
+      'delete',
+      'execute',
+      'install',
+      'fetch',
+      'send',
+      'commit',
+      'push',
+      'rewrite',
+      'deploy',
+    ];
+    const kinds = [
+      'workspace_path',
+      'other_path',
+      'vcs_remote',
+      'host',
+      'package',
+      'mcp',
+      'deploy_target',
+      'unknown',
+    ];
+    const value = {
+      sessionCount: 0,
+      actionCount: 0,
+      evaluableActionCount: 0,
+      capabilityCounts: zero(capabilities),
+      targetKindCounts: zero(kinds),
+      analyzability: { full: 0, partial: 0, none: 0 },
+      topPrograms: [],
+      topRemoteKeys: [],
+    };
+    expect(ActivityOverviewSchema.parse(value)).toEqual(value);
+    expect(
+      ActivityOverviewSchema.safeParse({ ...value, capabilityCounts: zero(capabilities.slice(1)) })
+        .success,
+    ).toBe(false);
+    expect(
+      ActivityOverviewSchema.safeParse({
+        ...value,
+        topPrograms: Array.from({ length: 21 }, (_, i) => ({ program: `p${i}`, count: 1 })),
+      }).success,
+    ).toBe(false);
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  ActivityOverviewQuerySchema,
   ChangeReviewResponseSchema,
   CreateDecisionRequestSchema,
   CreateReplayRunRequestSchema,
@@ -9,6 +10,7 @@ import {
   ImportTraceResponseSchema,
   ListActionsQuerySchema,
   ListAdoptionGroupsQuerySchema,
+  ListChangeReviewsQuerySchema,
   ListReviewAdoptionGroupsQuerySchema,
   ReviewAdoptionGroupResponseSchema,
 } from '../schema.ts';
@@ -58,6 +60,21 @@ describe('contracts DTO round-trip', () => {
       rejectedCount: 0,
     };
     expect(ImportTraceResponseSchema.parse(value)).toEqual(value);
+  });
+
+  test('defaults the activity overview window to 30 days and bounds it to a year', () => {
+    expect(ActivityOverviewQuerySchema.parse({})).toEqual({ windowDays: 30 });
+    expect(ActivityOverviewQuerySchema.parse({ windowDays: '14' })).toEqual({ windowDays: 14 });
+    expect(ActivityOverviewQuerySchema.safeParse({ windowDays: '366' }).success).toBe(false);
+    expect(ActivityOverviewQuerySchema.safeParse({ windowDays: '0' }).success).toBe(false);
+  });
+
+  test('the change reviews listing requires a policy id', () => {
+    expect(ListChangeReviewsQuerySchema.parse({ policyId: `pol_${ULID}` })).toEqual({
+      policyId: `pol_${ULID}`,
+      limit: 50,
+    });
+    expect(ListChangeReviewsQuerySchema.safeParse({}).success).toBe(false);
   });
 
   test('coerces the actions list limit and defaults it', () => {

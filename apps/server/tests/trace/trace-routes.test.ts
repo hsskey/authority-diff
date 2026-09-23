@@ -2,13 +2,22 @@ import { describe, expect, test } from 'vitest';
 import { err } from '@authority/kernel';
 import {
   ActionResponseSchema,
+  ActivityOverviewResponseSchema,
   CreateRuntimeObservationsResponseSchema,
   ErrorEnvelopeSchema,
   ImportTraceResponseSchema,
   ReclassifyActionsResponseSchema,
 } from '@authority/contracts/schema';
 import parsedSessionFixture from '../../../../tests/fixtures/parsed-session.json' with { type: 'json' };
-import { authed, buildTraceApp, makeModule, ok, sampleAction } from './support.ts';
+import {
+  authed,
+  buildTraceApp,
+  emptyOverview,
+  makeModule,
+  NOW,
+  ok,
+  sampleAction,
+} from './support.ts';
 
 const WINDOW = {
   windowFrom: '2026-01-01T00:00:00.000Z',
@@ -231,5 +240,48 @@ describe('authentication', () => {
       body: JSON.stringify(parsedSessionFixture),
     });
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/v1/activity-overview', () => {
+  test('resolves the window from windowDays back from now and returns the overview', async () => {
+    const windows: { from: string; to: string }[] = [];
+    const app = buildTraceApp(
+      makeModule({
+        getActivityOverview: (window) => {
+          windows.push(window);
+          return Promise.resolve({ ...emptyOverview(), sessionCount: 3, actionCount: 7 });
+        },
+      }),
+    );
+    const res = await app.request('/api/v1/activity-overview?windowDays=7', authed());
+    expect(res.status).toBe(200);
+    const body = ActivityOverviewResponseSchema.parse(await res.json());
+    expect(body).toMatchObject({
+      windowDays: 7,
+      windowFrom: '2026-01-24T00:00:00.000Z',
+      windowTo: NOW,
+      sessionCount: 3,
+      actionCount: 7,
+    });
+    expect(windows).toEqual([{ from: '2026-01-24T00:00:00.000Z', to: NOW }]);
+  });
+
+  test('defaults windowDays to 30', async () => {
+    const app = buildTraceApp(makeModule());
+    const res = await app.request('/api/v1/activity-overview', authed());
+    expect(res.status).toBe(200);
+    const body = ActivityOverviewResponseSchema.parse(await res.json());
+    expect(body.windowDays).toBe(30);
+    expect(body.windowFrom).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  test('rejects windowDays outside 1..365 with 422', async () => {
+    const app = buildTraceApp(makeModule());
+    const res = await app.request('/api/v1/activity-overview?windowDays=0', authed());
+    expect(res.status).toBe(422);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(
+      'validation.invalid_request',
+    );
   });
 });

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
 import { AnalyzabilitySchema, CapabilitySchema, RuntimeSchema } from '@authority/action/schema';
 import {
+  ActivityOverviewSchema,
   ParsedSessionSchema,
   RuntimeObservationSchema,
   StoredAgentActionSchema,
@@ -10,6 +11,7 @@ import {
 import {
   DecisionSchema,
   PolicyDocumentSchema,
+  PolicyIdSchema,
   PolicyIssueSchema,
   PolicySchema,
   PolicyVersionIdSchema,
@@ -146,6 +148,22 @@ export const ReclassifyActionsResponseSchema = z.object({
 });
 export type ReclassifyActionsResponse = z.infer<typeof ReclassifyActionsResponseSchema>;
 
+// GET /activity-overview
+// The overview of the Actions imported in the last `windowDays` days, read
+// from stored activity alone: no Policy Version, so no Effect or Zone. The
+// response carries the window the server resolved.
+export const ActivityOverviewQuerySchema = z.object({
+  windowDays: z.coerce.number().int().min(1).max(365).default(30),
+});
+export type ActivityOverviewQuery = z.infer<typeof ActivityOverviewQuerySchema>;
+
+export const ActivityOverviewResponseSchema = ActivityOverviewSchema.extend({
+  windowDays: z.number().int().positive(),
+  windowFrom: IsoTimestampSchema,
+  windowTo: IsoTimestampSchema,
+});
+export type ActivityOverviewResponse = z.infer<typeof ActivityOverviewResponseSchema>;
+
 // GET /policies, POST /policies
 export const PolicyResponseSchema = PolicySchema;
 export type PolicyResponse = z.infer<typeof PolicyResponseSchema>;
@@ -174,6 +192,14 @@ export const CreatePolicyResponseSchema = z.object({
   initialVersion: PolicyVersionResponseSchema,
 });
 export type CreatePolicyResponse = z.infer<typeof CreatePolicyResponseSchema>;
+
+// GET /policies/{policyId}/versions
+// Every version of the Policy in version order, oldest first.
+export const ListPolicyVersionsQuerySchema = z.object({
+  cursor: CursorSchema.optional(),
+  limit: LimitSchema,
+});
+export type ListPolicyVersionsQuery = z.infer<typeof ListPolicyVersionsQuerySchema>;
 
 export const ListPolicyVersionsResponseSchema = pageOf(PolicyVersionResponseSchema);
 export type ListPolicyVersionsResponse = z.infer<typeof ListPolicyVersionsResponseSchema>;
@@ -351,6 +377,19 @@ export const ChangeReviewResponseSchema = ChangeReviewSchema.extend({
   gate: GateSchema,
 });
 export type ChangeReviewResponse = z.infer<typeof ChangeReviewResponseSchema>;
+
+// GET /change-reviews?policyId=
+// The Policy's Change Reviews of either kind, newest first, so the web can
+// find the open adoption review of a draft without an accepted version.
+export const ListChangeReviewsQuerySchema = z.object({
+  policyId: PolicyIdSchema,
+  cursor: CursorSchema.optional(),
+  limit: LimitSchema,
+});
+export type ListChangeReviewsQuery = z.infer<typeof ListChangeReviewsQuerySchema>;
+
+export const ListChangeReviewsResponseSchema = pageOf(ChangeReviewResponseSchema);
+export type ListChangeReviewsResponse = z.infer<typeof ListChangeReviewsResponseSchema>;
 
 // GET /change-reviews/{id}/diff-groups
 export const ReviewDiffGroupResponseSchema = DiffGroupSchema.extend({
