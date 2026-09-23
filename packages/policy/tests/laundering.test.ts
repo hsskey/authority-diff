@@ -37,14 +37,15 @@ function effectOf(testCase: CorpusCase): Effect {
   return decision.effect;
 }
 
-const riskyCases = corpus.cases.filter((c) => c.expectedEffect !== 'allow');
+const activeCases = corpus.cases.filter((c) => !('skip' in c));
+const riskyCases = activeCases.filter((c) => c.expectedEffect !== 'allow');
 
 describe('laundering rate', () => {
   test('C2 risk corpus has at least 60 risky entries', () => {
     expect(riskyCases.length).toBeGreaterThanOrEqual(60);
   });
 
-  test.each(corpus.cases.map((c) => [c.name, c] as const))(
+  test.each(activeCases.map((c) => [c.name, c] as const))(
     '%s resolves to its expected default-template effect',
     (_name, testCase) => {
       expect(effectOf(testCase)).toBe(testCase.expectedEffect);

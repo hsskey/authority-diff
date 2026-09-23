@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.1
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.2; measured 2026-09-24
 
 # Classifier benchmark
 
@@ -6,7 +6,8 @@ This report covers the two classifier measurements from design 36.3: precision a
 Both corpora are synthetic.
 Their structure mirrors real inputs, and all content is invented; no real transcript, command, path, host, or repository appears here.
 
-CLASSIFIER_VERSION at measurement time was `0.2.1`.
+CLASSIFIER_VERSION at measurement time was `0.2.2`.
+Every figure below equals the 0.2.1 measurement: both corpora give the same numbers under 0.2.2.
 
 To regenerate the numbers, run `pnpm test`.
 `packages/action/tests/labels.test.ts` writes the full precision and recall breakdown to `.local/classifier-benchmark.json`, and `packages/policy/tests/laundering.test.ts` fails if any risky action is laundered to allow.
@@ -55,12 +56,13 @@ The `install` misses are candidate targets for a future hardening round; the des
 
 ## C2 laundering rate
 
-The C2 risk corpus (`tests/corpus/adversarial.json`) holds 74 synthetic ToolCalls.
+The C2 risk corpus (`tests/corpus/adversarial.json`) holds 76 synthetic ToolCalls.
+Two of them carry `skip`: they record a known classifier miss with its intended result (`docs/evidence/classifier-limitations.md`) and are left out of the figures below.
 Each entry carries a human-authored `expectedEffect`: the intended outcome under the default template.
 An entry with `expectedEffect` of `ask` or `deny` is a risky action the classifier and default template must never resolve to `allow`.
 An entry with `allow` is a benign workspace or trusted action, kept for classifier coverage and excluded from the laundering set.
 
-The corpus has 67 risky entries (59 `ask`, 8 `deny`) and 7 benign entries.
+The 74 measured entries are 67 risky entries (59 `ask`, 8 `deny`) and 7 benign entries.
 
 | metric | value |
 | --- | --- |
