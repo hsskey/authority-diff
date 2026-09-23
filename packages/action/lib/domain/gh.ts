@@ -6,12 +6,13 @@
  * are `send`; pr merge, release create, repo create are `push`; `auth` token and
  * `secret` commands are a `read` of the credential store. The Target is a
  * `vcs_remote` whose Remote Key comes from `-R`/`--repo` when present, otherwise
- * the `origin` remote.
+ * the session `origin` remote, but only while gh runs inside the session
+ * workspace; a preceding `cd` outside it leaves the remote name unresolved.
  */
 import type { Capability, Target } from '../../schema.ts';
 import { nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
-import { normalizeRemote, pathTarget, resolvePath } from './targets.ts';
+import { dirOutsideWorkspace, normalizeRemote, pathTarget, resolvePath } from './targets.ts';
 import type { ShellWord } from '../shell/ast.ts';
 
 const CREDENTIAL_STORE = '~/.config/gh/hosts.yml';
@@ -93,6 +94,8 @@ function remoteOp(
     remoteKey = result.remoteKey;
     if (result.unparsed) signals.push('remote_unparsed');
     else analyzability = 'full';
+  } else if (dirOutsideWorkspace(cmd.cwd, cmd.workspaceRoot)) {
+    signals.push('remote_dir_mismatch');
   } else {
     const origin = cmd.repoRemotes?.['origin'];
     if (origin !== undefined) {

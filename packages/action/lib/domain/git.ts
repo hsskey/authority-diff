@@ -12,7 +12,7 @@
 import type { Capability, Target } from '../../schema.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
-import { normalizeRemote, pathTarget, resolvePath } from './targets.ts';
+import { dirOutsideWorkspace, normalizeRemote, pathTarget, resolvePath } from './targets.ts';
 import type { ShellWord } from '../shell/ast.ts';
 
 const READ_SUBS: ReadonlySet<string> = new Set([
@@ -126,31 +126,16 @@ function splitGitGlobals(args: readonly ShellWord[]): GitGlobals {
   return { args: args.slice(i), dirs, hasGitDir };
 }
 
-/**
- * True when git runs against a directory other than the session workspace, so
- * the session `repoRemotes` may not describe its remotes: `--git-dir`, a `-C` or
- * `--work-tree` path outside the workspace or not statically known, or a cwd an
- * earlier `cd` moved outside the workspace or to an unknown directory.
- */
-function remoteDirMismatch(cmd: NormalizedCommand, globals: GitGlobals): boolean {
-  if (globals.hasGitDir) return true;
-  // Without a workspace root the cwd cannot be compared; only an explicit
-  // directory change is known to leave the session repository.
-  if (cmd.workspaceRoot === null) return globals.dirs.length > 0;
-  if (cmd.cwd === null) return true;
-  let dir = resolvePath('.', cmd.cwd, cmd.workspaceRoot);
-  for (const word of globals.dirs) {
-    if (word.hasExpansion) return true;
-    dir = resolvePath(word.text, dir.path, cmd.workspaceRoot);
-  }
-  return !dir.isInsideWorkspace;
-}
-
 export function classifyGit(cmd: NormalizedCommand): OperationDraft[] {
   const globals = splitGitGlobals(cmd.args);
   const args = globals.args;
   const gitCmd: NormalizedCommand = { ...cmd, args };
-  const dirMismatch = remoteDirMismatch(cmd, globals);
+  const dirMismatch = dirOutsideWorkspace(
+    cmd.cwd,
+    cmd.workspaceRoot,
+    globals.dirs,
+    globals.hasGitDir,
+  );
   const positional = nonFlagArgs(args);
   const sub = positional[0]?.text ?? '';
   const rest = args.filter((a) => a !== positional[0]);

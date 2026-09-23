@@ -134,6 +134,42 @@ describe('git remote resolution outside the session workspace', () => {
   });
 });
 
+describe('gh remote resolution outside the session workspace', () => {
+  function remoteOp(command: string): Operation | undefined {
+    return classify(bash(command)).find((o) => o.target.kind === 'vcs_remote');
+  }
+
+  test.each(['cd /tmp/other && gh pr merge 5', 'cd "$DIR" && gh pr merge 5'])(
+    '%s keeps only the remote name',
+    (command) => {
+      const op = remoteOp(command);
+      expect(op?.target).toEqual({
+        kind: 'vcs_remote',
+        remoteName: 'origin',
+        remoteKey: null,
+        branch: 'main',
+      });
+      expect(op?.analyzability).toBe('partial');
+      expect(op?.signals).toContain('remote_dir_mismatch');
+    },
+  );
+
+  test('cd inside the workspace resolves the session remote', () => {
+    const op = remoteOp('cd packages && gh pr merge 5');
+    expect(op?.target).toMatchObject({
+      remoteName: 'origin',
+      remoteKey: 'github.com/acme/toolkit',
+    });
+    expect(op?.signals).not.toContain('remote_dir_mismatch');
+  });
+
+  test('an explicit -R outside the workspace still resolves its Remote Key', () => {
+    const op = remoteOp('cd /tmp/other && gh pr merge 5 -R acme/other');
+    expect(op?.target).toMatchObject({ remoteName: null, remoteKey: 'github.com/acme/other' });
+    expect(op?.signals).not.toContain('remote_dir_mismatch');
+  });
+});
+
 describe('force-push refspec detection', () => {
   test('git push origin +main (colon-less force refspec) is rewrite', () => {
     const ops = classify(bash('git push origin +main'));

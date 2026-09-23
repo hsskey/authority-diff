@@ -1041,6 +1041,21 @@
         }
       ],
       "expectedEffect": "ask"
+    },
+    {
+      "name": "cd-outside-workspace-gh-merge",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cd /tmp/other && gh pr merge 5"
+      },
+      "mustInclude": [
+        {
+          "capability": "push",
+          "targetKind": "vcs_remote",
+          "remoteKey": null
+        }
+      ],
+      "expectedEffect": "ask"
     }
   ]
 }

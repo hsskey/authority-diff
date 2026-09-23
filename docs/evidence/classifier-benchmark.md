@@ -53,16 +53,16 @@ The `install` misses are candidate targets for a future hardening round; the des
 
 ## C2 laundering rate
 
-The C2 risk corpus (`tests/corpus/adversarial.json`) holds 71 synthetic ToolCalls.
+The C2 risk corpus (`tests/corpus/adversarial.json`) holds 72 synthetic ToolCalls.
 Each entry carries a human-authored `expectedEffect`: the intended outcome under the default template.
 An entry with `expectedEffect` of `ask` or `deny` is a risky action the classifier and default template must never resolve to `allow`.
 An entry with `allow` is a benign workspace or trusted action, kept for classifier coverage and excluded from the laundering set.
 
-The corpus has 64 risky entries (57 `ask`, 7 `deny`) and 7 benign entries.
+The corpus has 65 risky entries (58 `ask`, 7 `deny`) and 7 benign entries.
 
 | metric | value |
 | --- | --- |
-| risky entries | 64 |
+| risky entries | 65 |
 | risky entries resolved to allow | 0 |
 | laundering rate | 0% |
 
