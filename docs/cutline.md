@@ -31,7 +31,7 @@ V1은 모델 호출 0건으로 완결됩니다.
 
 | 번호 | 고치는 곳 | 내용 |
 | --- | --- | --- |
-| R1 | 설계서 16.1 Diff Group signature와 severity | Zone을 하나만 담고 있었습니다. Environment Profile을 바꾸는 변경에서는 같은 action의 Zone이 baseline과 candidate에서 달라집니다. demo의 핵심 장면(`trustedRemotes = github.com/*`)에서 candidate Zone이 `trusted_remote`가 되어 severity가 `normal`로 떨어집니다. signature에 `fromZone`과 `toZone`을 넣고, severity는 baseline 쪽 Zone과 Reversibility로 판정합니다 |
+| R1 | 설계서 16.1 Diff Group signature와 severity | Zone을 하나만 담고 있었습니다. Environment Profile을 바꾸는 변경에서는 같은 action의 Zone이 baseline과 candidate에서 달라집니다. demo의 핵심 장면(`trustedRemotes = github.com/**`)에서 candidate Zone이 `trusted_remote`가 되어 severity가 `normal`로 떨어집니다. signature에 `fromZone`과 `toZone`을 넣고, severity는 baseline 쪽 Zone과 Reversibility로 판정합니다 |
 | R2 | 설계서 13.3 Zone 판정 순서 | `trusted_remote`를 `public_remote`보다 먼저 검사했습니다. 조직이 공개 대상이라고 선언한 곳은 넓은 trusted pattern에 걸려도 `public_remote`여야 합니다. `public_remote`를 먼저 검사합니다 |
 | R3 | replay 결과의 표현 전반 | "새로 자동 허용된다", "자동 실행된다"는 표현을 쓰지 않습니다. replay가 말하는 것은 "이 Authority Policy에서는 이 과거 action의 effect가 달라진다"까지입니다. Claude Code가 실제로 어떻게 동작할지는 conformance를 측정한 뒤에만 말할 수 있고, conformance는 V1에 없습니다 |
 
@@ -105,7 +105,7 @@ architecture:
 5. 화면 상단에서 "변경된 Action 47건, Widening group 6개, critical 1개" 같은 요약을 봅니다.
    group마다 평문 한 문장, target 상위 목록, 건수가 나옵니다.
 6. critical group을 엽니다.
-   `trustedRemotes = github.com/*`라는 실수로 조직 밖 저장소로의 실제 과거 push가 `ask`에서 `allow`로 바뀐 것을 저장소 이름과 함께 확인합니다.
+   `trustedRemotes = github.com/**`라는 실수로 조직 밖 저장소로의 실제 과거 push가 `ask`에서 `allow`로 바뀐 것을 저장소 이름과 함께 확인합니다.
    이 장면의 Action이 실제 기록인지 `synthetic` fixture인지를 화면과 Evidence report가 표시합니다.
 7. group마다 `expected`, `investigate`, `unexpected`를 기록합니다.
    판정이 없거나 `investigate`, `unexpected`인 Widening group이 남아 있으면 수락 버튼이 잠깁니다.
@@ -439,7 +439,7 @@ Target Architecture의 완성이 아닙니다.
 5. Widening group마다 `headline`, target 요약, sample이 나오고 Verdict를 기록할 수 있습니다.
 6. 판정이 끝나지 않은 Widening group이 있으면 수락되지 않습니다(I7).
 7. 수락 또는 반려가 `review_decisions`에 hash와 함께 남고 Evidence report에 5장의 고정 문구가 들어갑니다.
-8. demo에서 `github.com/*` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)을 적고, 등급보다 강한 표현을 쓰지 않습니다.
+8. demo에서 `github.com/**` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)을 적고, 등급보다 강한 표현을 쓰지 않습니다.
 9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm test:e2e`가 CI에서 통과합니다.
 10. `docs/evidence`에 실제 기록 측정, diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
 11. README에 한계가 적혀 있습니다.
