@@ -15,7 +15,8 @@ import { ParsedSessionSchema } from '@authority/trace/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
 import { createReplayModule, migrateReplayStore } from '../index.ts';
 import type { PolicyReader } from '../index.ts';
-import { computeDiff } from '../diff.ts';
+import { createEvaluator } from '@authority/policy/evaluate';
+import { computeConformanceWith, computeDiff } from '../diff.ts';
 import sessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
@@ -175,4 +176,77 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
   expect(map.run?.policyVersionId).toBe(candidateVersion.value.id);
   const total = map.cells.reduce((sum, cell) => sum + cell.count, 0);
   expect(total).toBe(local.stats.evaluatedActions);
+});
+
+test('a conformance run joins observations by toolUseId and persists its findings', async () => {
+  const clock = createSystemClock();
+  const idGenerator = createUlidGenerator();
+  const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
+  const created = await repository.createPolicy({
+    name: idGenerator.next('policy'),
+    template: 'default',
+  });
+  if (!created.ok) {
+    throw new Error('createPolicy failed');
+  }
+  const candidate = created.value.initialVersion;
+  const trace = createTraceModule({ database, clock, idGenerator });
+  const session = ParsedSessionSchema.parse(sessionFixture);
+  const imported = await trace.importTrace(session);
+  if (!imported.ok) {
+    throw new Error('importTrace failed');
+  }
+  await trace.ingestObservations({
+    runtime: session.runtime,
+    observations: session.toolCalls.flatMap((call) => [
+      {
+        event: 'pre_tool_use' as const,
+        sessionExternalId: session.sessionExternalId,
+        toolUseId: call.toolUseId,
+        toolName: call.toolName,
+        toolInputHash: null,
+        hookDecision: null,
+        cwd: null,
+        runtimeVersion: null,
+        occurredAt: call.occurredAt,
+      },
+    ]),
+  });
+  const window = freshWindow();
+  const streamed: ActionForReplay[] = [];
+  for await (const batch of trace.reader.streamActions({
+    from: window.windowFrom,
+    to: window.windowTo,
+    batchSize: 5000,
+  })) {
+    streamed.push(...batch);
+  }
+  const observations = await trace.reader.getObservations(streamed.map((a) => a.actionKey));
+  const local = computeConformanceWith(createEvaluator(candidate.document), streamed, observations);
+  const replay = createReplayModule({
+    database,
+    reader: trace.reader,
+    policy: makePolicyReader(repository),
+    clock,
+    idGenerator,
+    classifierVersion: trace.classifierVersion,
+  });
+
+  const requested = await replay.requestConformanceReplay({
+    candidateVersionId: candidate.id,
+    ...window,
+  });
+  if (!requested.ok) {
+    throw new Error(`requestConformanceReplay failed: ${requested.error.code}`);
+  }
+  await requested.value.execution;
+  const stored = await replay.getRun(requested.value.run.id);
+  const listed = await replay.listConformanceFindings();
+
+  expect(observations.length).toBeGreaterThanOrEqual(session.toolCalls.length);
+  expect(stored?.kind).toBe('conformance');
+  expect(stored?.resultHash).toBe(local.resultHash);
+  expect(listed.run?.replayRunId).toBe(requested.value.run.id);
+  expect(listed.items).toEqual(local.findings);
+  expect(listed.items.map((finding) => finding.kind)).toContain('under_asked');
 });

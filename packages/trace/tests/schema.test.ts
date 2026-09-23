@@ -118,10 +118,13 @@ describe('trace storage schema round-trip', () => {
   test('accepts a Runtime Observation and rejects a bad key', () => {
     const value = {
       observationKey: HASH,
+      actionKey: HASH,
       event: 'permission_request',
       sessionExternalId: 'session-a',
+      toolUseId: 'toolu_synthetic',
       toolName: 'Bash',
       toolInputHash: HASH,
+      hookDecision: 'allow',
       cwd: '~/project',
       runtimeVersion: null,
       occurredAt: TS,

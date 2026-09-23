@@ -13,7 +13,7 @@ type EvaluateAction = (operations: readonly Operation[]) => Decision | null;
 const EFFECT_RANK: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
 
 /** The nine Effect transition cells, ordered allow, ask, deny for from then to. */
-const EFFECT_ORDER = ['allow', 'ask', 'deny'] as const;
+export const EFFECT_ORDER = ['allow', 'ask', 'deny'] as const;
 
 /** Baseline Zones that make a widening group critical. */
 const CRITICAL_BASELINE_ZONES: ReadonlySet<Zone> = new Set([
@@ -208,17 +208,16 @@ function targetSummary(entries: readonly ChangedEntry[]): { key: string; count: 
     .slice(0, 5);
 }
 
-function sampleActionKeys(entries: readonly ChangedEntry[]): string[] {
-  const keys = [...entries]
-    .sort((a, b) => {
-      const left = a.action;
-      const right = b.action;
+/** The first five and last five Actions by (occurredAt, actionKey), or all when at most ten. */
+export function sampleActionKeys(actions: readonly ActionForReplay[]): string[] {
+  const keys = [...actions]
+    .sort((left, right) => {
       if (left.occurredAt !== right.occurredAt) {
         return left.occurredAt < right.occurredAt ? -1 : 1;
       }
       return left.actionKey < right.actionKey ? -1 : left.actionKey > right.actionKey ? 1 : 0;
     })
-    .map((entry) => entry.action.actionKey);
+    .map((action) => action.actionKey);
   if (keys.length <= 10) {
     return keys;
   }
@@ -268,7 +267,7 @@ function buildGroup(groupKey: string, entries: readonly ChangedEntry[]): BuiltGr
     baselineRuleIds: sortedUniqueRuleIds(entries.map((entry) => entry.baselineOp.decidingRuleId)),
     candidateRuleIds: sortedUniqueRuleIds(entries.map((entry) => entry.candidateOp.decidingRuleId)),
     targetSummary: summary,
-    sampleActionKeys: sampleActionKeys(entries),
+    sampleActionKeys: sampleActionKeys(entries.map((entry) => entry.action)),
   };
   return { full: { ...core, headline: renderHeadline(core) }, hashed: core };
 }

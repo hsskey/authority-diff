@@ -1,5 +1,6 @@
 import type {
   ActionForReplay,
+  ObservationForReplay,
   RuntimeObservation,
   StoredAgentAction,
   TraceImport,
@@ -101,6 +102,15 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
         }
       }
       return Promise.resolve({ acceptedCount: inserted, duplicateCount: batch.length - inserted });
+    },
+
+    getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]> {
+      const wanted = new Set(actionKeys);
+      return Promise.resolve(
+        [...observations.values()].flatMap(({ actionKey, event, hookDecision }) =>
+          actionKey !== null && wanted.has(actionKey) ? [{ actionKey, event, hookDecision }] : [],
+        ),
+      );
     },
 
     getActions(actionKeys: readonly string[]): Promise<readonly StoredAgentAction[]> {

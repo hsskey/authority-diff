@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
-import { IsoTimestampSchema } from '@authority/kernel';
+import { RuntimeObservationInputSchema } from '@authority/contracts/schema';
 import type {
   CreateRuntimeObservationsRequest,
   RuntimeObservationInput,
@@ -29,29 +29,18 @@ function toObservation(line: string): RuntimeObservationInput | null {
   if (!isRecord(parsed)) {
     return null;
   }
-  const event = readString(parsed, 'event');
-  const sessionExternalId = readString(parsed, 'sessionId');
-  const timestamp = readString(parsed, 'timestamp');
-  if (
-    (event !== 'permission_request' && event !== 'session_end') ||
-    sessionExternalId === null ||
-    timestamp === null
-  ) {
-    return null;
-  }
-  const occurredAt = IsoTimestampSchema.safeParse(timestamp);
-  if (!occurredAt.success) {
-    return null;
-  }
-  return {
-    event,
-    sessionExternalId,
+  const observation = RuntimeObservationInputSchema.safeParse({
+    event: parsed.event,
+    sessionExternalId: readString(parsed, 'sessionId'),
+    toolUseId: readString(parsed, 'toolUseId'),
     toolName: readString(parsed, 'toolName'),
     toolInputHash: readString(parsed, 'toolInputHash'),
+    hookDecision: readString(parsed, 'hookDecision'),
     cwd: readString(parsed, 'cwd'),
     runtimeVersion: readString(parsed, 'runtimeVersion'),
-    occurredAt: occurredAt.data,
-  };
+    occurredAt: parsed.timestamp,
+  });
+  return observation.success ? observation.data : null;
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {

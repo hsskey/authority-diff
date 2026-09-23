@@ -49,7 +49,10 @@ export function registerReplayRunsRoutes(app: Hono<AppEnv>, replay: ReplayModule
       return respondError(c, validationInvalidRequest({ issues: parsed.error.issues }));
     }
 
-    const result = await replay.requestReplay(parsed.data);
+    const result =
+      parsed.data.kind === 'conformance'
+        ? await replay.requestConformanceReplay(parsed.data)
+        : await replay.requestReplay(parsed.data);
     if (!result.ok) {
       return respondReplayError(c, result.error);
     }

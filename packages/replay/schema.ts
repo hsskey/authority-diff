@@ -145,14 +145,36 @@ export const ReplayRunStatusSchema = z.enum(['queued', 'running', 'completed', '
 export type ReplayRunStatus = z.infer<typeof ReplayRunStatusSchema>;
 
 /**
+ * `version_diff` compares two Policy Versions. `conformance` compares the
+ * `observed_runtime` Decision Source, the Disposition the runtime showed, as
+ * the baseline against a candidate Policy Version.
+ */
+export const ReplayRunKindSchema = z.enum(['version_diff', 'conformance']);
+export type ReplayRunKind = z.infer<typeof ReplayRunKindSchema>;
+
+export const DispositionSchema = z.enum([
+  'auto_executed',
+  'prompted',
+  'hook_approved',
+  'blocked',
+  'executed_prompt_unknown',
+]);
+export type Disposition = z.infer<typeof DispositionSchema>;
+
+export const ConformanceFindingKindSchema = z.enum(['violation', 'under_asked', 'over_asked']);
+export type ConformanceFindingKind = z.infer<typeof ConformanceFindingKindSchema>;
+
+/**
  * A stored replay run. `inputsHash` is the natural idempotency key over
  * (baseline, candidate, window, classifierVersion); a second request with the
  * same hash returns the completed run instead of starting another. `resultHash`
  * and `stats` are null until the run completes; `errorCode` is set on failure.
+ * `baselineVersionId` is null exactly when `kind` is `conformance`.
  */
 export const ReplayRunSchema = z.object({
   id: ReplayRunIdSchema,
-  baselineVersionId: PolicyVersionIdSchema,
+  kind: ReplayRunKindSchema,
+  baselineVersionId: PolicyVersionIdSchema.nullable(),
   candidateVersionId: PolicyVersionIdSchema,
   windowFrom: IsoTimestampSchema,
   windowTo: IsoTimestampSchema,
@@ -183,3 +205,28 @@ export const StoredChangedActionSchema = z.object({
   toEffect: EffectSchema,
 });
 export type StoredChangedAction = z.infer<typeof StoredChangedActionSchema>;
+
+/**
+ * Actions of a conformance run whose Disposition and candidate Effect disagree,
+ * grouped by `[kind, capability, zone, program]` of the signature Operation.
+ * `findingKey = sha256Hex(canonicalJson(signature))`.
+ */
+export const ConformanceFindingSchema = z.object({
+  findingKey: Sha256Schema,
+  kind: ConformanceFindingKindSchema,
+  capability: CapabilitySchema,
+  zone: ZoneSchema,
+  program: z.string().nullable(),
+  actionCount: z.number().int().positive(),
+  sessionCount: z.number().int().positive(),
+  firstOccurredAt: IsoTimestampSchema,
+  lastOccurredAt: IsoTimestampSchema,
+  sampleActionKeys: z.array(Sha256Schema).max(10),
+});
+export type ConformanceFinding = z.infer<typeof ConformanceFindingSchema>;
+
+/** The stored Conformance Finding is the computed finding tied to its run. */
+export const StoredConformanceFindingSchema = ConformanceFindingSchema.extend({
+  replayRunId: ReplayRunIdSchema,
+});
+export type StoredConformanceFinding = z.infer<typeof StoredConformanceFindingSchema>;

@@ -3,10 +3,14 @@ import type { IsoTimestamp } from '@authority/kernel';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import {
+  ConformanceFindingSchema,
   ReplayRunSchema,
   StoredDiffGroupSchema,
+  type ConformanceFinding,
   type ReplayRun,
   type ReplayRunId,
+  type ReplayRunKind,
+  type StoredConformanceFinding,
   type StoredDiffGroup,
 } from '../../schema.ts';
 import type {
@@ -17,10 +21,16 @@ import type {
   RecordCompletionInput,
   ReplayStore,
 } from '../app/ports.ts';
-import { replayChangedActions, replayDiffGroups, replayRuns } from './tables.ts';
+import {
+  conformanceFindings,
+  replayChangedActions,
+  replayDiffGroups,
+  replayRuns,
+} from './tables.ts';
 
 type RunRow = typeof replayRuns.$inferSelect;
 type GroupRow = typeof replayDiffGroups.$inferSelect;
+type FindingRow = typeof conformanceFindings.$inferSelect;
 
 function toRun(row: RunRow): ReplayRun {
   return ReplayRunSchema.parse(row);
@@ -33,6 +43,7 @@ function toGroup(row: GroupRow): StoredDiffGroup {
 function runInsertValues(run: ReplayRun): RunRow {
   return {
     id: run.id,
+    kind: run.kind,
     baselineVersionId: run.baselineVersionId,
     candidateVersionId: run.candidateVersionId,
     windowFrom: run.windowFrom,
@@ -71,6 +82,22 @@ function groupInsertValues(group: StoredDiffGroup): GroupRow {
     targetSummary: group.targetSummary.map((entry) => ({ key: entry.key, count: entry.count })),
     headline: group.headline,
     sampleActionKeys: [...group.sampleActionKeys],
+  };
+}
+
+function findingInsertValues(finding: StoredConformanceFinding): FindingRow {
+  return {
+    replayRunId: finding.replayRunId,
+    findingKey: finding.findingKey,
+    kind: finding.kind,
+    capability: finding.capability,
+    zone: finding.zone,
+    program: finding.program,
+    actionCount: finding.actionCount,
+    sessionCount: finding.sessionCount,
+    firstOccurredAt: finding.firstOccurredAt,
+    lastOccurredAt: finding.lastOccurredAt,
+    sampleActionKeys: [...finding.sampleActionKeys],
   };
 }
 
@@ -120,6 +147,9 @@ export function createReplayStore(database: Database): ReplayStore {
               toEffect: changed.toEffect,
             })),
           );
+        }
+        if (input.findings.length > 0) {
+          await tx.insert(conformanceFindings).values(input.findings.map(findingInsertValues));
         }
         await tx
           .update(replayRuns)
@@ -188,7 +218,7 @@ export function createReplayStore(database: Database): ReplayStore {
       const rows = await db
         .select()
         .from(replayRuns)
-        .where(eq(replayRuns.status, 'completed'))
+        .where(and(eq(replayRuns.status, 'completed'), eq(replayRuns.kind, 'version_diff')))
         .orderBy(desc(replayRuns.completedAt));
       return rows.map((row) => {
         const run = toRun(row);
@@ -200,6 +230,27 @@ export function createReplayStore(database: Database): ReplayStore {
           matrix: row.stats?.matrix ?? [],
         };
       });
+    },
+
+    async findLatestCompletedRun(kind: ReplayRunKind): Promise<ReplayRun | null> {
+      const [row] = await db
+        .select()
+        .from(replayRuns)
+        .where(and(eq(replayRuns.status, 'completed'), eq(replayRuns.kind, kind)))
+        .orderBy(desc(replayRuns.completedAt), desc(replayRuns.id))
+        .limit(1);
+      return row === undefined ? null : toRun(row);
+    },
+
+    async listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]> {
+      const rows = await db
+        .select()
+        .from(conformanceFindings)
+        .where(eq(conformanceFindings.replayRunId, id))
+        .orderBy(asc(conformanceFindings.findingKey));
+      return rows.map(({ replayRunId: _replayRunId, ...finding }) =>
+        ConformanceFindingSchema.parse(finding),
+      );
     },
   };
 }

@@ -13,6 +13,7 @@ import {
   DiffGroupSamplesResponseSchema,
   ImportTraceRequestSchema,
   ImportTraceResponseSchema,
+  ListConformanceFindingsResponseSchema,
   ListDiffGroupsResponseSchema,
   ListPoliciesResponseSchema,
   ListReviewDiffGroupsResponseSchema,
@@ -119,6 +120,10 @@ export const routes = {
     DiffGroupSamplesResponseSchema,
   ),
   getAuthorityMap: get(`${API}/authority-map`, AuthorityMapResponseSchema),
+  listConformanceFindings: get(
+    `${API}/conformance-findings`,
+    ListConformanceFindingsResponseSchema,
+  ),
 
   // The change-review routes carry the frozen contract DTOs; their server wiring is added later.
   createChangeReview: post(

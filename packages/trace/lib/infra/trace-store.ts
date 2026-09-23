@@ -1,8 +1,17 @@
 import { and, asc, count, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
-import { ActionForReplaySchema, StoredAgentActionSchema } from '../../schema.ts';
-import type { ActionForReplay, RuntimeObservation, StoredAgentAction } from '../../schema.ts';
+import {
+  ActionForReplaySchema,
+  ObservationForReplaySchema,
+  StoredAgentActionSchema,
+} from '../../schema.ts';
+import type {
+  ActionForReplay,
+  ObservationForReplay,
+  RuntimeObservation,
+  StoredAgentAction,
+} from '../../schema.ts';
 import type {
   ClassificationUpdate,
   StreamActionsQuery,
@@ -105,10 +114,13 @@ export function createTraceStore(database: Database): TraceStore {
         .values(
           batch.map((observation) => ({
             observationKey: observation.observationKey,
+            actionKey: observation.actionKey,
             event: observation.event,
             sessionExternalId: observation.sessionExternalId,
+            toolUseId: observation.toolUseId,
             toolName: observation.toolName,
             toolInputHash: observation.toolInputHash,
+            hookDecision: observation.hookDecision,
             cwd: observation.cwd,
             runtimeVersion: observation.runtimeVersion,
             occurredAt: observation.occurredAt,
@@ -117,6 +129,21 @@ export function createTraceStore(database: Database): TraceStore {
         .onConflictDoNothing({ target: runtimeObservations.observationKey })
         .returning({ observationKey: runtimeObservations.observationKey });
       return { acceptedCount: returned.length, duplicateCount: batch.length - returned.length };
+    },
+
+    async getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]> {
+      if (actionKeys.length === 0) {
+        return [];
+      }
+      const rows = await db
+        .select({
+          actionKey: runtimeObservations.actionKey,
+          event: runtimeObservations.event,
+          hookDecision: runtimeObservations.hookDecision,
+        })
+        .from(runtimeObservations)
+        .where(inArray(runtimeObservations.actionKey, [...actionKeys]));
+      return rows.map((row) => ObservationForReplaySchema.parse(row));
     },
 
     async getActions(actionKeys: readonly string[]): Promise<readonly StoredAgentAction[]> {

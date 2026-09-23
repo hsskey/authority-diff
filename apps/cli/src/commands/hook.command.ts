@@ -23,6 +23,13 @@ function hashToolInput(toolInput: unknown): string | null {
   return sha256Hex(canonicalJson(toolInput));
 }
 
+// A permission decision another hook already made, when the hook input carries one.
+function readHookDecision(input: Record<string, unknown>): 'allow' | 'deny' | null {
+  const decision = input.decision;
+  const behavior = isRecord(decision) ? decision.behavior : decision;
+  return behavior === 'allow' || behavior === 'deny' ? behavior : null;
+}
+
 function buildRecord(
   event: HookEvent,
   input: Record<string, unknown>,
@@ -48,6 +55,7 @@ function buildRecord(
       toolName,
       toolInputHash,
       toolUseId,
+      hookDecision: event === 'permission_request' ? readHookDecision(input) : null,
       cwd,
       runtimeVersion: runtimeVersion(),
     };
@@ -60,6 +68,7 @@ function buildRecord(
     toolName: null,
     toolInputHash: null,
     toolUseId,
+    hookDecision: null,
     cwd,
     runtimeVersion: runtimeVersion(),
   };

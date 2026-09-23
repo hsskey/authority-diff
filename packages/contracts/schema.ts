@@ -17,6 +17,7 @@ import {
   ZoneSchema,
 } from '@authority/policy/schema';
 import {
+  ConformanceFindingSchema,
   DiffGroupSchema,
   ReplayRunIdSchema,
   ReplayRunSchema,
@@ -81,6 +82,7 @@ export type ImportTraceResponse = z.infer<typeof ImportTraceResponseSchema>;
 // POST /runtime-observations
 export const RuntimeObservationInputSchema = RuntimeObservationSchema.omit({
   observationKey: true,
+  actionKey: true,
 });
 export type RuntimeObservationInput = z.infer<typeof RuntimeObservationInputSchema>;
 
@@ -179,12 +181,23 @@ export const ValidatePolicyVersionResponseSchema = z.object({
 export type ValidatePolicyVersionResponse = z.infer<typeof ValidatePolicyVersionResponseSchema>;
 
 // POST /replay-runs, GET /replay-runs/{id}
-export const CreateReplayRunRequestSchema = z.object({
-  baselineVersionId: PolicyVersionIdSchema,
-  candidateVersionId: PolicyVersionIdSchema,
-  windowFrom: IsoTimestampSchema,
-  windowTo: IsoTimestampSchema,
-});
+// Without `kind` the request is a `version_diff` run. A `conformance` run has
+// no baseline version: its baseline is the observed_runtime Decision Source.
+export const CreateReplayRunRequestSchema = z.union([
+  z.object({
+    kind: z.literal('version_diff').default('version_diff'),
+    baselineVersionId: PolicyVersionIdSchema,
+    candidateVersionId: PolicyVersionIdSchema,
+    windowFrom: IsoTimestampSchema,
+    windowTo: IsoTimestampSchema,
+  }),
+  z.object({
+    kind: z.literal('conformance'),
+    candidateVersionId: PolicyVersionIdSchema,
+    windowFrom: IsoTimestampSchema,
+    windowTo: IsoTimestampSchema,
+  }),
+]);
 export type CreateReplayRunRequest = z.infer<typeof CreateReplayRunRequestSchema>;
 
 export const ReplayRunResponseSchema = ReplayRunSchema;
@@ -242,6 +255,25 @@ export const AuthorityMapResponseSchema = z.object({
   cells: z.array(AuthorityMapCellSchema),
 });
 export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
+
+// GET /conformance-findings
+// The findings of the most recent completed conformance run; the run carries
+// the candidate version and window, so the request takes no query parameters.
+export const ConformanceFindingResponseSchema = ConformanceFindingSchema;
+export type ConformanceFindingResponse = z.infer<typeof ConformanceFindingResponseSchema>;
+
+export const ListConformanceFindingsResponseSchema = z.object({
+  run: z
+    .object({
+      replayRunId: ReplayRunIdSchema,
+      policyVersionId: PolicyVersionIdSchema,
+      windowFrom: IsoTimestampSchema,
+      windowTo: IsoTimestampSchema,
+    })
+    .nullable(),
+  items: z.array(ConformanceFindingResponseSchema),
+});
+export type ListConformanceFindingsResponse = z.infer<typeof ListConformanceFindingsResponseSchema>;
 
 // POST /change-reviews, GET /change-reviews/{id}
 export const CreateChangeReviewRequestSchema = z.object({

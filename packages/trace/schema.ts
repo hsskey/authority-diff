@@ -155,23 +155,44 @@ export const StoredAgentActionSchema = ActionForReplaySchema.extend({
 });
 export type StoredAgentAction = z.infer<typeof StoredAgentActionSchema>;
 
-export const RuntimeObservationEventSchema = z.enum(['permission_request', 'session_end']);
+export const RuntimeObservationEventSchema = z.enum([
+  'pre_tool_use',
+  'permission_request',
+  'session_end',
+]);
 export type RuntimeObservationEvent = z.infer<typeof RuntimeObservationEventSchema>;
+
+/** The permission decision a hook input carried, when another hook already decided. */
+export const HookDecisionSchema = z.enum(['allow', 'deny']);
+export type HookDecision = z.infer<typeof HookDecisionSchema>;
 
 /**
  * A runtime hook observation. `observationKey` is the server-derived sha256
- * natural key and makes ingestion idempotent. The join to an Action is by
- * (`sessionExternalId`, `toolName`, `toolInputHash`) because `toolUseId` is not
- * confirmed present in the hook input (docs/design.md section 25).
+ * natural key and makes ingestion idempotent. `actionKey` is server-derived
+ * from `toolUseId` with DeriveActionKey, so an observation joins its Action by
+ * the same runtime tool use identifier; it is null without a `toolUseId`.
+ * `toolUseId` and `hookDecision` default to null for hook clients that predate
+ * them.
  */
 export const RuntimeObservationSchema = z.object({
   observationKey: Sha256Schema,
+  actionKey: Sha256Schema.nullable(),
   event: RuntimeObservationEventSchema,
   sessionExternalId: z.string(),
+  toolUseId: z.string().min(1).nullable().default(null),
   toolName: z.string().nullable(),
   toolInputHash: Sha256Schema.nullable(),
+  hookDecision: HookDecisionSchema.nullable().default(null),
   cwd: z.string().nullable(),
   runtimeVersion: z.string().nullable(),
   occurredAt: IsoTimestampSchema,
 });
 export type RuntimeObservation = z.infer<typeof RuntimeObservationSchema>;
+
+/** The observation fields replay needs to derive a Disposition for an Action. */
+export const ObservationForReplaySchema = z.object({
+  actionKey: Sha256Schema,
+  event: RuntimeObservationEventSchema,
+  hookDecision: HookDecisionSchema.nullable(),
+});
+export type ObservationForReplay = z.infer<typeof ObservationForReplaySchema>;

@@ -2,6 +2,7 @@ import type { IsoTimestamp } from '@authority/kernel';
 import type {
   ActionForReplay,
   AgentSession,
+  ObservationForReplay,
   RuntimeObservation,
   StoredAgentAction,
   TraceImport,
@@ -48,6 +49,7 @@ export interface ClassificationUpdate {
 export interface TraceStore {
   writeImport(input: WriteImportInput): Promise<WriteCounts>;
   writeObservations(observations: readonly RuntimeObservation[]): Promise<WriteCounts>;
+  getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]>;
   getActions(actionKeys: readonly string[]): Promise<readonly StoredAgentAction[]>;
   streamActions(query: StreamActionsQuery): AsyncIterable<readonly ActionForReplay[]>;
   countStaleClassifications(query: WindowQuery & { classifierVersion: string }): Promise<number>;
@@ -66,4 +68,6 @@ export interface ActionReader {
   getActions(actionKeys: readonly string[]): Promise<readonly StoredAgentAction[]>;
   streamActions(query: StreamActionsQuery): AsyncIterable<readonly ActionForReplay[]>;
   countStaleClassifications(query: WindowQuery): Promise<number>;
+  /** The observations joined to the given Actions by actionKey, in no particular order. */
+  getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]>;
 }

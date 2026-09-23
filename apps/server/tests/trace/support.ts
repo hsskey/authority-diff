@@ -70,6 +70,7 @@ export function makeModule(overrides: Partial<TraceModule> = {}): TraceModule {
         },
       }),
       countStaleClassifications: () => Promise.resolve(0),
+      getObservations: () => Promise.resolve([]),
     },
     classifierVersion: 'test-classifier',
     ...overrides,
