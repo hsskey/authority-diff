@@ -4,6 +4,8 @@ export {
   type PolicyPage,
   type PolicyRepository,
   type PolicyRepositoryDeps,
+  type SeedAcceptedPolicyInput,
+  type SeedAcceptedPolicyResult,
 } from './lib/infra/repository.ts';
 export {
   createPolicyModule,

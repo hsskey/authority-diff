@@ -34,6 +34,8 @@ export function createReviewModule(deps: CreateReviewModuleDeps): ReviewModule {
 export { createReviewStore } from './lib/infra/review-store.ts';
 export { verifyAuditChain } from './lib/infra/audit-chain.ts';
 export type { AuditVerification } from './lib/infra/audit-chain.ts';
+export { recordSeedOnlyAcceptance, SEED_ONLY_AUDIT_NOTE } from './lib/infra/seed-audit.ts';
+export type { RecordSeedOnlyAcceptanceInput } from './lib/infra/seed-audit.ts';
 export { assembleReviewModule } from './lib/app/module.ts';
 export { computeGate } from './lib/domain/gate.ts';
 export { renderReport } from './lib/domain/report.ts';

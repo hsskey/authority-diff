@@ -186,4 +186,31 @@ describe('policy store', () => {
     const error = expectErr(await repository.transitionVersion(draft.id, 'accept'));
     expect(error.code).toBe('policy.transition_not_allowed');
   });
+
+  test('seedAcceptedPolicy inserts an accepted version 1 and is idempotent', async () => {
+    const name = uniqueName();
+    const first = expectOk(
+      await repository.seedAcceptedPolicy({ name, document: EMPTY_POLICY_DOCUMENT }),
+    );
+    expect(first.created).toBe(true);
+    expect(first.version.versionNumber).toBe(1);
+    expect(first.version.status).toBe('accepted');
+    expect(first.version.document).toEqual(EMPTY_POLICY_DOCUMENT);
+
+    const second = expectOk(
+      await repository.seedAcceptedPolicy({ name, document: EMPTY_POLICY_DOCUMENT }),
+    );
+    expect(second.created).toBe(false);
+    expect(second.policy.id).toBe(first.policy.id);
+    expect(second.version.id).toBe(first.version.id);
+  });
+
+  test('seedAcceptedPolicy rejects a different document for an existing name', async () => {
+    const name = uniqueName();
+    expectOk(await repository.seedAcceptedPolicy({ name, document: EMPTY_POLICY_DOCUMENT }));
+    const error = expectErr(
+      await repository.seedAcceptedPolicy({ name, document: DEFAULT_POLICY_DOCUMENT }),
+    );
+    expect(error.code).toBe('policy.seed_document_mismatch');
+  });
 });

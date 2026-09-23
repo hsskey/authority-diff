@@ -9,7 +9,12 @@ import {
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
-import { createReviewStore, verifyAuditChain } from '@authority/review';
+import {
+  createReviewStore,
+  recordSeedOnlyAcceptance,
+  SEED_ONLY_AUDIT_NOTE,
+  verifyAuditChain,
+} from '@authority/review';
 import type { ReviewStore } from '@authority/review';
 import { ChangeReviewIdSchema } from '@authority/review/schema';
 import type { ChangeReviewId, ReviewDecision } from '@authority/review/schema';
@@ -114,6 +119,24 @@ async function rewriteNoteBypassingTrigger(
     await tx.execute('alter table review_decisions enable trigger review_decisions_append_only');
   });
 }
+
+test('seed-only acceptance appends one audit row with the seed note', async () => {
+  const changeReviewId = ChangeReviewIdSchema.parse(idGenerator.next('rev'));
+  await recordSeedOnlyAcceptance(database, {
+    changeReviewId,
+    contentHash: HASH,
+    decidedAt: IsoTimestampSchema.parse(new Date().toISOString()),
+  });
+
+  const [row] = await database.db.execute<{ note: string }>(
+    `select note from review_decisions where change_review_id = '${changeReviewId}'`,
+  );
+  if (row === undefined) {
+    throw new Error('seed audit row not found');
+  }
+  expect(row.note).toBe(SEED_ONLY_AUDIT_NOTE);
+  expect((await verifyAuditChain(database)).isIntact).toBe(true);
+});
 
 test('decisions recorded concurrently extend one intact chain', async () => {
   await Promise.all(Array.from({ length: 6 }, () => decideOnce()));
