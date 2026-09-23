@@ -91,6 +91,7 @@ export function registerReviewModule(app: Hono<AppEnv>, deps: RegisterReviewModu
     database: deps.database,
     replay,
     policy: makePolicyReviewRepository(repository),
+    traceSources: deps.trace,
     clock: deps.clock,
     idGenerator: deps.idGenerator,
   });

@@ -124,6 +124,7 @@ beforeAll(async () => {
     database,
     replay,
     policy: makePolicyReviewRepository(repository),
+    traceSources: trace,
     clock,
     idGenerator,
   });

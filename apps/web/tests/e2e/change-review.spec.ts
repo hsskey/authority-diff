@@ -13,7 +13,8 @@ const ACTION_KEY = 'd'.repeat(64);
 const CONTENT_HASH = 'e'.repeat(64);
 const RESULT_HASH = 'f'.repeat(64);
 const TS = '2026-09-01T00:00:00.000Z';
-const REDACTED_INPUT = 'execute: bash script over [REDACTED_PATH]';
+const REDACTED_INPUT = 'bash /Users/e2e-user/scripts/run.sh';
+const TRACE_SOURCES = { transcript: 18, hook: 0, synthetic: 2 };
 
 type Verdict = 'expected' | 'investigate' | 'unexpected';
 
@@ -93,6 +94,7 @@ function buildReview(store: Store): unknown {
       },
       resultHash: RESULT_HASH,
     },
+    traceSources: TRACE_SOURCES,
     gate: gateFor(store.verdict),
   };
 }
@@ -116,7 +118,7 @@ function wideningGroup(store: Store): unknown {
     baselineRuleIds: ['baseline_rule'],
     candidateRuleIds: ['candidate_rule'],
     targetSummary: [{ key: 'host', count: 3 }],
-    headline: 'execute가 workspace에서 host로 넓어졌습니다',
+    headline: "Users/e2e-user 등 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
     sampleActionKeys: [ACTION_KEY],
     verdict: store.verdict,
   };
@@ -351,12 +353,19 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   // review -> the Change Review screen loads with the gate closed
   await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
   await expect(page.getByText('평가한 action')).toBeVisible();
+  await expect(page.getByTestId('trace-sources')).toHaveText(
+    '기록 출처: 실제 transcript 18건 / synthetic 2건',
+  );
   await expect(page.getByRole('button', { name: '정책 변경 수락' })).toBeDisabled();
 
   // the group detail shows the redacted input, operations, and both decisions
   await page.getByRole('link', { name: '보기' }).first().click();
   await expect(page.getByRole('heading', { name: 'Diff Group', level: 1 })).toBeVisible();
-  await expect(page.getByText(REDACTED_INPUT)).toBeVisible();
+  await expect(page.getByText('bash ~/scripts/run.sh')).toBeVisible();
+  await expect(
+    page.getByText("~ 등 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다."),
+  ).toBeVisible();
+  await expect(page.getByText('e2e-user')).toHaveCount(0);
   await expect(page.getByText('Baseline 결정')).toBeVisible();
   await expect(page.getByText('Candidate 결정')).toBeVisible();
   await expect(page.getByText('#0 execute · workspace → host · ~/.ssh')).toBeVisible();
@@ -369,7 +378,9 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await expect(page.getByText('baseline_rule')).toBeVisible();
 
   // verdict -> record the widening group as expected
-  await page.getByLabel('execute 판정').selectOption('expected');
+  await page
+    .getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정')
+    .selectOption('expected');
 
   // back on the review the gate is now open
   await page.getByRole('link', { name: 'Change Review로 돌아가세요' }).click();

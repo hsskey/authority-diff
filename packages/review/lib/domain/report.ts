@@ -1,3 +1,4 @@
+import { foldHomePaths } from '@authority/kernel';
 import type { Effect, IsoTimestamp } from '@authority/kernel';
 import type { AdoptionEffect, AdoptionStats, ReplayStats } from '@authority/replay/schema';
 import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
@@ -5,7 +6,8 @@ import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
 /**
  * The two headline-wording fixes (R3) live in replay's headline rendering, so
  * this report reproduces each group's `headline` as given and never rewrites
- * it. The report deliberately carries no raw command text, `ruleId`, or regex:
+ * it beyond folding home directories to `~`. The report deliberately carries
+ * no raw command text, `ruleId`, or regex:
  * only plain-language headlines, Target key summaries, counts, transitions,
  * operation-level widening while Action Effect is unchanged, Verdicts, hashes,
  * the Decision Record's audit chain sequence and hash, and the reviewer
@@ -43,6 +45,13 @@ export interface ReportDecision {
   readonly replayResultHash: string;
 }
 
+/** The review window's Actions counted by the source of their Trace Import. */
+export interface TraceSourceCounts {
+  readonly transcript: number;
+  readonly hook: number;
+  readonly synthetic: number;
+}
+
 /** The top of the audit chain when the report was generated: the latest Decision Record across all reviews. */
 export interface AuditTail {
   readonly sequence: number;
@@ -56,6 +65,7 @@ export interface ReportInput {
   readonly candidateContentHash: string;
   readonly windowFrom: IsoTimestamp;
   readonly windowTo: IsoTimestamp;
+  readonly traceSources: TraceSourceCounts;
   readonly evaluatedActions: number | null;
   readonly changedActions: number | null;
   readonly analyzabilityNoneCount: number | null;
@@ -83,6 +93,7 @@ export interface AdoptionReportInput {
   readonly candidateContentHash: string;
   readonly windowFrom: IsoTimestamp;
   readonly windowTo: IsoTimestamp;
+  readonly traceSources: TraceSourceCounts;
   readonly stats: AdoptionStats | null;
   readonly groups: readonly AdoptionReportGroup[];
   readonly decision: ReportDecision | null;
@@ -144,6 +155,16 @@ function ratio(part: number, whole: number): string {
   return `${((part / whole) * 100).toFixed(1)}%`;
 }
 
+/** The fixed provenance line; `hook` appears only when some Action came from a hook import. */
+function renderTraceSources(counts: TraceSourceCounts): string {
+  const line = `기록 출처: 실제 transcript ${counts.transcript}건 / synthetic ${counts.synthetic}건`;
+  return counts.hook === 0 ? line : `${line} / hook ${counts.hook}건`;
+}
+
+function renderTarget(target: ReportTarget): string {
+  return `${foldHomePaths(target.key)} (${target.count}건)`;
+}
+
 function verdictLabel(verdict: Verdict | null, label: VerdictLabel): string {
   return verdict === null ? '미판정' : label[verdict];
 }
@@ -191,7 +212,7 @@ function renderTransitions(transitions: readonly ReportTransition[] | null): str
 
 function renderGroup(group: ReportGroup): string {
   const lines = [
-    `#### ${group.headline}`,
+    `#### ${foldHomePaths(group.headline)}`,
     '',
     `- 방향: ${DIRECTION_LABEL[group.direction]}`,
     `- Effect: ${EFFECT_LABEL[group.fromEffect]} → ${EFFECT_LABEL[group.toEffect]}`,
@@ -201,7 +222,7 @@ function renderGroup(group: ReportGroup): string {
   if (group.targetSummary.length > 0) {
     lines.push('- 주요 Target:');
     for (const target of group.targetSummary) {
-      lines.push(`  - ${target.key} (${target.count}건)`);
+      lines.push(`  - ${renderTarget(target)}`);
     }
   }
   return lines.join('\n');
@@ -263,6 +284,8 @@ export function renderReport(input: ReportInput): string {
     '# Evidence Report',
     '',
     `Change Review \`${input.changeReviewId}\``,
+    '',
+    renderTraceSources(input.traceSources),
     '',
     '## 정책 Version',
     '',
@@ -339,10 +362,8 @@ function renderAdoptionGroupTable(
     '| Adoption Group | Action 수 | Session 수 | 주요 Target | Verdict |',
     '| --- | --- | --- | --- | --- |',
     ...rows.map((group) => {
-      const targets = group.targetSummary
-        .map((target) => `${target.key} (${target.count}건)`)
-        .join(', ');
-      return `| ${group.headline} | ${group.actionCount} | ${group.sessionCount} | ${targets} | ${verdictLabel(group.verdict, ADOPTION_VERDICT_LABEL)} |`;
+      const targets = group.targetSummary.map(renderTarget).join(', ');
+      return `| ${foldHomePaths(group.headline)} | ${group.actionCount} | ${group.sessionCount} | ${targets} | ${verdictLabel(group.verdict, ADOPTION_VERDICT_LABEL)} |`;
     }),
   ].join('\n');
 }
@@ -357,6 +378,8 @@ export function renderAdoptionReport(input: AdoptionReportInput): string {
     '# Evidence Report',
     '',
     `최초 도입 검토 \`${input.changeReviewId}\``,
+    '',
+    renderTraceSources(input.traceSources),
     '',
     '## 정책 Version',
     '',

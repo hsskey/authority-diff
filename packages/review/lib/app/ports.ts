@@ -7,7 +7,7 @@ import type {
   ReviewDecision,
   Verdict,
 } from '../../schema.ts';
-import type { AuditTail } from '../domain/report.ts';
+import type { AuditTail, TraceSourceCounts } from '../domain/report.ts';
 
 export interface StoredVerdict {
   readonly groupKey: string;
@@ -80,4 +80,15 @@ export interface ReviewStore {
   getChainedDecision(changeReviewId: ChangeReviewId): Promise<ChainedDecision | null>;
   /** The latest Decision Record in the audit chain across all reviews, or null while the chain is empty. */
   getAuditTail(): Promise<AuditTail | null>;
+}
+
+/**
+ * The trace surface the review module reads: the window's Actions counted by
+ * the source of their Trace Import. The server wires it to the trace module.
+ */
+export interface TraceSourceReader {
+  countActionsBySource(window: {
+    readonly from: IsoTimestamp;
+    readonly to: IsoTimestamp;
+  }): Promise<TraceSourceCounts>;
 }

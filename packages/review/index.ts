@@ -6,12 +6,14 @@ import {
   type PolicyReviewRepository,
   type ReviewModule,
 } from './lib/app/module.ts';
+import type { TraceSourceReader } from './lib/app/ports.ts';
 import { createReviewStore } from './lib/infra/review-store.ts';
 
 export interface CreateReviewModuleDeps {
   readonly database: Database;
   readonly replay: ReplayModule;
   readonly policy: PolicyReviewRepository;
+  readonly traceSources: TraceSourceReader;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
 }
@@ -26,6 +28,7 @@ export function createReviewModule(deps: CreateReviewModuleDeps): ReviewModule {
     }),
     replay: deps.replay,
     policy: deps.policy,
+    traceSources: deps.traceSources,
     clock: deps.clock,
     idGenerator: deps.idGenerator,
   });
@@ -58,7 +61,7 @@ export type {
   ReviewDiffGroupsResult,
   ReviewModule,
 } from './lib/app/module.ts';
-export type { ReviewStore } from './lib/app/ports.ts';
+export type { ReviewStore, TraceSourceReader } from './lib/app/ports.ts';
 export type { GateInput } from './lib/domain/gate.ts';
 export type {
   AdoptionReportGroup,
@@ -66,4 +69,5 @@ export type {
   AdoptionReportInput,
   ReportGroup,
   ReportInput,
+  TraceSourceCounts,
 } from './lib/domain/report.ts';

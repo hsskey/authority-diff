@@ -172,6 +172,18 @@ export type TraceImportId = z.infer<typeof TraceImportIdSchema>;
 export const TraceSourceSchema = z.enum(['transcript', 'hook', 'synthetic']);
 export type TraceSource = z.infer<typeof TraceSourceSchema>;
 
+/**
+ * A window's Actions counted by the source of their Session's first Trace
+ * Import, so a screen or Evidence Report can say whether the records it rests
+ * on are real transcripts or synthetic fixtures.
+ */
+export const TraceSourceCountsSchema = z.object({
+  transcript: z.number().int().nonnegative(),
+  hook: z.number().int().nonnegative(),
+  synthetic: z.number().int().nonnegative(),
+});
+export type TraceSourceCounts = z.infer<typeof TraceSourceCountsSchema>;
+
 export const TraceImportSchema = z.object({
   id: TraceImportIdSchema,
   runtime: RuntimeSchema,

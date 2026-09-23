@@ -25,8 +25,9 @@ import {
   type AdoptionReportGroup,
   type ReportDecision,
   type ReportGroup,
+  type TraceSourceCounts,
 } from '../domain/report.ts';
-import type { ChainedDecision, ReviewStore } from './ports.ts';
+import type { ChainedDecision, ReviewStore, TraceSourceReader } from './ports.ts';
 
 /** The narrow policy surface the review module reads and transitions. */
 export interface PolicyVersionSummary {
@@ -57,6 +58,7 @@ export interface ChangeReviewView {
   readonly review: ChangeReview;
   readonly replaySummary: ReplaySummary;
   readonly gate: Gate;
+  readonly traceSources: TraceSourceCounts;
 }
 
 export interface CreateChangeReviewInput {
@@ -161,6 +163,7 @@ export interface AssembleReviewModuleDeps {
   readonly store: ReviewStore;
   readonly replay: ReplayModule;
   readonly policy: PolicyReviewRepository;
+  readonly traceSources: TraceSourceReader;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
 }
@@ -256,7 +259,10 @@ function reportDecisionOf(chained: ChainedDecision): ReportDecision {
 }
 
 export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModule {
-  const { store, replay, policy, clock, idGenerator } = deps;
+  const { store, replay, policy, traceSources, clock, idGenerator } = deps;
+
+  const traceSourcesOf = (review: ChangeReview): Promise<TraceSourceCounts> =>
+    traceSources.countActionsBySource({ from: review.windowFrom, to: review.windowTo });
 
   const fetchAllDiffGroups = async (
     runId: ReplayRun['id'],
@@ -396,7 +402,12 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
     if (!gate.ok) {
       return gate;
     }
-    return ok({ review, replaySummary: replaySummaryOf(run), gate: gate.value });
+    return ok({
+      review,
+      replaySummary: replaySummaryOf(run),
+      gate: gate.value,
+      traceSources: await traceSourcesOf(review),
+    });
   };
 
   const changeReportGroups = async (
@@ -683,6 +694,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       const chained = await store.getChainedDecision(review.id);
       const decision = chained === null ? null : reportDecisionOf(chained);
       const auditTail = await store.getAuditTail();
+      const sources = await traceSourcesOf(review);
 
       if (review.kind === 'adoption') {
         const groups = await adoptionReportGroups(review, run);
@@ -696,6 +708,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
             candidateContentHash: review.candidateContentHash,
             windowFrom: review.windowFrom,
             windowTo: review.windowTo,
+            traceSources: sources,
             stats: run !== null && run.kind === 'adoption' ? run.stats : null,
             groups: groups.value,
             decision,
@@ -718,6 +731,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
           candidateContentHash: review.candidateContentHash,
           windowFrom: review.windowFrom,
           windowTo: review.windowTo,
+          traceSources: sources,
           evaluatedActions: stats?.evaluatedActions ?? null,
           changedActions: stats?.changedActions ?? null,
           analyzabilityNoneCount: reportGroups.value.analyzabilityNoneCount,

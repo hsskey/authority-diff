@@ -10,6 +10,7 @@ const REPLAY_INPUTS_HASH = 'd'.repeat(64);
 const REPLAY_RESULT_HASH = 'e'.repeat(64);
 const TAIL_HASH = 'f'.repeat(64);
 const AUDIT_TAIL = { sequence: 9, hash: TAIL_HASH };
+const TRACE_SOURCES = { transcript: 47, hook: 0, synthetic: 0 };
 
 function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
   return {
@@ -19,6 +20,7 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
     candidateContentHash: CANDIDATE_HASH,
     windowFrom: IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z'),
     windowTo: IsoTimestampSchema.parse('2026-02-01T00:00:00.000Z'),
+    traceSources: TRACE_SOURCES,
     evaluatedActions: 47,
     changedActions: 15,
     analyzabilityNoneCount: 2,
@@ -164,6 +166,7 @@ function makeAdoptionInput(overrides: Partial<AdoptionReportInput> = {}): Adopti
     candidateContentHash: CANDIDATE_HASH,
     windowFrom: IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z'),
     windowTo: IsoTimestampSchema.parse('2026-02-01T00:00:00.000Z'),
+    traceSources: TRACE_SOURCES,
     stats: {
       totalActions: 10,
       evaluatedActions: 8,
@@ -276,4 +279,67 @@ test('the adoption report shows the audit chain tail sequence and hash', () => {
   expect(report).toContain(
     `## Audit chain\n\n- 보고서 생성 시점의 audit chain sequence: 9\n- 보고서 생성 시점의 audit chain hash: \`${TAIL_HASH}\``,
   );
+});
+
+test.each([
+  ['change', renderReport(makeInput({ traceSources: { transcript: 40, hook: 0, synthetic: 7 } }))],
+  [
+    'adoption',
+    renderAdoptionReport(
+      makeAdoptionInput({ traceSources: { transcript: 40, hook: 0, synthetic: 7 } }),
+    ),
+  ],
+])('the %s report states the record provenance before its first section', (_kind, report) => {
+  expect(report).toMatch(
+    /`\n\n기록 출처: 실제 transcript 40건 \/ synthetic 7건\n\n## 정책 Version/,
+  );
+});
+
+test('the provenance line names hook imports only when some Action came from one', () => {
+  const report = renderReport(
+    makeInput({ traceSources: { transcript: 3, hook: 2, synthetic: 0 } }),
+  );
+  expect(report).toContain('기록 출처: 실제 transcript 3건 / synthetic 0건 / hook 2건\n');
+});
+
+test('a change report folds a home directory in headlines and Target keys to ~', () => {
+  const report = renderReport(
+    makeInput({
+      groups: [
+        {
+          direction: 'widening',
+          headline: "Users/alice 등 1곳으로의 read 4건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+          fromEffect: 'ask',
+          toEffect: 'allow',
+          actionCount: 4,
+          targetSummary: [{ key: 'Users/alice', count: 4 }],
+          verdict: 'expected',
+        },
+      ],
+    }),
+  );
+  expect(report).toContain('#### ~ 등 1곳으로의 read 4건이');
+  expect(report).toContain('  - ~ (4건)');
+  expect(report).not.toContain('alice');
+});
+
+test('an adoption report folds a home directory in its Target column to ~', () => {
+  const report = renderAdoptionReport(
+    makeAdoptionInput({
+      groups: [
+        {
+          effect: 'ask',
+          headline: ADOPTION_HEADLINE_ASK,
+          actionCount: 3,
+          sessionCount: 2,
+          targetSummary: [
+            { key: 'home/alice', count: 2 },
+            { key: 'etc/hosts', count: 1 },
+          ],
+          verdict: null,
+        },
+      ],
+    }),
+  );
+  expect(report).toContain('| ~ (2건), etc/hosts (1건) |');
 });

@@ -45,6 +45,7 @@ function reviewWithGate(blocker: { code: string; count: number }): unknown {
       },
       resultHash: 'b'.repeat(64),
     },
+    traceSources: { transcript: 1, hook: 0, synthetic: 0 },
     gate: { isOpen: false, blockers: [blocker] },
   };
 }

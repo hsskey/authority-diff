@@ -124,7 +124,9 @@ Action counts and group keys are unaffected; the difference is recorded rather t
 Findings from this run (none blocks the journey):
 
 - After the first Policy is adopted, `/` shows "완료된 replay run이 없습니다" under the accepted Policy until a Change Review runs: the Effect distribution reads only `version_diff` runs, so neither the adoption run nor the conformance run of version 1 fills it. The E2E stub returns cells there, so the test does not see it.
+  Since fixed: the Effect distribution also reads the completed adoption run of an accepted version, so `/` fills right after the first adoption.
 - The adoption Evidence Report lists Target keys of two path segments, and for a home directory the second segment is the operating-system user name; Remote Keys carry owner and repository names by design. The screens keep paths inside the sample panel. The report is meant to be shared, so its local-path Target keys need the same masking decision that the change-review report's local-path targets still wait for.
+  Since fixed for display: both Evidence Reports and the review screens fold `/Users/<name>` and `/home/<name>` (and the `Users/<name>` Target key form) to `~`; stored Target keys and every hash are unchanged, so a stored key in the local database can still contain the user name.
 - The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
 - The candidate stays `in_review` after a replay failure and returns to `draft` on the next read; the measured build had no withdraw control; the review screen now withdraws a computing or ready review (`docs/evidence/review-limitations.md`).
 

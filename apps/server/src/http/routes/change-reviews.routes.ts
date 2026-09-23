@@ -61,6 +61,7 @@ function toResponse(view: ChangeReviewView): unknown {
     ...view.review,
     replaySummary: view.replaySummary,
     gate: view.gate,
+    traceSources: view.traceSources,
   });
 }
 

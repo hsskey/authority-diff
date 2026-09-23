@@ -12,14 +12,14 @@ export function VerdictSelect({
   reviewId,
   kind,
   groupKey,
-  capability,
+  groupLabel,
   verdict,
   disabled = false,
 }: {
   reviewId: string;
   kind: ChangeReviewResponse['kind'];
   groupKey: string;
-  capability: string;
+  groupLabel: string;
   verdict: Verdict;
   disabled?: boolean;
 }) {
@@ -46,7 +46,7 @@ export function VerdictSelect({
     <label className="verdict-select">
       <span className="sr-only">판정</span>
       <select
-        aria-label={`${capability} 판정`}
+        aria-label={`${groupLabel} 판정`}
         value={verdict ?? ''}
         disabled={disabled || record.isPending}
         onChange={(event) => {
