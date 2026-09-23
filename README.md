@@ -48,7 +48,7 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 - **Single runtime.** Parse, import, and hooks cover Claude Code. There is no Codex adapter.
 - **Agent Verdict.** Widening-group review time was measured by an Agent. A person has not recorded Verdicts on those groups.
 - **Hook observation gap.** When the hook is down, no Runtime Observation is written. Those Actions get Disposition `executed_prompt_unknown`.
-- **`over_asked` is 0.** PermissionRequest observations often arrive with a null tool use id, so they do not pair onto Actions. `over_asked` stays 0 on this corpus.
+- **`over_asked` stays near 0.** The PermissionRequest hook input carries no tool use id, so a PermissionRequest pairs to its Action by Session, tool name, and tool input hash, and only when the earlier `pre_tool_use` was observed. This corpus recorded only 2 PermissionRequest observations.
 - **Publish direction.** Zone does not distinguish publish from fetch. `ask_external_disclosure` matches `push` on `public_remote` and `unknown_remote` only. A package publish to a registry listed in `trustedRemotes` is `push` on `trusted_remote` and is not treated as external disclosure.
 - **Worktree host Zone.** `workspace` is the Action's workspace root. Sibling worktree paths resolve as `host`. A Rule that allows read, write, or execute in `workspace` still asks there.
 - **Node path.** `install-hooks` prefers a stable Node symlink over a Homebrew Cellar path, because a Cellar path disappears on upgrade. If no symlink resolves to the same binary, the Cellar path remains and hooks break after upgrade.
