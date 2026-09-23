@@ -1,6 +1,7 @@
 import { canonicalJson } from '@authority/kernel/hash';
 import { ParsedSessionSchema, type ObservedOutcome, type ParseTranscript } from '../../schema.ts';
 import { redactStructuredInput, redactText } from './redact.ts';
+import { stripNul, stripNulDeep } from './strip-nul.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -171,7 +172,7 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
     totalLineCount++;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(line);
+      parsed = stripNulDeep(JSON.parse(stripNul(line)));
     } catch {
       unparsedLineCount++;
       continue;

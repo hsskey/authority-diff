@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import { createClassifier } from '@authority/action';
 import type { ClassifyToolCall } from '@authority/action/schema';
 import { parseTranscript } from '@authority/trace/client';
-import { createTestTraceModule } from '@authority/trace/testing';
+import { createInMemoryTraceStore, createTestTraceModule } from '@authority/trace/testing';
 import type { ImportTraceResult } from '@authority/trace';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -61,6 +61,77 @@ describe('I5 idempotent import', () => {
     expect(second.acceptedCount).toBe(0);
     expect(second.duplicateCount).toBe(total);
     expect(module.store.dump().actions.length).toBe(total);
+  });
+});
+
+describe('NUL in tool input', () => {
+  test('imports a session whose Bash command contained NUL without rejecting it', async () => {
+    const module = createTestTraceModule({ classify });
+    const session = parseTranscript({
+      sessionExternalId: '3866289f-22bc-484f-a410-5d01a4980ca2',
+      lines: [
+        JSON.stringify({
+          type: 'assistant',
+          timestamp: '2026-01-02T03:04:05.000Z',
+          cwd: '/Users/synth/proj',
+          gitBranch: 'feature/synthetic',
+          version: '9.9.9-synthetic',
+          isSidechain: false,
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'nul-tool',
+                name: 'Bash',
+                input: { command: 'node -e "console.log(`a\x00b`)"' },
+              },
+            ],
+          },
+        }),
+      ],
+    });
+    const result = unwrap(await module.importTrace(session));
+    expect(result.acceptedCount).toBe(1);
+    expect(result.rejectedCount).toBe(0);
+    const stored = module.store.dump().actions[0];
+    expect(stored?.toolInputRedacted.includes('\0')).toBe(false);
+    expect(JSON.stringify(stored?.operations).includes('\\u0000')).toBe(false);
+  });
+
+  test('returns a 422 Result when storage rejects the import', async () => {
+    const base = createInMemoryTraceStore();
+    const module = createTestTraceModule({
+      classify,
+      store: {
+        ...base,
+        writeImport: () =>
+          Promise.reject(
+            Object.assign(new Error('unsupported Unicode escape sequence'), {
+              cause: { code: '22P05' },
+            }),
+          ),
+      },
+    });
+    const session = loadCanarySession();
+    const result = await module.importTrace(session);
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error('expected import to fail');
+    }
+    expect(result.error.code).toBe('trace.import_rejected');
+  });
+
+  test('rethrows a transient storage failure instead of mapping it to 422', async () => {
+    const module = createTestTraceModule({
+      classify,
+      store: {
+        ...createInMemoryTraceStore(),
+        writeImport: () =>
+          Promise.reject(Object.assign(new Error('connection terminated'), { code: 'ECONNRESET' })),
+      },
+    });
+    await expect(module.importTrace(loadCanarySession())).rejects.toThrow('connection terminated');
   });
 });
 

@@ -99,9 +99,9 @@ async function main(): Promise<void> {
   process.env.AUTHORITY_CLI_TOKEN = token;
   process.env.AUTHORITY_CLI_SERVER_URL ??= DEFAULT_SERVER_URL;
 
-  await runImport(snapshot);
-  if (process.exitCode !== undefined && process.exitCode !== 0) {
-    process.exit(process.exitCode);
+  const importSummary = await runImport(snapshot);
+  if (importSummary.failedSessionIds.length > 0) {
+    console.error(JSON.stringify({ failedSessionIds: importSummary.failedSessionIds }, null, 2));
   }
 
   const document = loadPolicyDocument(policy);
@@ -127,7 +127,18 @@ async function main(): Promise<void> {
 
   console.log(
     JSON.stringify(
-      { policyId: seeded.value.policy.id, versionId: seeded.value.version.id },
+      {
+        policyId: seeded.value.policy.id,
+        versionId: seeded.value.version.id,
+        import: {
+          sessions: importSummary.sessions,
+          acceptedCount: importSummary.acceptedCount,
+          duplicateCount: importSummary.duplicateCount,
+          rejectedCount: importSummary.rejectedCount,
+          failedSessions: importSummary.failedSessions,
+          failedSessionIds: importSummary.failedSessionIds,
+        },
+      },
       null,
       2,
     ),

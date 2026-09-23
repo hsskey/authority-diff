@@ -9,6 +9,7 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'auth.role_forbidden': 403,
   'validation.invalid_request': 422,
   'trace.redaction_missing': 422,
+  'trace.import_rejected': 422,
   'trace.batch_too_large': 413,
   'trace.action_not_found': 404,
   'policy.version_not_found': 404,

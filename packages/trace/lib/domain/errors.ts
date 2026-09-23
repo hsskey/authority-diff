@@ -9,3 +9,13 @@ export function redactionMissing(kinds: readonly string[]): AppError {
     cause: null,
   };
 }
+
+export function importRejected(cause: unknown): AppError {
+  return {
+    code: 'trace.import_rejected',
+    message: 'the import could not be stored',
+    isRetryable: false,
+    details: null,
+    cause,
+  };
+}

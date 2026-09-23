@@ -47,7 +47,7 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
   if (dir === undefined || dir.length === 0) {
     process.exit(1);
   }
-  runAsync(runImport(dir));
+  runAsync(runImport(dir).then(() => undefined));
 } else if (args[0] === 'spool-flush') {
   runAsync(runSpoolFlush());
 } else if (args[0] === 'verify-audit') {
