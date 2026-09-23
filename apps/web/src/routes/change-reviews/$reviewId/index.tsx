@@ -41,6 +41,7 @@ const STATUS_LABEL: Record<ReviewStatus, string> = {
   accepted: '채택됨',
   rejected: '반려됨',
   failed: '실패',
+  withdrawn: '철회됨',
 };
 
 const DECISION_LABEL: Record<ReviewKind, { accept: string; reject: string; title: string }> = {
@@ -169,6 +170,7 @@ function ChangeReviewDetail({
       <NarrowingGroups reviewId={reviewId} groups={narrowing} />
       <GateBlockers review={review} />
       <DecisionPanel reviewId={reviewId} review={review} />
+      <WithdrawPanel reviewId={reviewId} review={review} />
       <ReportDownload reviewId={reviewId} kind={review.kind} />
     </div>
   );
@@ -207,6 +209,7 @@ function AdoptionReviewDetail({
       />
       <GateBlockers review={review} />
       <DecisionPanel reviewId={reviewId} review={review} />
+      <WithdrawPanel reviewId={reviewId} review={review} />
       <ReportDownload reviewId={reviewId} kind={review.kind} />
     </div>
   );
@@ -657,6 +660,9 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
     },
   });
 
+  if (review.status === 'withdrawn') {
+    return null;
+  }
   const isDecided = review.status === 'accepted' || review.status === 'rejected';
   if (isDecided) {
     return (
@@ -737,6 +743,77 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
       {decide.error ? (
         <p className="state-message status-error" role="alert">
           결정 실패: {decide.error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeReviewResponse }) {
+  const queryClient = useQueryClient();
+
+  const withdraw = useMutation({
+    mutationFn: async () => {
+      const result = await callRoute(routes.withdrawChangeReview, { params: { id: reviewId } });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      return result.value;
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['change-review', reviewId], updated);
+      void queryClient.invalidateQueries({ queryKey: ['change-review', reviewId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['policy-version', updated.candidateVersionId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ['policy-versions', updated.policyId] });
+      void queryClient.invalidateQueries({ queryKey: ['policy-change-reviews', updated.policyId] });
+    },
+  });
+
+  if (review.status === 'withdrawn') {
+    return (
+      <div className="panel stack">
+        <h2 className="section-title">검토 철회됨</h2>
+        <p className="state-message hint">
+          이 검토는 결정 없이 닫혔고 version이 draft로 돌아갔습니다. draft를 고친 뒤 새 검토를 만들
+          수 있습니다.
+        </p>
+        <div className="actions">
+          <Link
+            className="button-link"
+            to="/policies/$policyId/versions/$versionId"
+            params={{ policyId: review.policyId, versionId: review.candidateVersionId }}
+          >
+            draft version 열기
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  if (review.status !== 'computing' && review.status !== 'ready') {
+    return null;
+  }
+
+  return (
+    <div className="panel stack">
+      <h2 className="section-title">검토 철회</h2>
+      <p className="state-message hint">
+        결정 없이 이 검토를 닫고 version을 draft로 되돌립니다. 결정 기록은 남지 않습니다.
+      </p>
+      <div className="actions">
+        <button
+          type="button"
+          className="button-secondary"
+          disabled={withdraw.isPending}
+          onClick={() => withdraw.mutate()}
+        >
+          검토 철회
+        </button>
+      </div>
+      {withdraw.error ? (
+        <p className="state-message status-error" role="alert">
+          철회 실패: {withdraw.error.message}
         </p>
       ) : null}
     </div>

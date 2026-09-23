@@ -198,6 +198,18 @@ export function registerChangeReviewsRoutes(app: Hono<AppEnv>, review: ReviewMod
     return c.json(toResponse(result.value), 201);
   });
 
+  app.post('/api/v1/change-reviews/:id/withdrawals', async (c) => {
+    const id = ChangeReviewIdSchema.safeParse(c.req.param('id'));
+    if (!id.success) {
+      return respondReviewError(c, reviewNotFound());
+    }
+    const result = await review.withdraw(id.data);
+    if (!result.ok) {
+      return respondReviewError(c, result.error);
+    }
+    return c.json(toResponse(result.value), 201);
+  });
+
   app.get('/api/v1/change-reviews/:id/report', async (c) => {
     const id = ChangeReviewIdSchema.safeParse(c.req.param('id'));
     if (!id.success) {

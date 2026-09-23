@@ -161,9 +161,15 @@ Change Review의 종류.
 _Avoid_: review type, review mode
 
 **Accept Policy Change / Reject Policy Change**:
-Change Review의 두 종결 동작.
+Change Review에 결정을 남기는 두 동작.
 Review Kind가 `adoption`이면 최초 정책 채택 / 최초 정책 반려라고 부릅니다.
 _Avoid_: Approve Review, Mark Reviewed, activate
+
+**Withdraw Review**:
+사람이 `computing`이나 `ready`인 Change Review를 결정 없이 닫는 동작.
+화면 라벨은 검토 철회이고 review 상태는 `withdrawn`(철회됨)이 됩니다.
+candidate Policy Version은 철회 전이로 `draft`로 돌아가고, Decision Record를 남기지 않으며, withdrawn review는 열린 review로 세지 않습니다.
+_Avoid_: cancel, delete, discard
 
 **Decision Record**:
 정책 변경 또는 최초 도입의 수락이나 반려 1건의 불변 기록.

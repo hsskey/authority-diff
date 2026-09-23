@@ -12,6 +12,7 @@ export const ChangeReviewStatusSchema = z.enum([
   'accepted',
   'rejected',
   'failed',
+  'withdrawn',
 ]);
 export type ChangeReviewStatus = z.infer<typeof ChangeReviewStatusSchema>;
 

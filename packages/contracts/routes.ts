@@ -168,6 +168,10 @@ export const routes = {
     CreateDecisionRequestSchema,
     ChangeReviewResponseSchema,
   ),
+  withdrawChangeReview: postNoBody(
+    `${API}/change-reviews/:id/withdrawals`,
+    ChangeReviewResponseSchema,
+  ),
   getChangeReviewReport: get(`${API}/change-reviews/:id/report`, ChangeReviewReportResponseSchema),
 } as const;
 

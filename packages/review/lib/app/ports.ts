@@ -51,6 +51,15 @@ export interface FailReviewInput {
   readonly candidateVersionId: PolicyVersionId;
 }
 
+/**
+ * A person withdrew the open review: marks it `withdrawn` and returns its
+ * candidate Policy Version from `in_review` to `draft` in one transaction.
+ */
+export interface WithdrawReviewInput {
+  readonly changeReviewId: ChangeReviewId;
+  readonly candidateVersionId: PolicyVersionId;
+}
+
 /** The review module's persistence port; the drizzle adapter lives in lib/infra. */
 export interface ReviewStore {
   insertChangeReview(review: ChangeReview): Promise<void>;
@@ -61,6 +70,8 @@ export interface ReviewStore {
   listChangeReviews(policyId: PolicyId): Promise<readonly ChangeReview[]>;
   updateStatus(id: ChangeReviewId, status: ChangeReviewStatus): Promise<void>;
   failReview(input: FailReviewInput): Promise<void>;
+  /** False when the review is no longer `computing` or `ready`; nothing changes then. */
+  withdrawReview(input: WithdrawReviewInput): Promise<boolean>;
   upsertVerdict(input: UpsertVerdictInput): Promise<void>;
   getVerdict(changeReviewId: ChangeReviewId, groupKey: string): Promise<StoredVerdict | null>;
   listVerdicts(changeReviewId: ChangeReviewId): Promise<readonly StoredVerdict[]>;
