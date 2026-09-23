@@ -5,27 +5,35 @@ import type {
   PolicyVersionStatus,
 } from '@authority/policy/schema';
 import type {
+  AdoptionEffect,
+  AdoptionStats,
+  AnalyzabilityCounts,
+  AuthorityMapCell,
   ConformanceFinding,
   DiffGroup,
   ReplayRun,
   ReplayRunId,
   ReplayStats,
+  StoredAdoptionAssignment,
+  StoredAdoptionGroup,
   StoredChangedAction,
   StoredConformanceFinding,
   StoredDiffGroup,
 } from '../../schema.ts';
-import type { AnalyzabilityCounts, AuthorityMapCell } from '../domain/build-matrix.ts';
 
 /**
- * The stored `stats` jsonb: the diff core's stats plus the authority-map matrix
- * and analyzability counts, and for a conformance run the permission_requests
- * left without a pre_tool_use.
+ * The stored `stats` jsonb of a version_diff or conformance run: the diff
+ * core's stats plus the authority-map matrix and analyzability counts, and for
+ * a conformance run the permission_requests left without a pre_tool_use.
  */
 export interface StoredReplayStats extends ReplayStats {
   readonly matrix: readonly AuthorityMapCell[];
   readonly analyzability: AnalyzabilityCounts;
   readonly unpairedPermissionRequests?: number;
 }
+
+/** The stored `stats` jsonb of any run; an adoption run stores its AdoptionStats as is. */
+export type StoredRunStats = StoredReplayStats | AdoptionStats;
 
 /** The candidate/baseline policy documents replay reads through trace's sibling policy module. */
 export interface PolicyVersionView {
@@ -51,13 +59,28 @@ export interface DiffGroupsPage {
   readonly nextCursor: string | null;
 }
 
+export interface ListAdoptionGroupsQuery {
+  readonly replayRunId: ReplayRunId;
+  readonly effect?: AdoptionEffect | undefined;
+  /** The groupKey of the last group of the previous page. */
+  readonly cursor?: string | undefined;
+  readonly limit: number;
+}
+
+export interface AdoptionGroupsPage {
+  readonly items: readonly StoredAdoptionGroup[];
+  readonly nextCursor: string | null;
+}
+
 export interface RecordCompletionInput {
   readonly replayRunId: ReplayRunId;
   readonly resultHash: string;
-  readonly stats: StoredReplayStats;
+  readonly stats: StoredRunStats;
   readonly groups: readonly StoredDiffGroup[];
   readonly changedActions: readonly StoredChangedAction[];
   readonly findings: readonly StoredConformanceFinding[];
+  readonly adoptionGroups: readonly StoredAdoptionGroup[];
+  readonly adoptionAssignments: readonly StoredAdoptionAssignment[];
   readonly completedAt: IsoTimestamp;
 }
 
@@ -101,6 +124,9 @@ export interface ReplayStore {
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
   listDiffGroups(query: ListDiffGroupsQuery): Promise<DiffGroupsPage>;
   getDiffGroup(id: ReplayRunId, groupKey: string): Promise<StoredDiffGroup | null>;
+  /** Adoption Groups of a run in review order (`position`). */
+  listAdoptionGroups(query: ListAdoptionGroupsQuery): Promise<AdoptionGroupsPage>;
+  getAdoptionGroup(id: ReplayRunId, groupKey: string): Promise<StoredAdoptionGroup | null>;
   failStaleRunningRuns(input: FailStaleRunsInput): Promise<number>;
   /** Completed `version_diff` runs only; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;

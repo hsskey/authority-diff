@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import {
   ActionResponseSchema,
+  AdoptionGroupSamplesResponseSchema,
   AuthorityMapResponseSchema,
   ChangeReviewReportResponseSchema,
   ChangeReviewResponseSchema,
@@ -14,6 +15,7 @@ import {
   DiffGroupSamplesResponseSchema,
   ImportTraceRequestSchema,
   ImportTraceResponseSchema,
+  ListAdoptionGroupsResponseSchema,
   ListConformanceFindingsResponseSchema,
   ListDiffGroupsResponseSchema,
   ListPoliciesResponseSchema,
@@ -119,6 +121,14 @@ export const routes = {
   getDiffGroupSamples: get(
     `${API}/diff-groups/:runId/:groupKey/samples`,
     DiffGroupSamplesResponseSchema,
+  ),
+  listReplayAdoptionGroups: get(
+    `${API}/replay-runs/:id/adoption-groups`,
+    ListAdoptionGroupsResponseSchema,
+  ),
+  getAdoptionGroupSamples: get(
+    `${API}/adoption-groups/:runId/:groupKey/samples`,
+    AdoptionGroupSamplesResponseSchema,
   ),
   getAuthorityMap: get(`${API}/authority-map`, AuthorityMapResponseSchema),
   listConformanceFindings: get(

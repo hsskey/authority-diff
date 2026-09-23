@@ -1,19 +1,24 @@
-import { assertNever, invariant } from '@authority/kernel';
+import { invariant } from '@authority/kernel';
 import type { Effect } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
-import type { Capability, Operation, Target } from '@authority/action/schema';
+import type { Capability, Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision, Zone } from '@authority/policy/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import type { DeriveTargetKey, DiffGroup, DiffResult, ReplayStats } from '../../schema.ts';
+import type { DiffGroup, DiffResult, ReplayStats } from '../../schema.ts';
+import {
+  CAPABILITY_WORD,
+  directionalParticle,
+  EFFECT_ORDER,
+  EFFECT_RANK,
+  EFFECT_WORD,
+  sampleActionKeys,
+  sortedUniqueRuleIds,
+  targetSummary,
+  ZONE_WORD,
+} from './group-summary.ts';
 
 /** Evaluates one Action's Operations against a compiled Policy Document. */
 type EvaluateAction = (operations: readonly Operation[]) => Decision | null;
-
-/** Restrictiveness order used everywhere a "most restrictive" Effect is chosen. */
-const EFFECT_RANK: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
-
-/** The nine Effect transition cells, ordered allow, ask, deny for from then to. */
-export const EFFECT_ORDER = ['allow', 'ask', 'deny'] as const;
 
 /** Baseline Zones that make a widening group critical. */
 const CRITICAL_BASELINE_ZONES: ReadonlySet<Zone> = new Set([
@@ -23,78 +28,6 @@ const CRITICAL_BASELINE_ZONES: ReadonlySet<Zone> = new Set([
   'public_remote',
   'unknown_remote',
 ]);
-
-/**
- * Derives the Target Summary key for a signature Operation's Target.
- *
- * See the DeriveTargetKey TSDoc in schema.ts for the frozen contract.
- */
-export const deriveTargetKey: DeriveTargetKey = (target: Target): string => {
-  switch (target.kind) {
-    case 'path':
-      if (target.isInsideWorkspace) {
-        return 'workspace';
-      }
-      return target.path
-        .split('/')
-        .filter((segment) => segment.length > 0)
-        .slice(0, 2)
-        .join('/');
-    case 'host':
-      return target.host;
-    case 'vcs_remote':
-      return target.remoteKey ?? target.remoteName ?? 'unknown';
-    case 'package':
-      return target.source === null ? target.ecosystem : `${target.ecosystem}:${target.source}`;
-    case 'mcp':
-      return `mcp:${target.server}`;
-    case 'deploy_target':
-      return target.label ?? 'unknown';
-    case 'unknown':
-      return 'unknown';
-    default:
-      return assertNever(target);
-  }
-};
-
-/** Plain Korean words for the fixed Headline template. Never model output. */
-const CAPABILITY_WORD: Record<Capability, string> = {
-  read: '읽기',
-  write: '쓰기',
-  delete: '삭제',
-  execute: '실행',
-  install: '설치',
-  fetch: '가져오기',
-  send: '전송',
-  commit: 'commit',
-  push: 'push',
-  rewrite: '이력 재작성',
-  deploy: '배포',
-};
-
-const ZONE_WORD: Record<Zone, string> = {
-  workspace: '작업 공간',
-  host: '호스트',
-  credentials: '자격 증명',
-  agent_config: 'agent 설정',
-  trusted_remote: '신뢰하는 원격',
-  public_remote: '공개 원격',
-  unknown_remote: '신뢰 목록에 없는 원격',
-  protected: '보호 대상',
-};
-
-const EFFECT_WORD: Record<Effect, string> = {
-  allow: '허용',
-  ask: '확인 필요',
-  deny: '차단',
-};
-
-/** "으로" after a batchim-final syllable, "로" otherwise (e.g. 허용으로, 차단으로, 필요로). */
-function directionalParticle(word: string): '으로' | '로' {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
-  return hasBatchim ? '으로' : '로';
-}
 
 /** The Headline is rendered from a group but is excluded from resultHash. */
 type HeadlineInput = Omit<DiffGroup, 'headline'>;
@@ -199,39 +132,6 @@ function groupKeyOf(signature: Signature): string {
   );
 }
 
-function sortedUniqueRuleIds(ids: readonly (string | null)[]): string[] {
-  const present = ids.filter((id): id is string => id !== null);
-  return [...new Set(present)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-}
-
-function targetSummary(entries: readonly ChangedEntry[]): { key: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const entry of entries) {
-    const key = deriveTargetKey(entry.signatureOperation.target);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([key, count]) => ({ key, count }))
-    .sort((a, b) => (b.count - a.count !== 0 ? b.count - a.count : a.key < b.key ? -1 : 1))
-    .slice(0, 5);
-}
-
-/** The first five and last five Actions by (occurredAt, actionKey), or all when at most ten. */
-export function sampleActionKeys(actions: readonly ActionForReplay[]): string[] {
-  const keys = [...actions]
-    .sort((left, right) => {
-      if (left.occurredAt !== right.occurredAt) {
-        return left.occurredAt < right.occurredAt ? -1 : 1;
-      }
-      return left.actionKey < right.actionKey ? -1 : left.actionKey > right.actionKey ? 1 : 0;
-    })
-    .map((action) => action.actionKey);
-  if (keys.length <= 10) {
-    return keys;
-  }
-  return [...keys.slice(0, 5), ...keys.slice(-5)];
-}
-
 /** A built group: the full Diff Group and its headline-free hashed projection. */
 interface BuiltGroup {
   readonly full: DiffGroup;
@@ -256,7 +156,7 @@ function buildGroup(groupKey: string, entries: readonly ChangedEntry[]): BuiltGr
       anyIrreversible ||
       analyzabilityNoneCount > 0);
 
-  const summary = targetSummary(entries);
+  const summary = targetSummary(entries.map((entry) => entry.signatureOperation.target));
   const core: HeadlineInput = {
     groupKey,
     direction: first.direction,

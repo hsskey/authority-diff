@@ -10,7 +10,7 @@ import type {
   Disposition,
   ReplayStats,
 } from '../../schema.ts';
-import { EFFECT_ORDER, sampleActionKeys } from './compute-diff.ts';
+import { EFFECT_ORDER, sampleActionKeys } from './group-summary.ts';
 import { deriveDisposition } from './derive-disposition.ts';
 import { pairPermissionRequests } from './pair-permission-requests.ts';
 

@@ -7,6 +7,7 @@ import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import type { TraceModule } from '@authority/trace';
 import type { AppEnv } from '../http/env.ts';
+import { registerAdoptionGroupsRoutes } from '../http/routes/adoption-groups.routes.ts';
 import { registerAuthorityMapRoutes } from '../http/routes/authority-map.routes.ts';
 import { registerConformanceFindingsRoutes } from '../http/routes/conformance-findings.routes.ts';
 import { registerDiffGroupsRoutes } from '../http/routes/diff-groups.routes.ts';
@@ -61,6 +62,7 @@ export function registerReplayModule(app: Hono<AppEnv>, deps: RegisterReplayModu
 
   registerReplayRunsRoutes(app, replay);
   registerDiffGroupsRoutes(app, replay);
+  registerAdoptionGroupsRoutes(app, replay);
   registerAuthorityMapRoutes(app, replay);
   registerConformanceFindingsRoutes(app, replay);
 }

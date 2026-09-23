@@ -11,17 +11,24 @@ import type {
 } from '@authority/trace/schema';
 import { ReplayRunIdSchema } from '../../schema.ts';
 import type {
+  AdoptionEffect,
+  AdoptionGroup,
+  AnalyzabilityCounts,
+  AuthorityMapCell,
   ConformanceFinding,
   DiffGroup,
   ReplayRun,
   ReplayRunId,
+  StoredAdoptionAssignment,
+  StoredAdoptionGroup,
   StoredChangedAction,
   StoredDiffGroup,
 } from '../../schema.ts';
 import { buildAnalyzabilityCounts, buildMatrix } from '../domain/build-matrix.ts';
-import type { AnalyzabilityCounts, AuthorityMapCell } from '../domain/build-matrix.ts';
+import { computeAdoptionWith } from '../domain/compute-adoption.ts';
 import { computeConformanceWith } from '../domain/compute-conformance.ts';
-import { computeDiffWith, deriveTargetKey } from '../domain/compute-diff.ts';
+import { computeDiffWith } from '../domain/compute-diff.ts';
+import { deriveTargetKey } from '../domain/group-summary.ts';
 import type { PolicyReader, RecordCompletionInput, ReplayStore } from './ports.ts';
 
 const BATCH_SIZE = 5_000;
@@ -57,6 +64,13 @@ export interface RequestConformanceReplayInput {
   readonly windowTo: IsoTimestamp;
 }
 
+/** The candidate is the draft Policy Version being adopted; there is no baseline. */
+export interface RequestAdoptionReplayInput {
+  readonly candidateVersionId: PolicyVersionId;
+  readonly windowFrom: IsoTimestamp;
+  readonly windowTo: IsoTimestamp;
+}
+
 /** The findings of the most recent completed conformance run. */
 export interface ConformanceFindingsView {
   readonly run: {
@@ -79,6 +93,14 @@ export interface DiffGroupSample {
   readonly baselineDecision: Decision;
   readonly candidateDecision: Decision;
   readonly baselineRuleRationales: Readonly<Record<string, string>>;
+  readonly candidateRuleRationales: Readonly<Record<string, string>>;
+}
+
+/** An adoption run has no baseline, so a sample carries the candidate Decision only. */
+export interface AdoptionGroupSample {
+  readonly action: StoredAgentAction;
+  readonly targetKeys: readonly string[];
+  readonly candidateDecision: Decision;
   readonly candidateRuleRationales: Readonly<Record<string, string>>;
 }
 
@@ -105,11 +127,26 @@ export interface DiffGroupsResult {
   readonly nextCursor: string | null;
 }
 
+export interface ListAdoptionGroupsInput {
+  readonly effect?: AdoptionEffect | undefined;
+  readonly cursor?: string | undefined;
+  readonly limit: number;
+}
+
+export interface AdoptionGroupsResult {
+  readonly items: readonly AdoptionGroup[];
+  readonly nextCursor: string | null;
+}
+
 export interface ReplayModule {
   requestReplay(input: RequestReplayInput): Promise<Result<RequestReplayOutput, AppError>>;
   /** Compares the observed_runtime Decision Source against the candidate. */
   requestConformanceReplay(
     input: RequestConformanceReplayInput,
+  ): Promise<Result<RequestReplayOutput, AppError>>;
+  /** Applies the candidate alone to the window's Actions: the Initial Adoption preview. */
+  requestAdoptionReplay(
+    input: RequestAdoptionReplayInput,
   ): Promise<Result<RequestReplayOutput, AppError>>;
   listConformanceFindings(): Promise<ConformanceFindingsView>;
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
@@ -121,6 +158,15 @@ export interface ReplayModule {
     id: ReplayRunId,
     groupKey: string,
   ): Promise<Result<readonly DiffGroupSample[], AppError>>;
+  /** Adoption Groups in review order; an empty page for a run of another kind. */
+  listAdoptionGroups(
+    id: ReplayRunId,
+    input: ListAdoptionGroupsInput,
+  ): Promise<Result<AdoptionGroupsResult, AppError>>;
+  getAdoptionSamples(
+    id: ReplayRunId,
+    groupKey: string,
+  ): Promise<Result<readonly AdoptionGroupSample[], AppError>>;
   getAuthorityMap(): Promise<AuthorityMapView>;
   recoverInterruptedRuns(): Promise<void>;
 }
@@ -133,6 +179,13 @@ export interface AssembleReplayModuleDeps {
   readonly idGenerator: IdGenerator;
   readonly classifierVersion: string;
 }
+
+/** The kind-correlated identity of a new run, before status and hashes are attached. */
+type ReplayRunIdentity = ReplayRun extends infer Run
+  ? Run extends ReplayRun
+    ? Pick<Run, 'kind' | 'baselineVersionId' | 'candidateVersionId' | 'windowFrom' | 'windowTo'>
+    : never
+  : never;
 
 function sourceInvalid(id: PolicyVersionId): AppError {
   return {
@@ -168,6 +221,16 @@ function groupNotFound(id: ReplayRunId, groupKey: string): AppError {
   return {
     code: 'replay.group_not_found',
     message: `no diff group ${groupKey} in run ${id}`,
+    isRetryable: false,
+    details: { replayRunId: id, groupKey },
+    cause: null,
+  };
+}
+
+function adoptionGroupNotFound(id: ReplayRunId, groupKey: string): AppError {
+  return {
+    code: 'replay.group_not_found',
+    message: `no adoption group ${groupKey} in run ${id}`,
     isRetryable: false,
     details: { replayRunId: id, groupKey },
     cause: null,
@@ -235,10 +298,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
   };
 
   const start = async (
-    fields: Pick<
-      ReplayRun,
-      'kind' | 'baselineVersionId' | 'candidateVersionId' | 'windowFrom' | 'windowTo'
-    >,
+    identity: ReplayRunIdentity,
     inputsHash: string,
     compute: (run: ReplayRun) => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
   ): Promise<RequestReplayOutput> => {
@@ -247,7 +307,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       return { run: existing, reused: true, execution: null };
     }
     const run: ReplayRun = {
-      ...fields,
+      ...identity,
       id: ReplayRunIdSchema.parse(idGenerator.next('rpl')),
       status: 'queued',
       classifierVersion,
@@ -261,6 +321,17 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
     };
     await store.insertQueuedRun(run);
     return { run, reused: false, execution: execute(run, () => compute(run)) };
+  };
+
+  const samplesOf = async (
+    sampleActionKeys: readonly string[],
+  ): Promise<readonly StoredAgentAction[]> => {
+    const actions = await reader.getActions(sampleActionKeys);
+    const byKey = new Map(actions.map((action) => [action.actionKey, action]));
+    return sampleActionKeys.flatMap((key) => {
+      const action = byKey.get(key);
+      return action === undefined ? [] : [action];
+    });
   };
 
   return {
@@ -309,6 +380,8 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
             replayRunId: run.id,
           })),
           findings: [],
+          adoptionGroups: [],
+          adoptionAssignments: [],
         };
       });
       return ok(output);
@@ -360,6 +433,55 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
             groups: [],
             changedActions: [],
             findings: result.findings.map((finding) => ({ ...finding, replayRunId: run.id })),
+            adoptionGroups: [],
+            adoptionAssignments: [],
+          };
+        },
+      );
+      return ok(output);
+    },
+
+    async requestAdoptionReplay(input) {
+      const candidate = await policy.getVersion(input.candidateVersionId);
+      if (candidate === null) {
+        return err(sourceInvalid(input.candidateVersionId));
+      }
+      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+      if (!prepared.ok) {
+        return prepared;
+      }
+      const actions = prepared.value;
+      const inputsHash = sha256Hex(
+        canonicalJson([
+          'adoption',
+          candidate.contentHash,
+          input.windowFrom,
+          input.windowTo,
+          classifierVersion,
+          actions.length,
+          lastActionKeyOf(actions),
+        ]),
+      );
+      const output = await start(
+        { ...input, kind: 'adoption', baselineVersionId: null },
+        inputsHash,
+        (run) => {
+          const result = computeAdoptionWith(createEvaluator(candidate.document), actions);
+          return {
+            resultHash: result.resultHash,
+            stats: result.stats,
+            groups: [],
+            changedActions: [],
+            findings: [],
+            adoptionGroups: result.groups.map((group, position): StoredAdoptionGroup => ({
+              ...group,
+              replayRunId: run.id,
+              position,
+            })),
+            adoptionAssignments: result.assignments.map((assignment): StoredAdoptionAssignment => ({
+              ...assignment,
+              replayRunId: run.id,
+            })),
           };
         },
       );
@@ -419,14 +541,8 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       }
       const evaluateBaseline = createEvaluator(baseline.document);
       const evaluateCandidate = createEvaluator(candidate.document);
-      const actions = await reader.getActions(group.sampleActionKeys);
-      const byKey = new Map(actions.map((action) => [action.actionKey, action]));
       const samples: DiffGroupSample[] = [];
-      for (const key of group.sampleActionKeys) {
-        const action = byKey.get(key);
-        if (action === undefined) {
-          continue;
-        }
+      for (const action of await samplesOf(group.sampleActionKeys)) {
         const baselineDecision = evaluateBaseline(action.operations);
         const candidateDecision = evaluateCandidate(action.operations);
         if (baselineDecision === null || candidateDecision === null) {
@@ -438,6 +554,48 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           baselineDecision,
           candidateDecision,
           baselineRuleRationales: decidingRationales(baselineDecision, baseline.document),
+          candidateRuleRationales: decidingRationales(candidateDecision, candidate.document),
+        });
+      }
+      return ok(samples);
+    },
+
+    async listAdoptionGroups(id, input) {
+      const run = await store.getRun(id);
+      if (run === null) {
+        return err(runNotFound(id));
+      }
+      const page = await store.listAdoptionGroups({ replayRunId: id, ...input });
+      const items = page.items.map(
+        ({ replayRunId: _replayRunId, position: _position, ...group }) => group,
+      );
+      return ok({ items, nextCursor: page.nextCursor });
+    },
+
+    async getAdoptionSamples(id, groupKey) {
+      const run = await store.getRun(id);
+      if (run === null) {
+        return err(adoptionGroupNotFound(id, groupKey));
+      }
+      const group = await store.getAdoptionGroup(id, groupKey);
+      if (group === null) {
+        return err(adoptionGroupNotFound(id, groupKey));
+      }
+      const candidate = await policy.getVersion(run.candidateVersionId);
+      if (candidate === null) {
+        return err(sourceInvalid(run.candidateVersionId));
+      }
+      const evaluateCandidate = createEvaluator(candidate.document);
+      const samples: AdoptionGroupSample[] = [];
+      for (const action of await samplesOf(group.sampleActionKeys)) {
+        const candidateDecision = evaluateCandidate(action.operations);
+        if (candidateDecision === null) {
+          continue;
+        }
+        samples.push({
+          action,
+          targetKeys: action.operations.map((operation) => deriveTargetKey(operation.target)),
+          candidateDecision,
           candidateRuleRationales: decidingRationales(candidateDecision, candidate.document),
         });
       }

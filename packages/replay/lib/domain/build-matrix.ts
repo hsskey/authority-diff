@@ -2,26 +2,7 @@ import type { Effect } from '@authority/kernel';
 import type { Analyzability, Capability, Operation } from '@authority/action/schema';
 import type { Decision, Zone } from '@authority/policy/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-
-/**
- * One capability x zone x effect cell of the candidate policy's authority map.
- * Structurally the AuthorityMapCell the HTTP contract returns; it is kept here
- * because the diff core stores the matrix inside the `stats` jsonb value rather
- * than in a column.
- */
-export interface AuthorityMapCell {
-  readonly capability: Capability;
-  readonly zone: Zone;
-  readonly effect: Effect;
-  readonly count: number;
-}
-
-/** Full/partial/none counts of evaluated Actions, by the Action's analyzability. */
-export interface AnalyzabilityCounts {
-  readonly full: number;
-  readonly partial: number;
-  readonly none: number;
-}
+import type { AnalyzabilityCounts, AuthorityMapCell } from '../../schema.ts';
 
 type EvaluateAction = (operations: readonly Operation[]) => Decision | null;
 

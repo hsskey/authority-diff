@@ -1,12 +1,16 @@
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { assertNever } from '@authority/kernel';
 import type { AppError } from '@authority/kernel';
 import {
   CreateReplayRunRequestSchema,
+  ListAdoptionGroupsQuerySchema,
+  ListAdoptionGroupsResponseSchema,
   ListDiffGroupsQuerySchema,
   ListDiffGroupsResponseSchema,
   ReplayRunResponseSchema,
 } from '@authority/contracts/schema';
+import type { CreateReplayRunRequest } from '@authority/contracts/schema';
 import type { ReplayModule } from '@authority/replay';
 import { ReplayRunIdSchema } from '@authority/replay/schema';
 import type { AppEnv } from '../env.ts';
@@ -41,6 +45,19 @@ function runNotFound(): AppError {
   };
 }
 
+function requestRun(replay: ReplayModule, request: CreateReplayRunRequest) {
+  switch (request.kind) {
+    case 'version_diff':
+      return replay.requestReplay(request);
+    case 'conformance':
+      return replay.requestConformanceReplay(request);
+    case 'adoption':
+      return replay.requestAdoptionReplay(request);
+    default:
+      return assertNever(request);
+  }
+}
+
 export function registerReplayRunsRoutes(app: Hono<AppEnv>, replay: ReplayModule): void {
   app.post('/api/v1/replay-runs', async (c) => {
     const body: unknown = await c.req.json().catch(() => null);
@@ -49,10 +66,7 @@ export function registerReplayRunsRoutes(app: Hono<AppEnv>, replay: ReplayModule
       return respondError(c, validationInvalidRequest({ issues: parsed.error.issues }));
     }
 
-    const result =
-      parsed.data.kind === 'conformance'
-        ? await replay.requestConformanceReplay(parsed.data)
-        : await replay.requestReplay(parsed.data);
+    const result = await requestRun(replay, parsed.data);
     if (!result.ok) {
       return respondReplayError(c, result.error);
     }
@@ -91,5 +105,26 @@ export function registerReplayRunsRoutes(app: Hono<AppEnv>, replay: ReplayModule
       return respondReplayError(c, result.error);
     }
     return c.json(ListDiffGroupsResponseSchema.parse(result.value));
+  });
+
+  app.get('/api/v1/replay-runs/:id/adoption-groups', async (c) => {
+    const id = ReplayRunIdSchema.safeParse(c.req.param('id'));
+    if (!id.success) {
+      return respondReplayError(c, runNotFound());
+    }
+    const query = ListAdoptionGroupsQuerySchema.safeParse(c.req.query());
+    if (!query.success) {
+      return respondError(c, validationInvalidRequest({ issues: query.error.issues }));
+    }
+
+    const result = await replay.listAdoptionGroups(id.data, {
+      effect: query.data.effect,
+      cursor: query.data.cursor,
+      limit: query.data.limit,
+    });
+    if (!result.ok) {
+      return respondReplayError(c, result.error);
+    }
+    return c.json(ListAdoptionGroupsResponseSchema.parse(result.value));
   });
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EffectSchema, IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
+import { IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
 import { AnalyzabilitySchema, CapabilitySchema, RuntimeSchema } from '@authority/action/schema';
 import {
   ParsedSessionSchema,
@@ -14,9 +14,12 @@ import {
   PolicySchema,
   PolicyVersionIdSchema,
   PolicyVersionSchema,
-  ZoneSchema,
 } from '@authority/policy/schema';
 import {
+  AdoptionEffectSchema,
+  AdoptionGroupSchema,
+  AnalyzabilityCountsSchema,
+  AuthorityMapCellSchema,
   ConformanceFindingSchema,
   DiffGroupSchema,
   ReplayRunIdSchema,
@@ -183,6 +186,7 @@ export type ValidatePolicyVersionResponse = z.infer<typeof ValidatePolicyVersion
 // POST /replay-runs, GET /replay-runs/{id}
 // Without `kind` the request is a `version_diff` run. A `conformance` run has
 // no baseline version: its baseline is the observed_runtime Decision Source.
+// An `adoption` run has no baseline either: it applies the candidate alone.
 export const CreateReplayRunRequestSchema = z.union([
   z.object({
     kind: z.literal('version_diff').default('version_diff'),
@@ -193,6 +197,12 @@ export const CreateReplayRunRequestSchema = z.union([
   }),
   z.object({
     kind: z.literal('conformance'),
+    candidateVersionId: PolicyVersionIdSchema,
+    windowFrom: IsoTimestampSchema,
+    windowTo: IsoTimestampSchema,
+  }),
+  z.object({
+    kind: z.literal('adoption'),
     candidateVersionId: PolicyVersionIdSchema,
     windowFrom: IsoTimestampSchema,
     windowTo: IsoTimestampSchema,
@@ -236,26 +246,43 @@ export const DiffGroupSamplesResponseSchema = z.object({
 });
 export type DiffGroupSamplesResponse = z.infer<typeof DiffGroupSamplesResponseSchema>;
 
+// GET /replay-runs/{id}/adoption-groups
+// Groups come in review order: deny before ask, then actionCount descending.
+export const ListAdoptionGroupsQuerySchema = z.object({
+  effect: AdoptionEffectSchema.optional(),
+  cursor: CursorSchema.optional(),
+  limit: LimitSchema,
+});
+export type ListAdoptionGroupsQuery = z.infer<typeof ListAdoptionGroupsQuerySchema>;
+
+export const AdoptionGroupResponseSchema = AdoptionGroupSchema;
+export type AdoptionGroupResponse = z.infer<typeof AdoptionGroupResponseSchema>;
+
+export const ListAdoptionGroupsResponseSchema = pageOf(AdoptionGroupResponseSchema);
+export type ListAdoptionGroupsResponse = z.infer<typeof ListAdoptionGroupsResponseSchema>;
+
+// GET /adoption-groups/{runId}/{groupKey}/samples
+// The diff sample shape with the candidate side only: an adoption run has no
+// baseline Decision.
+export const AdoptionGroupSampleSchema = z.object({
+  action: StoredAgentActionSchema,
+  targetKeys: z.array(z.string()),
+  candidateDecision: DecisionSchema,
+  candidateRuleRationales: z.record(z.string(), z.string()),
+});
+export type AdoptionGroupSample = z.infer<typeof AdoptionGroupSampleSchema>;
+
+export const AdoptionGroupSamplesResponseSchema = z.object({
+  items: z.array(AdoptionGroupSampleSchema),
+});
+export type AdoptionGroupSamplesResponse = z.infer<typeof AdoptionGroupSamplesResponseSchema>;
+
 // GET /authority-map
 // The map is the most recent completed run for the accepted baseline; its
 // period is carried by the run's windowFrom/windowTo, so the request takes no
-// query parameters.
-export const AuthorityMapCellSchema = z.object({
-  capability: CapabilitySchema,
-  zone: ZoneSchema,
-  effect: EffectSchema,
-  count: z.number().int().nonnegative(),
-});
-export type AuthorityMapCell = z.infer<typeof AuthorityMapCellSchema>;
-
-// Evaluated Action counts by analyzability (cutline.md 11: full / partial / none,
-// an Action's analyzability is the worst of its Operations').
-export const AnalyzabilityCountsSchema = z.object({
-  full: z.number().int().nonnegative(),
-  partial: z.number().int().nonnegative(),
-  none: z.number().int().nonnegative(),
-});
-export type AnalyzabilityCounts = z.infer<typeof AnalyzabilityCountsSchema>;
+// query parameters. The cell and analyzability shapes are replay's.
+export { AnalyzabilityCountsSchema, AuthorityMapCellSchema };
+export type { AnalyzabilityCounts, AuthorityMapCell } from '@authority/replay/schema';
 
 export const AuthorityMapResponseSchema = z.object({
   run: z

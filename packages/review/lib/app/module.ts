@@ -170,11 +170,21 @@ function groupNotFound(groupKey: string): AppError {
   };
 }
 
+/** A Change Review's replay is always a version_diff run; any other kind has no diff stats. */
+function diffStatsOf(run: ReplayRun): ReplayStats | null {
+  return run.kind === 'version_diff' ? run.stats : null;
+}
+
 function replaySummaryOf(run: ReplayRun | null): ReplaySummary {
   if (run === null) {
     return { replayRunId: null, status: 'queued', stats: null, resultHash: null };
   }
-  return { replayRunId: run.id, status: run.status, stats: run.stats, resultHash: run.resultHash };
+  return {
+    replayRunId: run.id,
+    status: run.status,
+    stats: diffStatsOf(run),
+    resultHash: run.resultHash,
+  };
 }
 
 export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModule {
@@ -455,7 +465,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         );
       }
 
-      const stats = run?.stats ?? null;
+      const stats = run === null ? null : diffStatsOf(run);
       const baseline = await policy.getVersion(review.baselineVersionId);
       const baselineContentHash = baseline.ok ? baseline.value.contentHash : '';
       const chained = await store.getChainedDecision(review.id);
