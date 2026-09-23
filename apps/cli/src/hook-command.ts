@@ -39,7 +39,7 @@ function resolveCoreHookCommand(event: HookCliEvent): string {
 
 export function wrapFailOpenShell(coreCommand: string): string {
   const escaped = coreCommand.replace(/'/g, `'\\''`);
-  return `sh -c '${escaped} 2>>$HOME/.authority/hook-errors.log || exit 0'`;
+  return `sh -c 'mkdir -p $HOME/.authority 2>/dev/null; ${escaped} 2>>$HOME/.authority/hook-errors.log || exit 0'`;
 }
 
 export function resolveHookCommand(

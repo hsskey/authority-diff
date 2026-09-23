@@ -21,7 +21,7 @@
     "dev:replay-local": "tsx tools/local-pipeline/replay-local.ts",
     "dev:policy-init": "tsx tools/local-pipeline/policy-init.ts",
     "authority": "tsx apps/cli/src/main.ts",
-    "build:cli": "tsup --config apps/cli/tsup.config.ts apps/cli/src/main.ts",
+    "build:cli": "tsup --config apps/cli/tsup.config.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:boundaries && pnpm lint:prove && pnpm test"
   },
   "devDependencies": {
