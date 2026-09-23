@@ -39,6 +39,8 @@ export interface ReportDecision {
   readonly note: string;
   readonly sequence: number;
   readonly hash: string;
+  readonly replayInputsHash: string;
+  readonly replayResultHash: string;
 }
 
 export interface ReportInput {
@@ -191,6 +193,12 @@ export function renderReport(input: ReportInput): string {
     '',
     `- 기준 Policy Version contentHash: \`${input.baselineContentHash}\``,
     `- 변경안 Policy Version contentHash: \`${input.candidateContentHash}\``,
+    ...(input.decision === null
+      ? []
+      : [
+          `- Replay inputsHash: \`${input.decision.replayInputsHash}\``,
+          `- Replay resultHash: \`${input.decision.replayResultHash}\``,
+        ]),
     '',
     '## 검토 기간',
     '',

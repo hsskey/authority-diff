@@ -483,6 +483,8 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
                 note: chained.decision.note,
                 sequence: chained.sequence,
                 hash: chained.hash,
+                replayInputsHash: chained.decision.replayInputsHash,
+                replayResultHash: chained.decision.replayResultHash,
               },
       });
       return ok(markdown);

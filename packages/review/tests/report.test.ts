@@ -6,6 +6,8 @@ import type { ReportInput } from '../index.ts';
 const BASELINE_HASH = 'a'.repeat(64);
 const CANDIDATE_HASH = 'b'.repeat(64);
 const DECISION_HASH = 'c'.repeat(64);
+const REPLAY_INPUTS_HASH = 'd'.repeat(64);
+const REPLAY_RESULT_HASH = 'e'.repeat(64);
 
 function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
   return {
@@ -38,6 +40,8 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
       note: '검토 완료',
       sequence: 7,
       hash: DECISION_HASH,
+      replayInputsHash: REPLAY_INPUTS_HASH,
+      replayResultHash: REPLAY_RESULT_HASH,
     },
     ...overrides,
   };
@@ -71,6 +75,13 @@ test('the report records the Decision Record sequence and hash when decided', ()
   const report = renderReport(makeInput());
   expect(report).toContain(
     `- Decision Record sequence: 7\n- Decision Record hash: \`${DECISION_HASH}\``,
+  );
+});
+
+test('the Policy Version section lists the decision record replay hashes', () => {
+  const report = renderReport(makeInput());
+  expect(report).toContain(
+    `- Replay inputsHash: \`${REPLAY_INPUTS_HASH}\`\n- Replay resultHash: \`${REPLAY_RESULT_HASH}\``,
   );
 });
 
