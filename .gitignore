@@ -1,5 +1,6 @@
 node_modules/
 dist/
+apps/cli/dist/authority.mjs
 .turbo/
 coverage/
 *.tsbuildinfo
