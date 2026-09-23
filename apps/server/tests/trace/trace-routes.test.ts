@@ -179,6 +179,7 @@ describe('GET /api/v1/actions/:actionKey', () => {
             },
           }),
           countStaleClassifications: () => Promise.resolve(0),
+          getObservations: () => Promise.resolve([]),
         },
       }),
     );

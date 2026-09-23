@@ -3,7 +3,7 @@
 이 파일은 용어집 역할만 하고 구현 세부는 담지 않습니다.
 파일, symbol, table, HTTP 이름도 여기 단어를 씁니다.
 출처는 `docs/design.md` 13.1이며, V1 범위(`docs/cutline.md`)에 맞춰 Tier 2/3 개념을 뺐습니다.
-Target Architecture 전용 용어(Mandate, Mandate Exception, Disposition, Decision Source, Scenario, Precedent, Probe Run, Decision Provider, Conformance Finding)는 V1 용어집에 없습니다.
+Target Architecture 전용 용어(Mandate, Mandate Exception, Scenario, Precedent, Probe Run, Decision Provider)는 V1 용어집에 없습니다.
 용어집 완성은 계약 고정 시점의 사람 작업이고 이 목록은 그 입력입니다.
 
 **Principal**:
@@ -91,7 +91,22 @@ Effect와 근거 Rule을 포함합니다.
 _Avoid_: result, outcome
 
 **Replay Run**:
-두 Policy Version을 같은 Action 집합에 대입해 비교한 실행 1회.
+두 Decision Source를 같은 Action 집합에 대입해 비교한 실행 1회.
+`version_diff`는 두 Policy Version을, `conformance`는 `observed_runtime`과 Policy Version을 비교합니다.
+
+**Decision Source**:
+Replay에서 Effect를 내는 쪽.
+Policy Version 또는 `observed_runtime`(관측된 Disposition).
+
+**Disposition**:
+runtime이 Action에 실제로 보인 동작.
+`auto_executed`, `prompted`, `hook_approved`, `blocked`, `executed_prompt_unknown`.
+_Avoid_: observed decision, runtime state
+
+**Conformance Finding**:
+Disposition과 Policy Version의 Effect가 어긋난 Action 묶음.
+`violation`, `under_asked`, `over_asked`.
+_Avoid_: drift, incident, alert
 
 **Diff Group**:
 Effect가 달라진 Action을 같은 signature로 묶은 단위.
@@ -139,7 +154,7 @@ transcript 파일 하나를 server에 적재한 기록 1건. 수용, 중복, 거
 _Avoid_: upload, ingest batch
 
 **Runtime Observation**:
-runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다.
+runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다. tool use 식별자로 Action에 연결한다.
 _Avoid_: event, log entry
 
 **Gate**:

@@ -5,11 +5,14 @@ import type {
   PolicyVersionStatus,
 } from '@authority/policy/schema';
 import type {
+  ConformanceFinding,
   DiffGroup,
   ReplayRun,
   ReplayRunId,
+  ReplayRunKind,
   ReplayStats,
   StoredChangedAction,
+  StoredConformanceFinding,
   StoredDiffGroup,
 } from '../../schema.ts';
 import type { AuthorityMapCell } from '../domain/build-matrix.ts';
@@ -49,6 +52,7 @@ export interface RecordCompletionInput {
   readonly stats: StoredReplayStats;
   readonly groups: readonly StoredDiffGroup[];
   readonly changedActions: readonly StoredChangedAction[];
+  readonly findings: readonly StoredConformanceFinding[];
   readonly completedAt: IsoTimestamp;
 }
 
@@ -83,5 +87,8 @@ export interface ReplayStore {
   listDiffGroups(query: ListDiffGroupsQuery): Promise<DiffGroupsPage>;
   getDiffGroup(id: ReplayRunId, groupKey: string): Promise<StoredDiffGroup | null>;
   failStaleRunningRuns(input: FailStaleRunsInput): Promise<number>;
+  /** Completed `version_diff` runs only; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;
+  findLatestCompletedRun(kind: ReplayRunKind): Promise<ReplayRun | null>;
+  listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]>;
 }

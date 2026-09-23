@@ -11,7 +11,7 @@ import { assembleReplayModule } from '../index.ts';
 import type { AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
 import { computeDiff } from '../diff.ts';
 import { ReplayRunIdSchema } from '../schema.ts';
-import type { ReplayRun, StoredDiffGroup } from '../schema.ts';
+import type { ConformanceFinding, ReplayRun, StoredDiffGroup } from '../schema.ts';
 import actionFixture from '../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import baselineFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
 import candidateFixture from '../../../tests/fixtures/candidate-policy.json' with { type: 'json' };
@@ -53,6 +53,11 @@ function makeStore(): FakeStore {
   const runs = new Map<string, ReplayRun>();
   const groups = new Map<string, StoredDiffGroup[]>();
   const matrices = new Map<string, readonly AuthorityMapCell[]>();
+  const findings = new Map<string, readonly ConformanceFinding[]>();
+  const completedNewestFirst = () =>
+    [...runs.values()]
+      .filter((run) => run.status === 'completed')
+      .sort((a, b) => ((a.completedAt ?? '') < (b.completedAt ?? '') ? 1 : -1));
   return {
     runs,
     findCompletedByInputsHash: (inputsHash) =>
@@ -84,6 +89,10 @@ function makeStore(): FakeStore {
         });
       }
       groups.set(input.replayRunId, [...input.groups]);
+      findings.set(
+        input.replayRunId,
+        input.findings.map(({ replayRunId: _replayRunId, ...finding }) => finding),
+      );
       matrices.set(input.replayRunId, input.stats.matrix);
       return Promise.resolve();
     },
@@ -120,11 +129,13 @@ function makeStore(): FakeStore {
       }
       return Promise.resolve(failed);
     },
+    findLatestCompletedRun: (kind) =>
+      Promise.resolve(completedNewestFirst().find((run) => run.kind === kind) ?? null),
+    listConformanceFindings: (id) => Promise.resolve(findings.get(id) ?? []),
     listCompletedRunsNewestFirst: () =>
       Promise.resolve(
-        [...runs.values()]
-          .filter((run) => run.status === 'completed')
-          .sort((a, b) => ((a.completedAt ?? '') < (b.completedAt ?? '') ? 1 : -1))
+        completedNewestFirst()
+          .filter((run) => run.kind === 'version_diff')
           .map((run) => ({
             replayRunId: run.id,
             candidateVersionId: run.candidateVersionId,
@@ -145,6 +156,7 @@ function makeReader(overrides: Partial<ActionReader> = {}): ActionReader {
     getActions: (keys) =>
       Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
     countStaleClassifications: () => Promise.resolve(0),
+    getObservations: () => Promise.resolve([]),
     ...overrides,
   };
 }
@@ -329,6 +341,7 @@ describe('replay module', () => {
     const staleId = ReplayRunIdSchema.parse('rpl_0000000000000000000000000S');
     store.runs.set(staleId, {
       id: staleId,
+      kind: 'version_diff',
       baselineVersionId,
       candidateVersionId,
       windowFrom: WINDOW.windowFrom,
@@ -349,5 +362,79 @@ describe('replay module', () => {
     const recovered = store.runs.get(staleId);
     expect(recovered?.status).toBe('failed');
     expect(recovered?.errorCode).toBe('replay.interrupted');
+  });
+
+  test('a conformance run lists its findings against the candidate version', async () => {
+    const pushAction = actions[1]?.actionKey ?? '';
+    const { module } = makeModule({
+      reader: makeReader({
+        getObservations: () =>
+          Promise.resolve([
+            { actionKey: pushAction, event: 'pre_tool_use', hookDecision: null },
+            { actionKey: pushAction, event: 'permission_request', hookDecision: null },
+          ]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+    const listed = await module.listConformanceFindings();
+
+    expect(listed.run?.replayRunId).toBe(requested.value.run.id);
+    expect(listed.run?.policyVersionId).toBe(candidateVersionId);
+    expect(listed.items.map((finding) => [finding.kind, finding.capability])).toEqual([
+      ['over_asked', 'push'],
+    ]);
+  });
+
+  test('a conformance run is stored with kind conformance and no baseline version', async () => {
+    const { module } = makeModule();
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+
+    expect([requested.value.run.kind, requested.value.run.baselineVersionId]).toEqual([
+      'conformance',
+      null,
+    ]);
+  });
+
+  test('a new observation makes a repeated conformance request run again', async () => {
+    const observations: { actionKey: string; event: 'pre_tool_use'; hookDecision: null }[] = [];
+    const { module } = makeModule({
+      reader: makeReader({ getObservations: () => Promise.resolve([...observations]) }),
+    });
+    const first = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!first.ok) {
+      throw new Error(first.error.code);
+    }
+    await first.value.execution;
+    observations.push({
+      actionKey: actions[0]?.actionKey ?? '',
+      event: 'pre_tool_use',
+      hookDecision: null,
+    });
+
+    const second = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+
+    expect(second.ok && second.value.reused).toBe(false);
+  });
+
+  test('authority-map ignores a completed conformance run', async () => {
+    const { module } = makeModule();
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+
+    const map = await module.getAuthorityMap();
+
+    expect(map.run).toBeNull();
   });
 });

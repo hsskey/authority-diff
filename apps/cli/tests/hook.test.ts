@@ -85,6 +85,33 @@ describe('authority hook', () => {
     expect(JSON.stringify(record)).not.toContain('npm test');
   });
 
+  test.each([
+    ['a decision object', { behavior: 'allow' }, 'allow'],
+    ['a decision string', 'deny', 'deny'],
+    ['no decision', undefined, null],
+  ])(
+    'records hookDecision from %s in the permission-request input',
+    (_name, decision, expected) => {
+      const home = makeTempHome();
+      const input = JSON.stringify({
+        session_id: 'session-decided',
+        cwd: '/tmp/project',
+        hook_event_name: 'PermissionRequest',
+        tool_name: 'Bash',
+        tool_input: { command: 'ls' },
+        tool_use_id: 'toolu_decided',
+        decision,
+      });
+
+      runAuthority(['hook', 'permission-request'], { home, input });
+
+      const record: unknown = JSON.parse(readSpoolLines(home)[0] ?? 'null');
+      expect(isRecord(record) ? readNullableString(record, 'hookDecision') : undefined).toBe(
+        expected,
+      );
+    },
+  );
+
   test('records a pre-tool-use attempt with tool_use_id and no decision output', () => {
     const home = makeTempHome();
     const toolInput = { command: 'curl https://example.test', description: 'Fetch' };

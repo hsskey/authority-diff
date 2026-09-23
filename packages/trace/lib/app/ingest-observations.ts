@@ -1,9 +1,10 @@
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Runtime } from '@authority/action/schema';
 import type { RuntimeObservation } from '../../schema.ts';
+import { deriveActionKey } from '../client/actions.ts';
 import type { TraceStore, WriteCounts } from './ports.ts';
 
-export type RuntimeObservationInput = Omit<RuntimeObservation, 'observationKey'>;
+export type RuntimeObservationInput = Omit<RuntimeObservation, 'observationKey' | 'actionKey'>;
 
 export interface IngestObservationsInput {
   readonly runtime: Runtime;
@@ -25,6 +26,8 @@ function deriveObservationKey(runtime: Runtime, input: RuntimeObservationInput):
       input.cwd,
       input.runtimeVersion,
       input.occurredAt,
+      input.toolUseId,
+      input.hookDecision,
     ]),
   );
 }
@@ -37,7 +40,16 @@ export async function ingestObservations(
   for (const observation of input.observations) {
     const observationKey = deriveObservationKey(input.runtime, observation);
     if (!byKey.has(observationKey)) {
-      byKey.set(observationKey, { observationKey, ...observation });
+      const actionKey =
+        observation.toolUseId === null
+          ? null
+          : deriveActionKey({
+              runtime: input.runtime,
+              sessionExternalId: observation.sessionExternalId,
+              toolUseId: observation.toolUseId,
+              sequence: 0,
+            });
+      byKey.set(observationKey, { observationKey, actionKey, ...observation });
     }
   }
   const counts = await deps.store.writeObservations([...byKey.values()]);

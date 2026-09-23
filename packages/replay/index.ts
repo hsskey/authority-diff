@@ -31,10 +31,12 @@ export { assembleReplayModule } from './lib/app/module.ts';
 export type {
   AssembleReplayModuleDeps,
   AuthorityMapView,
+  ConformanceFindingsView,
   DiffGroupSample,
   DiffGroupsResult,
   ListDiffGroupsInput,
   ReplayModule,
+  RequestConformanceReplayInput,
   RequestReplayInput,
   RequestReplayOutput,
 } from './lib/app/module.ts';

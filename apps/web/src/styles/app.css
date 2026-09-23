@@ -45,6 +45,7 @@ input {
 
 .layout-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -62,11 +63,14 @@ input {
 
 .layout-brand {
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .layout-nav {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  white-space: nowrap;
 }
 
 .layout-main {
@@ -323,6 +327,14 @@ input {
 .data-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.data-table .nowrap {
+  white-space: nowrap;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 @media (prefers-color-scheme: dark) {

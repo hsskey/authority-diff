@@ -81,6 +81,29 @@ describe('contracts DTO round-trip', () => {
     ).toBe(true);
   });
 
+  test.each([
+    ['no kind as a version diff', { baselineVersionId: `pver_${ULID}` }, 'version_diff'],
+    ['a conformance run without a baseline', { kind: 'conformance' }, 'conformance'],
+  ])('parses a replay run request with %s', (_name, extra, expected) => {
+    const parsed = CreateReplayRunRequestSchema.parse({
+      candidateVersionId: `pver_${ULID}`,
+      windowFrom: TS,
+      windowTo: TS,
+      ...extra,
+    });
+    expect(parsed.kind).toBe(expected);
+  });
+
+  test('rejects a version diff replay run request without a baseline', () => {
+    const result = CreateReplayRunRequestSchema.safeParse({
+      kind: 'version_diff',
+      candidateVersionId: `pver_${ULID}`,
+      windowFrom: TS,
+      windowTo: TS,
+    });
+    expect(result.success).toBe(false);
+  });
+
   test('carries replay summary and gate on a change review response', () => {
     const value = {
       id: `rev_${ULID}`,

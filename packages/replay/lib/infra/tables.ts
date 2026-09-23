@@ -1,8 +1,9 @@
-import { index, integer, jsonb, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { check, index, integer, jsonb, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
 import type { Effect } from '@authority/kernel';
 import type { Capability } from '@authority/action/schema';
 import type { Zone } from '@authority/policy/schema';
-import type { ReplayRunStatus } from '../../schema.ts';
+import type { ConformanceFindingKind, ReplayRunKind, ReplayRunStatus } from '../../schema.ts';
 import type { StoredReplayStats } from '../app/ports.ts';
 
 // docs/design.md 25장. IsoTimestamp 문자열을 그대로 보존하려고 시각은 text로 저장한다.
@@ -11,7 +12,8 @@ export const replayRuns = pgTable(
   'replay_runs',
   {
     id: text('id').primaryKey(),
-    baselineVersionId: text('baseline_version_id').notNull(),
+    kind: text('kind').$type<ReplayRunKind>().notNull().default('version_diff'),
+    baselineVersionId: text('baseline_version_id'),
     candidateVersionId: text('candidate_version_id').notNull(),
     windowFrom: text('window_from').notNull(),
     windowTo: text('window_to').notNull(),
@@ -28,6 +30,11 @@ export const replayRuns = pgTable(
   (t) => [
     index('idx_replay_runs__inputs_hash').on(t.inputsHash),
     index('idx_replay_runs__status').on(t.status),
+    check('ck_replay_runs__kind', sql`${t.kind} in ('version_diff', 'conformance')`),
+    check(
+      'ck_replay_runs__baseline_version_id',
+      sql`(${t.kind} = 'conformance') = (${t.baselineVersionId} is null)`,
+    ),
   ],
 );
 
@@ -75,4 +82,22 @@ export const replayChangedActions = pgTable(
     toEffect: text('to_effect').$type<Effect>().notNull(),
   },
   (t) => [primaryKey({ columns: [t.replayRunId, t.actionKey] })],
+);
+
+export const conformanceFindings = pgTable(
+  'conformance_findings',
+  {
+    replayRunId: text('replay_run_id').notNull(),
+    findingKey: text('finding_key').notNull(),
+    kind: text('kind').$type<ConformanceFindingKind>().notNull(),
+    capability: text('capability').$type<Capability>().notNull(),
+    zone: text('zone').$type<Zone>().notNull(),
+    program: text('program'),
+    actionCount: integer('action_count').notNull(),
+    sessionCount: integer('session_count').notNull(),
+    firstOccurredAt: text('first_occurred_at').notNull(),
+    lastOccurredAt: text('last_occurred_at').notNull(),
+    sampleActionKeys: jsonb('sample_action_keys').$type<string[]>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.replayRunId, t.findingKey] })],
 );

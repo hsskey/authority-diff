@@ -2,11 +2,16 @@ import { err, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import { createEvaluator } from '@authority/policy/evaluate';
-import type { Decision, PolicyDocument, PolicyVersionId } from '@authority/policy/schema';
+import type { Decision, PolicyVersionId } from '@authority/policy/schema';
 import type { ActionReader } from '@authority/trace';
-import type { ActionForReplay, StoredAgentAction } from '@authority/trace/schema';
+import type {
+  ActionForReplay,
+  ObservationForReplay,
+  StoredAgentAction,
+} from '@authority/trace/schema';
 import { ReplayRunIdSchema } from '../../schema.ts';
 import type {
+  ConformanceFinding,
   DiffGroup,
   ReplayRun,
   ReplayRunId,
@@ -15,8 +20,9 @@ import type {
 } from '../../schema.ts';
 import { buildMatrix } from '../domain/build-matrix.ts';
 import type { AuthorityMapCell } from '../domain/build-matrix.ts';
+import { computeConformanceWith } from '../domain/compute-conformance.ts';
 import { computeDiffWith } from '../domain/compute-diff.ts';
-import type { PolicyReader, ReplayStore, StoredReplayStats } from './ports.ts';
+import type { PolicyReader, RecordCompletionInput, ReplayStore } from './ports.ts';
 
 const BATCH_SIZE = 5_000;
 const STALE_RUN_MS = 60_000;
@@ -34,6 +40,23 @@ export interface RequestReplayOutput {
   readonly reused: boolean;
   /** The in-process execution, for tests to await; null when a run was reused. */
   readonly execution: Promise<void> | null;
+}
+
+export interface RequestConformanceReplayInput {
+  readonly candidateVersionId: PolicyVersionId;
+  readonly windowFrom: IsoTimestamp;
+  readonly windowTo: IsoTimestamp;
+}
+
+/** The findings of the most recent completed conformance run. */
+export interface ConformanceFindingsView {
+  readonly run: {
+    readonly replayRunId: ReplayRunId;
+    readonly policyVersionId: PolicyVersionId;
+    readonly windowFrom: IsoTimestamp;
+    readonly windowTo: IsoTimestamp;
+  } | null;
+  readonly items: readonly ConformanceFinding[];
 }
 
 export interface DiffGroupSample {
@@ -66,6 +89,11 @@ export interface DiffGroupsResult {
 
 export interface ReplayModule {
   requestReplay(input: RequestReplayInput): Promise<Result<RequestReplayOutput, AppError>>;
+  /** Compares the observed_runtime Decision Source against the candidate. */
+  requestConformanceReplay(
+    input: RequestConformanceReplayInput,
+  ): Promise<Result<RequestReplayOutput, AppError>>;
+  listConformanceFindings(): Promise<ConformanceFindingsView>;
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
   listDiffGroups(
     id: ReplayRunId,
@@ -128,6 +156,22 @@ function groupNotFound(id: ReplayRunId, groupKey: string): AppError {
   };
 }
 
+function lastActionKeyOf(actions: readonly ActionForReplay[]): string {
+  return actions[actions.length - 1]?.actionKey ?? '';
+}
+
+async function collectObservations(
+  reader: ActionReader,
+  actions: readonly ActionForReplay[],
+): Promise<ObservationForReplay[]> {
+  const observations: ObservationForReplay[] = [];
+  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
+    const keys = actions.slice(i, i + BATCH_SIZE).map((action) => action.actionKey);
+    observations.push(...(await reader.getObservations(keys)));
+  }
+  return observations;
+}
+
 async function collectActions(
   reader: ActionReader,
   window: { from: IsoTimestamp; to: IsoTimestamp },
@@ -142,44 +186,58 @@ async function collectActions(
 export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModule {
   const { store, reader, policy, clock, idGenerator, classifierVersion } = deps;
 
-  const runReplay = async (
+  const execute = async (
     run: ReplayRun,
-    actions: readonly ActionForReplay[],
-    baselineDocument: PolicyDocument,
-    candidateDocument: PolicyDocument,
+    compute: () => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
   ): Promise<void> => {
     try {
       await store.markRunning(run.id, clock.now());
-      const evaluateCandidate = createEvaluator(candidateDocument);
-      const diff = computeDiffWith(createEvaluator(baselineDocument), evaluateCandidate, actions);
-      const stats: StoredReplayStats = {
-        ...diff.stats,
-        matrix: buildMatrix(actions, evaluateCandidate),
-      };
-      const groups: StoredDiffGroup[] = diff.groups.map((group) => ({
-        ...group,
-        replayRunId: run.id,
-      }));
-      const changedActions: StoredChangedAction[] = diff.changedActions.map((changed) => ({
-        replayRunId: run.id,
-        actionKey: changed.actionKey,
-        groupKey: changed.groupKey,
-        fromEffect: changed.fromEffect,
-        toEffect: changed.toEffect,
-      }));
-      await store.recordCompletion({
-        replayRunId: run.id,
-        resultHash: diff.resultHash,
-        stats,
-        groups,
-        changedActions,
-        completedAt: clock.now(),
-      });
+      await store.recordCompletion({ ...compute(), replayRunId: run.id, completedAt: clock.now() });
     } catch {
       // The failure is durable state, not a thrown error: the run is marked
       // failed in the DB and the fire-and-forget promise always resolves.
       await store.markFailed(run.id, 'replay.execution_failed', clock.now()).catch(() => {});
     }
+  };
+
+  const prepare = async (window: {
+    from: IsoTimestamp;
+    to: IsoTimestamp;
+  }): Promise<Result<readonly ActionForReplay[], AppError>> => {
+    const staleCount = await reader.countStaleClassifications(window);
+    if (staleCount > 0) {
+      return err(classifierVersionMismatch(staleCount));
+    }
+    return ok(await collectActions(reader, window));
+  };
+
+  const start = async (
+    fields: Pick<
+      ReplayRun,
+      'kind' | 'baselineVersionId' | 'candidateVersionId' | 'windowFrom' | 'windowTo'
+    >,
+    inputsHash: string,
+    compute: (run: ReplayRun) => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
+  ): Promise<RequestReplayOutput> => {
+    const existing = await store.findCompletedByInputsHash(inputsHash);
+    if (existing !== null) {
+      return { run: existing, reused: true, execution: null };
+    }
+    const run: ReplayRun = {
+      ...fields,
+      id: ReplayRunIdSchema.parse(idGenerator.next('rpl')),
+      status: 'queued',
+      classifierVersion,
+      inputsHash,
+      resultHash: null,
+      stats: null,
+      errorCode: null,
+      createdAt: clock.now(),
+      startedAt: null,
+      completedAt: null,
+    };
+    await store.insertQueuedRun(run);
+    return { run, reused: false, execution: execute(run, () => compute(run)) };
   };
 
   return {
@@ -192,16 +250,11 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       if (candidate === null) {
         return err(sourceInvalid(input.candidateVersionId));
       }
-
-      const window = { from: input.windowFrom, to: input.windowTo };
-      const staleCount = await reader.countStaleClassifications(window);
-      if (staleCount > 0) {
-        return err(classifierVersionMismatch(staleCount));
+      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+      if (!prepared.ok) {
+        return prepared;
       }
-
-      const actions = await collectActions(reader, window);
-      const lastActionKey =
-        actions.length === 0 ? '' : (actions[actions.length - 1]?.actionKey ?? '');
+      const actions = prepared.value;
       const inputsHash = sha256Hex(
         canonicalJson([
           baseline.contentHash,
@@ -210,35 +263,85 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           input.windowTo,
           classifierVersion,
           actions.length,
-          lastActionKey,
+          lastActionKeyOf(actions),
         ]),
       );
+      const output = await start({ ...input, kind: 'version_diff' }, inputsHash, (run) => {
+        const evaluateCandidate = createEvaluator(candidate.document);
+        const diff = computeDiffWith(
+          createEvaluator(baseline.document),
+          evaluateCandidate,
+          actions,
+        );
+        return {
+          resultHash: diff.resultHash,
+          stats: { ...diff.stats, matrix: buildMatrix(actions, evaluateCandidate) },
+          groups: diff.groups.map((group): StoredDiffGroup => ({ ...group, replayRunId: run.id })),
+          changedActions: diff.changedActions.map((changed): StoredChangedAction => ({
+            ...changed,
+            replayRunId: run.id,
+          })),
+          findings: [],
+        };
+      });
+      return ok(output);
+    },
 
-      const existing = await store.findCompletedByInputsHash(inputsHash);
-      if (existing !== null) {
-        return ok({ run: existing, reused: true, execution: null });
+    async requestConformanceReplay(input) {
+      const candidate = await policy.getVersion(input.candidateVersionId);
+      if (candidate === null) {
+        return err(sourceInvalid(input.candidateVersionId));
       }
-
-      const now = clock.now();
-      const run: ReplayRun = {
-        id: ReplayRunIdSchema.parse(idGenerator.next('rpl')),
-        baselineVersionId: input.baselineVersionId,
-        candidateVersionId: input.candidateVersionId,
-        windowFrom: input.windowFrom,
-        windowTo: input.windowTo,
-        status: 'queued',
-        classifierVersion,
+      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+      if (!prepared.ok) {
+        return prepared;
+      }
+      const actions = prepared.value;
+      const observations = await collectObservations(reader, actions);
+      const inputsHash = sha256Hex(
+        canonicalJson([
+          'observed_runtime',
+          candidate.contentHash,
+          input.windowFrom,
+          input.windowTo,
+          classifierVersion,
+          actions.length,
+          lastActionKeyOf(actions),
+          observations.length,
+        ]),
+      );
+      const output = await start(
+        { ...input, kind: 'conformance', baselineVersionId: null },
         inputsHash,
-        resultHash: null,
-        stats: null,
-        errorCode: null,
-        createdAt: now,
-        startedAt: null,
-        completedAt: null,
+        (run) => {
+          const evaluateCandidate = createEvaluator(candidate.document);
+          const result = computeConformanceWith(evaluateCandidate, actions, observations);
+          return {
+            resultHash: result.resultHash,
+            stats: { ...result.stats, matrix: buildMatrix(actions, evaluateCandidate) },
+            groups: [],
+            changedActions: [],
+            findings: result.findings.map((finding) => ({ ...finding, replayRunId: run.id })),
+          };
+        },
+      );
+      return ok(output);
+    },
+
+    async listConformanceFindings() {
+      const run = await store.findLatestCompletedRun('conformance');
+      if (run === null) {
+        return { run: null, items: [] };
+      }
+      return {
+        run: {
+          replayRunId: run.id,
+          policyVersionId: run.candidateVersionId,
+          windowFrom: run.windowFrom,
+          windowTo: run.windowTo,
+        },
+        items: await store.listConformanceFindings(run.id),
       };
-      await store.insertQueuedRun(run);
-      const execution = runReplay(run, actions, baseline.document, candidate.document);
-      return ok({ run, reused: false, execution });
     },
 
     getRun(id) {
@@ -262,6 +365,9 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       }
       const group = await store.getDiffGroup(id, groupKey);
       if (group === null) {
+        return err(groupNotFound(id, groupKey));
+      }
+      if (run.baselineVersionId === null) {
         return err(groupNotFound(id, groupKey));
       }
       const baseline = await policy.getVersion(run.baselineVersionId);

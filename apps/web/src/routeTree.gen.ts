@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConformanceRouteImport } from './routes/conformance'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ChangeReviewsReviewIdIndexRouteImport } from './routes/change-reviews/$reviewId/index'
 import { Route as ChangeReviewsReviewIdGroupsGroupKeyRouteImport } from './routes/change-reviews/$reviewId/groups/$groupKey'
@@ -18,6 +19,11 @@ import { Route as PoliciesPolicyIdVersionsVersionIdRouteImport } from './routes/
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConformanceRoute = ConformanceRouteImport.update({
+  id: '/conformance',
+  path: '/conformance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,6 +52,7 @@ const PoliciesPolicyIdVersionsVersionIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/conformance': typeof ConformanceRoute
   '/login': typeof LoginRoute
   '/change-reviews/$reviewId/': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/conformance': typeof ConformanceRoute
   '/login': typeof LoginRoute
   '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
@@ -61,6 +69,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/conformance': typeof ConformanceRoute
   '/login': typeof LoginRoute
   '/change-reviews/$reviewId/': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/conformance'
     | '/login'
     | '/change-reviews/$reviewId/'
     | '/change-reviews/$reviewId/groups/$groupKey'
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/conformance'
     | '/login'
     | '/change-reviews/$reviewId'
     | '/change-reviews/$reviewId/groups/$groupKey'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/conformance'
     | '/login'
     | '/change-reviews/$reviewId/'
     | '/change-reviews/$reviewId/groups/$groupKey'
@@ -92,6 +104,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConformanceRoute: typeof ConformanceRoute
   LoginRoute: typeof LoginRoute
   ChangeReviewsReviewIdIndexRoute: typeof ChangeReviewsReviewIdIndexRoute
   ChangeReviewsReviewIdGroupsGroupKeyRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
@@ -105,6 +118,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conformance': {
+      id: '/conformance'
+      path: '/conformance'
+      fullPath: '/conformance'
+      preLoaderRoute: typeof ConformanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -140,6 +160,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConformanceRoute: ConformanceRoute,
   LoginRoute: LoginRoute,
   ChangeReviewsReviewIdIndexRoute: ChangeReviewsReviewIdIndexRoute,
   ChangeReviewsReviewIdGroupsGroupKeyRoute:

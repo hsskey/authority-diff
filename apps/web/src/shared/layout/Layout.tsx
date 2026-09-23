@@ -11,6 +11,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="layout-brand">Authority Diff</div>
         <nav className="layout-nav" aria-label="Primary">
           <Link to="/">Activity Shape</Link>
+          <Link to="/conformance">Conformance</Link>
           {!hasToken ? <Link to="/login">Sign in</Link> : null}
         </nav>
         {hasToken ? (

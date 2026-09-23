@@ -78,10 +78,13 @@ export const runtimeObservations = pgTable(
   'runtime_observations',
   {
     observationKey: text('observation_key').primaryKey(),
+    actionKey: text('action_key'),
     event: text('event').notNull(),
     sessionExternalId: text('session_external_id').notNull(),
+    toolUseId: text('tool_use_id'),
     toolName: text('tool_name'),
     toolInputHash: text('tool_input_hash'),
+    hookDecision: text('hook_decision'),
     cwd: text('cwd'),
     runtimeVersion: text('runtime_version'),
     occurredAt: text('occurred_at').notNull(),
@@ -91,9 +94,14 @@ export const runtimeObservations = pgTable(
       t.sessionExternalId,
       t.toolInputHash,
     ),
+    index('idx_runtime_observations__action_key').on(t.actionKey),
     check(
       'ck_runtime_observations__event',
-      sql`${t.event} in ('permission_request', 'session_end')`,
+      sql`${t.event} in ('pre_tool_use', 'permission_request', 'session_end')`,
+    ),
+    check(
+      'ck_runtime_observations__hook_decision',
+      sql`${t.hookDecision} is null or ${t.hookDecision} in ('allow', 'deny')`,
     ),
   ],
 );

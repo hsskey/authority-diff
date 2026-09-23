@@ -125,6 +125,7 @@ describe('replay storage schema round-trip', () => {
   test('accepts a completed Replay Run', () => {
     const value = {
       id: `rpl_${ULID}`,
+      kind: 'version_diff',
       baselineVersionId: `pver_${ULID}`,
       candidateVersionId: `pver_${ULID}`,
       windowFrom: TS,
