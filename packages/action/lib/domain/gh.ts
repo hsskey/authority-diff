@@ -7,7 +7,7 @@
  * `secret` commands are a `read` of the credential store. The Target is a
  * `vcs_remote` whose Remote Key comes from `-R`/`--repo` when present, otherwise
  * the session `origin` remote, but only while gh runs inside the session
- * workspace; a preceding `cd` outside it leaves the remote name unresolved.
+ * workspace; a preceding `cd` outside it leaves the Remote Key unresolved.
  */
 import type { Capability, Target } from '../../schema.ts';
 import { nonFlagArgs, type NormalizedCommand } from './command.ts';
