@@ -206,6 +206,7 @@ test('a conformance run joins observations by toolUseId and persists its finding
         toolName: call.toolName,
         toolInputHash: null,
         hookDecision: null,
+        permissionMode: 'default',
         cwd: null,
         runtimeVersion: null,
         occurredAt: call.occurredAt,

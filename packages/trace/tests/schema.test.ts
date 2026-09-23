@@ -125,6 +125,7 @@ describe('trace storage schema round-trip', () => {
       toolName: 'Bash',
       toolInputHash: HASH,
       hookDecision: 'allow',
+      permissionMode: 'acceptEdits',
       cwd: '~/project',
       runtimeVersion: null,
       occurredAt: TS,
@@ -133,5 +134,20 @@ describe('trace storage schema round-trip', () => {
     expect(RuntimeObservationSchema.safeParse({ ...value, observationKey: 'nope' }).success).toBe(
       false,
     );
+  });
+
+  test('defaults permissionMode to null for hook clients that predate it', () => {
+    const legacy = {
+      observationKey: HASH,
+      actionKey: null,
+      event: 'session_end',
+      sessionExternalId: 'session-a',
+      toolName: null,
+      toolInputHash: null,
+      cwd: null,
+      runtimeVersion: null,
+      occurredAt: TS,
+    };
+    expect(RuntimeObservationSchema.parse(legacy).permissionMode).toBeNull();
   });
 });

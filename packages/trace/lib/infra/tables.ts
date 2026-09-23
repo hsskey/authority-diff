@@ -85,6 +85,7 @@ export const runtimeObservations = pgTable(
     toolName: text('tool_name'),
     toolInputHash: text('tool_input_hash'),
     hookDecision: text('hook_decision'),
+    permissionMode: text('permission_mode'),
     cwd: text('cwd'),
     runtimeVersion: text('runtime_version'),
     occurredAt: text('occurred_at').notNull(),

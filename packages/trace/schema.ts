@@ -171,8 +171,10 @@ export type HookDecision = z.infer<typeof HookDecisionSchema>;
  * natural key and makes ingestion idempotent. `actionKey` is server-derived
  * from `toolUseId` with DeriveActionKey, so an observation joins its Action by
  * the same runtime tool use identifier; it is null without a `toolUseId`.
- * `toolUseId` and `hookDecision` default to null for hook clients that predate
- * them.
+ * `permissionMode` is the runtime permission mode the hook input carried, kept
+ * as the runtime reports it.
+ * `toolUseId`, `hookDecision`, and `permissionMode` default to null for hook
+ * clients that predate them.
  */
 export const RuntimeObservationSchema = z.object({
   observationKey: Sha256Schema,
@@ -183,6 +185,7 @@ export const RuntimeObservationSchema = z.object({
   toolName: z.string().nullable(),
   toolInputHash: Sha256Schema.nullable(),
   hookDecision: HookDecisionSchema.nullable().default(null),
+  permissionMode: z.string().min(1).nullable().default(null),
   cwd: z.string().nullable(),
   runtimeVersion: z.string().nullable(),
   occurredAt: IsoTimestampSchema,

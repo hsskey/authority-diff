@@ -1,0 +1,1 @@
+ALTER TABLE "runtime_observations" ADD COLUMN "permission_mode" text;

@@ -36,6 +36,7 @@ function toObservation(line: string): RuntimeObservationInput | null {
     toolName: readString(parsed, 'toolName'),
     toolInputHash: readString(parsed, 'toolInputHash'),
     hookDecision: readString(parsed, 'hookDecision'),
+    permissionMode: readString(parsed, 'permissionMode'),
     cwd: readString(parsed, 'cwd'),
     runtimeVersion: readString(parsed, 'runtimeVersion'),
     occurredAt: parsed.timestamp,

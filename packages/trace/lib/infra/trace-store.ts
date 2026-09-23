@@ -121,6 +121,7 @@ export function createTraceStore(database: Database): TraceStore {
             toolName: observation.toolName,
             toolInputHash: observation.toolInputHash,
             hookDecision: observation.hookDecision,
+            permissionMode: observation.permissionMode,
             cwd: observation.cwd,
             runtimeVersion: observation.runtimeVersion,
             occurredAt: observation.occurredAt,
