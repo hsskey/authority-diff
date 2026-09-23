@@ -74,21 +74,6 @@ Operation-level widening while the Action Effect is unchanged: push trusted_remo
 
 Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 11; push trusted_remote → trusted_remote 3.
 
-## Change from classifier 0.2.1
-
-| measure | 0.2.1 | 0.2.2 |
-| --- | ---: | ---: |
-| A vs B changed Actions | 149 | 132 |
-| A vs B' changed Actions | 149 | 132 |
-| A vs P changed Actions | 0 | 0 |
-| A vs P' changed Actions | 6 | 6 |
-| widening / critical groups (B, B', P, P') | 5/5, 7/7, 0/0, 2/2 | 5/5, 7/7, 0/0, 2/2 |
-| `git` group 5f151a90 under B | 52 Actions / 34 Sessions | 35 / 21 |
-
-The 17 Actions that left the changed set were `git` fetches whose repository operand is a local path; classifier 0.2.2 makes them `path` Targets, so policy B's `allow_unknown_remote_fetch` no longer reaches them (`docs/evidence/classifier-hardening-2.md`).
-Every group keeps its identity (same signature and group key); the `gh`, WebFetch, curl, and WebSearch groups are unchanged in Actions and Sessions.
-A `resultHash` is comparable only within one classifier version and one stats schema: the 0.2.1 hashes below were recorded before Operation-level widening entered `stats` (`docs/acr/0009-operation-widening-stats.md`), so even the 0.2.1 classifier on the current code gives a different hash for the same Actions.
-
 ## B' scene (Gate 3 core)
 
 Appending one `github.com/**` line to `trustedRemotes` made an unlisted other-owner repository trusted.
@@ -116,7 +101,24 @@ Verdicts and timing in the recorded journey were given by an Agent, not a person
 ## Previous version: classifier 0.2.1 (official at the time, not re-run)
 
 The section below is the Gate 2 evidence as measured on classifier 0.2.1 and is kept as the record of that measurement.
-Its `resultHash` values are not comparable with the 0.2.2 values above (see "Change from classifier 0.2.1").
+Its `resultHash` values are not comparable with the 0.2.2 values above (see "Change from classifier 0.2.1" below).
+
+### Change from classifier 0.2.1
+
+| measure | 0.2.1 | 0.2.2 |
+| --- | ---: | ---: |
+| A vs B changed Actions | 149 | 132 |
+| A vs B' changed Actions | 149 | 132 |
+| A vs P changed Actions | 0 | 0 |
+| A vs P' changed Actions | 6 | 6 |
+| widening / critical groups (B, B', P, P') | 5/5, 7/7, 0/0, 2/2 | 5/5, 7/7, 0/0, 2/2 |
+| `git` group 5f151a90 under B | 52 Actions / 34 Sessions | 35 / 21 |
+
+The 17 Actions that left the changed set were `git` fetches whose repository operand is a local path; classifier 0.2.2 makes them `path` Targets, so policy B's `allow_unknown_remote_fetch` no longer reaches them (`docs/evidence/classifier-hardening-2.md`).
+Every group keeps its identity (same signature and group key); the `gh`, WebFetch, curl, and WebSearch groups are unchanged in Actions and Sessions.
+A `resultHash` is comparable only within one classifier version and one stats schema: the 0.2.1 hashes below were recorded before Operation-level widening entered `stats` (`docs/acr/0009-operation-widening-stats.md`), so even the 0.2.1 classifier on the current code gives a different hash for the same Actions.
+
+### Official 0.2.1 evidence
 
 Official Gate 2 evidence from classifier 0.2.1 on the frozen snapshot and corrected environment profile (policy v2).
 Every number below is labelled **classifier 0.2.1, official**.

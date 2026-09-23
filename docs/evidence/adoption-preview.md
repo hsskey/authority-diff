@@ -86,9 +86,6 @@ Programs are masked as in the previous rounds: non-standard programs as `<local-
   The Program Summary inside each group is what makes an `expected` Verdict on `ask · execute · host` a decision about 117 programs rather than about a key.
 - Review units: 23 Verdicts, one per group, to open the gate.
 
-Composition versus classifier 0.2.1 (same totals, same 23 groups): `ask · fetch · host` (18 `git` Actions) is new because a fetch whose repository operand is a local path is now a `path` Target, and `ask · fetch · unknown_remote` drops from 217 to 199 accordingly; the single `deny · rewrite · unknown_remote` Action joined `deny · rewrite · public_remote` (6 → 7) because its remote now resolves.
-Analyzability moved from 17,769 / 6,810 / 9,911 to 17,909 / 6,670 / 9,911 for the same reason.
-
 ## Determinism and consistency with the Change Review baseline
 
 - Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `3c51b5522a40cc88ad0b6b555b3fddc203aa68811b6c3d4aa6f3f404ad94e157` (502 ms and 535 ms).
@@ -155,6 +152,13 @@ Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1
 Conformance stage: copy the hook spool files into a scratch home, `spool-flush` them to the fresh server, request a `conformance` run for the accepted version over the observation window, and read `/conformance`.
 
 Tear the stack down with `down -v` when done.
+
+## Composition versus classifier 0.2.1 (previous version)
+
+These 0.2.1 figures are kept only as the record of the composition change; the current figures are in the sections above.
+The totals and the 23 groups are the same as classifier 0.2.1.
+`ask · fetch · host` (18 `git` Actions) is new because a fetch whose repository operand is a local path is now a `path` Target, and `ask · fetch · unknown_remote` drops from 217 to 199 accordingly; the single `deny · rewrite · unknown_remote` Action joined `deny · rewrite · public_remote` (6 → 7) because its remote now resolves.
+Analyzability moved from 17,769 / 6,810 / 9,911 to 17,909 / 6,670 / 9,911 for the same reason.
 
 ## Signature choice (previous version: classifier 0.2.1)
 
