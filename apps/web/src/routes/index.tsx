@@ -680,7 +680,7 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
     return (
       <EmptyState
         title="완료된 replay run이 없습니다"
-        message="채택된 version을 candidate로 한 replay run이 완료되면 Effect 분포가 여기에 나타납니다."
+        message="채택된 version의 최초 도입 검토나 변경 검토 replay가 완료되면 Effect 분포가 여기에 나타납니다."
       />
     );
   }
