@@ -29,7 +29,7 @@ The PreToolUse hook input does carry `tool_use_id`.
 - Permission request pairing is `pairPermissionRequests` in packages/replay/lib/domain, a pure function run at derive time before `deriveDisposition`.
   A `permission_request` without an `actionKey` pairs with the closest earlier `pre_tool_use` that has the same `sessionExternalId`, `toolName`, and `toolInputHash` and is not paired yet, and inherits its `actionKey`.
   A `pre_tool_use` at the same instant counts as earlier.
-  A `permission_request` without such a `pre_tool_use` stays unjoined and is counted as unpaired.
+  Pairing is session-wide, so a `permission_request` can still pair with a `pre_tool_use` just outside the window edge; a `permission_request` without such a `pre_tool_use` stays unjoined and is counted as unpaired only when its `occurredAt` is within the run window.
   The count is stored as `unpairedPermissionRequests` in the run's `stats` jsonb and returned as `run.unpairedPermissionRequests` by `GET /conformance-findings`.
 - `replay_runs.kind` is added with default `version_diff`; `conformance` marks a run whose baseline is `observed_runtime`, and `baseline_version_id` is null exactly for those runs.
 - Disposition derivation is `deriveDisposition` in packages/replay/lib/domain:
