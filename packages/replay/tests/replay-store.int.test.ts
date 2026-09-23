@@ -175,7 +175,7 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
   expect(total).toBe(local.stats.evaluatedActions);
 });
 
-test('a conformance run joins observations by toolUseId and persists its findings', async () => {
+test('a conformance run joins observations by toolUseId, pairs permission requests, and persists its findings', async () => {
   const clock = createSystemClock();
   const idGenerator = createUlidGenerator();
   const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
@@ -195,13 +195,25 @@ test('a conformance run joins observations by toolUseId and persists its finding
   }
   await trace.ingestObservations({
     runtime: session.runtime,
-    observations: session.toolCalls.flatMap((call) => [
+    observations: session.toolCalls.flatMap((call, index) => [
       {
         event: 'pre_tool_use' as const,
         sessionExternalId: session.sessionExternalId,
         toolUseId: call.toolUseId,
         toolName: call.toolName,
-        toolInputHash: null,
+        toolInputHash: String(index).padStart(64, '0'),
+        hookDecision: null,
+        permissionMode: null,
+        cwd: null,
+        runtimeVersion: null,
+        occurredAt: call.occurredAt,
+      },
+      {
+        event: 'permission_request' as const,
+        sessionExternalId: session.sessionExternalId,
+        toolUseId: null,
+        toolName: call.toolName,
+        toolInputHash: String(index).padStart(64, '0'),
         hookDecision: null,
         permissionMode: 'default',
         cwd: null,
@@ -209,6 +221,27 @@ test('a conformance run joins observations by toolUseId and persists its finding
         occurredAt: call.occurredAt,
       },
     ]),
+  });
+  const [firstCall] = session.toolCalls;
+  if (firstCall === undefined) {
+    throw new Error('the session fixture has a tool call');
+  }
+  await trace.ingestObservations({
+    runtime: session.runtime,
+    observations: [
+      {
+        event: 'permission_request',
+        sessionExternalId: session.sessionExternalId,
+        toolUseId: null,
+        toolName: 'Bash',
+        toolInputHash: 'f'.repeat(64),
+        hookDecision: null,
+        permissionMode: null,
+        cwd: null,
+        runtimeVersion: null,
+        occurredAt: firstCall.occurredAt,
+      },
+    ],
   });
   const window = freshWindow();
   const streamed: ActionForReplay[] = [];
@@ -219,8 +252,18 @@ test('a conformance run joins observations by toolUseId and persists its finding
   })) {
     streamed.push(...batch);
   }
-  const observations = await trace.reader.getObservations(streamed.map((a) => a.actionKey));
-  const local = computeConformanceWith(createEvaluator(candidate.document), streamed, observations);
+  const observations = await trace.reader.getObservations([
+    ...new Set(streamed.map((a) => a.sessionExternalId)),
+  ]);
+  const local = computeConformanceWith(
+    createEvaluator(candidate.document),
+    streamed,
+    observations,
+    {
+      from: window.windowFrom,
+      to: window.windowTo,
+    },
+  );
   const replay = createReplayModule({
     database,
     reader: trace.reader,
@@ -246,5 +289,6 @@ test('a conformance run joins observations by toolUseId and persists its finding
   expect(stored?.resultHash).toBe(local.resultHash);
   expect(listed.run?.replayRunId).toBe(requested.value.run.id);
   expect(listed.items).toEqual(local.findings);
-  expect(listed.items.map((finding) => finding.kind)).toContain('under_asked');
+  expect(local.findings.map((finding) => finding.kind)).not.toContain('under_asked');
+  expect(listed.run?.unpairedPermissionRequests).toBe(1);
 });

@@ -3,6 +3,7 @@ import type { ComputeDiff } from './schema.ts';
 import { computeConformanceWith } from './lib/domain/compute-conformance.ts';
 import { computeDiffWith, deriveTargetKey, renderHeadline } from './lib/domain/compute-diff.ts';
 import { deriveDisposition } from './lib/domain/derive-disposition.ts';
+import { pairPermissionRequests } from './lib/domain/pair-permission-requests.ts';
 
 /**
  * Public entry point for Replay diff computation.
@@ -17,6 +18,7 @@ export {
   computeDiffWith,
   deriveDisposition,
   deriveTargetKey,
+  pairPermissionRequests,
   renderHeadline,
 };
 

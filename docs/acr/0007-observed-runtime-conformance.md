@@ -9,16 +9,28 @@ This touches schema.ts of trace and replay, packages/contracts, the trace table 
 
 ## Context
 
-The hook already records `pre_tool_use`, `permission_request`, and `session_end` lines with the runtime `tool_use_id` in the local spool.
+The hook already records `pre_tool_use`, `permission_request`, and `session_end` lines in the local spool, with the runtime `tool_use_id` when the hook input carries one.
 The server accepted only `permission_request` and `session_end`, dropped `toolUseId`, and the spool flush filtered the rest out, so no observation could be joined to an Action.
 The transcript Action Key is derived from the same `tool_use_id`, which makes it the natural join key.
+
+The PermissionRequest hook input carries no `tool_use_id`.
+The `/hooks` help screen of Claude Code mentions `tool_use_id` for this event, but the payloads recorded in the spool did not contain it.
+A `permission_request` therefore arrives with a null `actionKey` and cannot be joined by `tool_use_id`.
+The PreToolUse hook input does carry `tool_use_id`.
 
 ## Decision
 
 - `runtime_observations` gains `tool_use_id`, `hook_decision` (`allow` or `deny`, from a decision already present in the hook input), and a server-derived `action_key` computed with DeriveActionKey from the runtime and `tool_use_id`.
   The event check adds `pre_tool_use`.
   `toolUseId` and `hookDecision` default to null on the wire so hook clients that predate them keep working.
-- `ActionReader.getObservations(actionKeys)` returns the observations joined to Actions by `action_key`.
+- `ActionReader.getObservations(sessionExternalIds)` returns every observation of the given Sessions.
+  `ObservationForReplay` carries a nullable `actionKey` plus `sessionExternalId`, `toolName`, `toolInputHash`, and `occurredAt`.
+  This widens only the read DTO; the `runtime_observations` table and its migrations are unchanged.
+- Permission request pairing is `pairPermissionRequests` in packages/replay/lib/domain, a pure function run at derive time before `deriveDisposition`.
+  A `permission_request` without an `actionKey` pairs with the closest earlier `pre_tool_use` that has the same `sessionExternalId`, `toolName`, and `toolInputHash` and is not paired yet, and inherits its `actionKey`.
+  A `pre_tool_use` at the same instant counts as earlier.
+  Pairing is session-wide, so a `permission_request` can still pair with a `pre_tool_use` just outside the window edge; a `permission_request` without such a `pre_tool_use` stays unjoined and is counted as unpaired only when its `occurredAt` is within the run window.
+  The count is stored as `unpairedPermissionRequests` in the run's `stats` jsonb and returned as `run.unpairedPermissionRequests` by `GET /conformance-findings`.
 - `replay_runs.kind` is added with default `version_diff`; `conformance` marks a run whose baseline is `observed_runtime`, and `baseline_version_id` is null exactly for those runs.
 - Disposition derivation is `deriveDisposition` in packages/replay/lib/domain:
   a runtime block marker in tool_result is `blocked`;
@@ -34,7 +46,9 @@ The transcript Action Key is derived from the same `tool_use_id`, which makes it
 
 ## Alternatives
 
-- Joining by (`sessionExternalId`, `toolName`, `toolInputHash`): the transcript keeps only the redacted input, so the hash cannot be recomputed server side.
+- Joining Actions by (`sessionExternalId`, `toolName`, `toolInputHash`): the transcript keeps only the redacted input, so the hash cannot be recomputed server side.
+  Pairing a `permission_request` with a `pre_tool_use` uses these fields only between two hook observations, whose hashes the hook computed from the same raw input.
+- Storing the paired `actionKey` at ingestion: the `pre_tool_use` may arrive in a later spool flush than its `permission_request`, and the pairing would become a stored fact that a rule change could not revisit.
 - A `DecisionSource` union on the run: only two shapes exist, and a `kind` column with a nullable baseline is the reduced form docs/cutline.md 7 reserved.
 
 ## Consequences

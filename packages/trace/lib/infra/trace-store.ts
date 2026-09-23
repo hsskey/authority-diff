@@ -132,18 +132,24 @@ export function createTraceStore(database: Database): TraceStore {
       return { acceptedCount: returned.length, duplicateCount: batch.length - returned.length };
     },
 
-    async getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]> {
-      if (actionKeys.length === 0) {
+    async getObservations(
+      sessionExternalIds: readonly string[],
+    ): Promise<readonly ObservationForReplay[]> {
+      if (sessionExternalIds.length === 0) {
         return [];
       }
       const rows = await db
         .select({
           actionKey: runtimeObservations.actionKey,
           event: runtimeObservations.event,
+          sessionExternalId: runtimeObservations.sessionExternalId,
+          toolName: runtimeObservations.toolName,
+          toolInputHash: runtimeObservations.toolInputHash,
           hookDecision: runtimeObservations.hookDecision,
+          occurredAt: runtimeObservations.occurredAt,
         })
         .from(runtimeObservations)
-        .where(inArray(runtimeObservations.actionKey, [...actionKeys]));
+        .where(inArray(runtimeObservations.sessionExternalId, [...sessionExternalIds]));
       return rows.map((row) => ObservationForReplaySchema.parse(row));
     },
 

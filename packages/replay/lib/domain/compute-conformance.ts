@@ -1,5 +1,5 @@
 import { invariant } from '@authority/kernel';
-import type { Effect } from '@authority/kernel';
+import type { Effect, IsoTimestamp } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision } from '@authority/policy/schema';
@@ -12,6 +12,7 @@ import type {
 } from '../../schema.ts';
 import { EFFECT_ORDER, sampleActionKeys } from './compute-diff.ts';
 import { deriveDisposition } from './derive-disposition.ts';
+import { pairPermissionRequests } from './pair-permission-requests.ts';
 
 type EvaluateAction = (operations: readonly Operation[]) => Decision | null;
 
@@ -28,6 +29,7 @@ export interface ConformanceResult {
   readonly stats: ReplayStats;
   readonly findings: readonly ConformanceFinding[];
   readonly resultHash: string;
+  readonly unpairedPermissionRequests: number;
 }
 
 /**
@@ -110,7 +112,8 @@ function buildFinding(findingKey: string, entries: readonly FindingEntry[]): Con
 /**
  * Compares the `observed_runtime` Decision Source against a candidate Policy
  * Version. Each Action's Disposition comes from `deriveDisposition` over the
- * observations whose actionKey matches it.
+ * observations whose actionKey matches it, after `pairPermissionRequests` gives
+ * each permission_request the actionKey of its pre_tool_use.
  *
  * ReplayStats follows the ComputeDiff contract with the Disposition Effect as
  * the baseline side: Actions without Operations or with an
@@ -123,6 +126,7 @@ export function computeConformanceWith(
   evaluateCandidate: EvaluateAction,
   actions: readonly ActionForReplay[],
   observations: readonly ObservationForReplay[],
+  window: { readonly from: IsoTimestamp; readonly to: IsoTimestamp },
 ): ConformanceResult {
   const seen = new Set<string>();
   for (const action of actions) {
@@ -130,8 +134,15 @@ export function computeConformanceWith(
     seen.add(action.actionKey);
   }
 
+  const { observations: paired, unpairedPermissionRequests } = pairPermissionRequests(
+    observations,
+    window,
+  );
   const observationsByAction = new Map<string, ObservationForReplay[]>();
-  for (const observation of observations) {
+  for (const observation of paired) {
+    if (observation.actionKey === null) {
+      continue;
+    }
     const bucket = observationsByAction.get(observation.actionKey) ?? [];
     bucket.push(observation);
     observationsByAction.set(observation.actionKey, bucket);
@@ -186,5 +197,5 @@ export function computeConformanceWith(
     .map(([findingKey, entries]) => buildFinding(findingKey, entries))
     .sort((a, b) => (a.findingKey < b.findingKey ? -1 : a.findingKey > b.findingKey ? 1 : 0));
   const resultHash = sha256Hex(canonicalJson({ stats, findings }));
-  return { stats, findings, resultHash };
+  return { stats, findings, resultHash, unpairedPermissionRequests };
 }

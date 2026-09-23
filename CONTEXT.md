@@ -154,7 +154,7 @@ transcript 파일 하나를 server에 적재한 기록 1건. 수용, 중복, 거
 _Avoid_: upload, ingest batch
 
 **Runtime Observation**:
-runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다. tool use 식별자로 Action에 연결한다.
+runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다. tool use 식별자로 Action에 연결한다. tool use 식별자가 없는 permission_request는 같은 Session, 같은 tool, 같은 입력 hash를 가진 직전 pre_tool_use와 짝지어 연결한다.
 _Avoid_: event, log entry
 
 **Gate**:

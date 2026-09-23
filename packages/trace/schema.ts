@@ -192,10 +192,18 @@ export const RuntimeObservationSchema = z.object({
 });
 export type RuntimeObservation = z.infer<typeof RuntimeObservationSchema>;
 
-/** The observation fields replay needs to derive a Disposition for an Action. */
+/**
+ * The observation fields replay needs to derive a Disposition for an Action.
+ * `actionKey` is null for a permission_request, whose hook input carries no
+ * `tool_use_id`; replay pairs it with a pre_tool_use by the remaining fields.
+ */
 export const ObservationForReplaySchema = z.object({
-  actionKey: Sha256Schema,
+  actionKey: Sha256Schema.nullable(),
   event: RuntimeObservationEventSchema,
+  sessionExternalId: z.string(),
+  toolName: z.string().nullable(),
+  toolInputHash: Sha256Schema.nullable(),
   hookDecision: HookDecisionSchema.nullable(),
+  occurredAt: IsoTimestampSchema,
 });
 export type ObservationForReplay = z.infer<typeof ObservationForReplaySchema>;

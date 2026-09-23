@@ -104,12 +104,32 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
       return Promise.resolve({ acceptedCount: inserted, duplicateCount: batch.length - inserted });
     },
 
-    getObservations(actionKeys: readonly string[]): Promise<readonly ObservationForReplay[]> {
-      const wanted = new Set(actionKeys);
+    getObservations(
+      sessionExternalIds: readonly string[],
+    ): Promise<readonly ObservationForReplay[]> {
+      const wanted = new Set(sessionExternalIds);
       return Promise.resolve(
-        [...observations.values()].flatMap(({ actionKey, event, hookDecision }) =>
-          actionKey !== null && wanted.has(actionKey) ? [{ actionKey, event, hookDecision }] : [],
-        ),
+        [...observations.values()]
+          .filter((observation) => wanted.has(observation.sessionExternalId))
+          .map(
+            ({
+              actionKey,
+              event,
+              sessionExternalId,
+              toolName,
+              toolInputHash,
+              hookDecision,
+              occurredAt,
+            }) => ({
+              actionKey,
+              event,
+              sessionExternalId,
+              toolName,
+              toolInputHash,
+              hookDecision,
+              occurredAt,
+            }),
+          ),
       );
     },
 

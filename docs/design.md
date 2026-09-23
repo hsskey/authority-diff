@@ -1768,8 +1768,9 @@ thesis의 이름과 대응: `AuthorityPolicy` = `Policy` + `PolicyDocument`, `Au
   repository가 `WHERE status = 'draft' AND content_hash = :expected`로 갱신합니다.
 - 보존: `replay_changed_actions`는 승인된 review에 묶이지 않은 run이면 90일 뒤 삭제합니다.
   `agent_actions`의 `tool_input_redacted`는 180일 뒤 비우고 operation은 남깁니다.
-- 아직 검증되지 않은 가정: `tool_use_id`가 `PermissionRequest` hook 입력에 들어 있는지 확인하지 못했습니다.
-  그래서 관측과 Action의 결합 key를 (`session_external_id`, `tool_name`, `tool_input_hash`)로 잡았습니다.
+- `PermissionRequest` hook 입력에는 `tool_use_id`가 없음이 확인됐습니다(`PreToolUse` 입력에는 있음).
+  그래서 `permission_request`는 같은 (`session_external_id`, `tool_name`, `tool_input_hash`)의 직전 `pre_tool_use`와 짝지어 그 `action_key`를 이어받습니다.
+  규칙과 근거는 ACR-0007을 봅니다.
 
 ## 26. API contract
 
