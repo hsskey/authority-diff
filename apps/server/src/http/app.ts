@@ -9,6 +9,7 @@ import { createRequestIdMiddleware } from './middleware/request-id.ts';
 import { createRequestLogMiddleware } from './middleware/request-log.ts';
 import { registerHealthRoutes } from './routes/health.ts';
 import { registerReplayModule } from '../modules/replay.wiring.ts';
+import { registerReviewModule } from '../modules/review.wiring.ts';
 
 export function createApp(deps: ServerDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -31,6 +32,13 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
   const trace = composeModules(app, deps.config);
 
   registerReplayModule(app, {
+    trace,
+    database: deps.db,
+    clock: createSystemClock(),
+    idGenerator: deps.idGenerator,
+  });
+
+  registerReviewModule(app, {
     trace,
     database: deps.db,
     clock: createSystemClock(),
