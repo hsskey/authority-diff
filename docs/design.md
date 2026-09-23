@@ -1781,7 +1781,7 @@ REST 하나만 씁니다.
 
 | METHOD path | 목적 | 입력 | 출력 | error | 멱등성 |
 | --- | --- | --- | --- | --- | --- |
-| `POST /trace-imports` | Session 1개의 tool call 묶음 적재 | `{ runtime, runtimeVersion, source, session: { sessionExternalId, workspaceRoot, gitBranch, repoRemotes, hasHookCoverage, startedAt, endedAt }, principalId, mandates: [{ sequence, textRedacted, textHash, occurredAt }], toolCalls: [ToolCall + { mandateSequence, observedOutcome, toolInputHash, isSidechain, occurredAt }] (최대 1,000) }` | `201 { importId, acceptedCount, duplicateCount, rejectedCount }` | `trace.batch_too_large`(413), `validation.invalid_request`(422), `trace.redaction_missing`(422, 서버 재검사에서 secret pattern 발견) | `actionKey`로 자연 멱등. 같은 요청을 다시 보내면 `duplicateCount`만 증가 |
+| `POST /trace-imports` | Session 1개의 tool call 묶음 적재 | `{ runtime, runtimeVersion, source, session: { sessionExternalId, workspaceRoot, gitBranch, repoRemotes, hasHookCoverage, startedAt, endedAt }, principalId, mandates: [{ sequence, textRedacted, textHash, occurredAt }], toolCalls: [ToolCall + { mandateSequence, observedOutcome, toolInputHash, isSidechain, occurredAt }] (최대 1,000) }` | `201 { importId, acceptedCount, duplicateCount, rejectedCount }` | `trace.batch_too_large`(413), `validation.invalid_request`(422), `trace.redaction_missing`(422, 서버 재검사에서 secret pattern 발견), `trace.import_rejected`(422, 저장소가 jsonb/text 내용을 거부) | `actionKey`로 자연 멱등. 같은 요청을 다시 보내면 `duplicateCount`만 증가 |
 | `POST /runtime-observations` | hook 관측 batch 적재 | `{ runtime, runtimeVersion, principalId, observations: [{ sessionExternalId, event, toolName, toolInputHash, occurredAt }] (최대 500) }` | `201 { acceptedCount, duplicateCount }` | `validation.invalid_request` | `observationKey`로 자연 멱등 |
 
 ### 26.2 조회와 편집(role `admin`)
