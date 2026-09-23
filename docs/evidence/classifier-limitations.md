@@ -11,9 +11,11 @@ The named remote in front of it is then not resolved, so the real Remote Key is 
 On the frozen corpus 5 fetch Operations from `ls-remote` carry this key, and one `push` command has the same shape.
 The Activity Overview remote host table shows the fetches under a host `refs`.
 
-The miss is conservative.
-The refspec key matches no `trustedRemotes` pattern, so the Target falls to `unknown_remote`, and a Rule that allows fetch or push on `trusted_remote` does not allow these Actions.
-No Effect moves toward allow; the Target summary and the overview host table are wrong for these rows.
+The miss is conservative for both shapes, by different Zones.
+For `git ls-remote origin refs/heads/main` the fetch Target has a null branch and the refspec Remote Key matches no `trustedRemotes` pattern, so the Target falls to `unknown_remote`.
+For `git push origin refs/heads/main` the refspec also fills the branch as `main`, which matches `protectedBranches`; that condition resolves ahead of the `unknown_remote` fallback, so the push Target lands in `protected`.
+Both Actions resolve to `ask` under the default template, and a Rule that allows fetch or push on `trusted_remote` allows neither; no Effect moves toward allow.
+The Target summary and the overview host table are still wrong for these rows.
 
 The classifier stays on 0.2.2.
 Changing the operand rule changes Remote Keys and therefore `resultHash` values, so a fix goes with a classifier version bump and a re-measurement of the published figures.
