@@ -52,9 +52,10 @@ export function renderHeadline(group: HeadlineInput, targetCount: number): strin
   if (group.fromZone === group.toZone) {
     return sentence;
   }
+  const toZoneWord = ZONE_WORD[group.toZone];
   return (
     `${sentence} 기준 정책에서는 ${ZONE_WORD[group.fromZone]}이었고 ` +
-    `변경안에서는 ${ZONE_WORD[group.toZone]}으로 분류됩니다.`
+    `변경안에서는 ${toZoneWord}${directionalParticle(toZoneWord)} 분류됩니다.`
   );
 }
 

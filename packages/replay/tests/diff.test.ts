@@ -694,6 +694,23 @@ describe('headline', () => {
     );
   });
 
+  test('uses 로 after 호스트 when the Zone changes to host', () => {
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario([
+      {
+        action: action(hex('a'), '2026-01-02T03:04:05.000Z', [
+          operation(0, 'fetch', { kind: 'host', host: 'example.invalid', scheme: 'https' }),
+        ]),
+        baseline: decision('ask', [opDecision(0, 'ask', 'credentials')]),
+        candidate: decision('allow', [opDecision(0, 'allow', 'host')]),
+      },
+    ]);
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+    expect(result.groups[0]?.headline).toBe(
+      "example.invalid 1곳으로의 가져오기 1건이 '확인 필요'에서 '허용'으로 바뀝니다. " +
+        '기준 정책에서는 자격 증명이었고 변경안에서는 호스트로 분류됩니다.',
+    );
+  });
+
   test('never contains the command fragment or ruleId', () => {
     const ops = [operation(0, 'push', remoteTarget, { fragment: 'git push --force origin main' })];
     const { actions, evaluateBaseline, evaluateCandidate } = scenario([
