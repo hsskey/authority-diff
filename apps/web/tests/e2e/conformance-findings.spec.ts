@@ -54,6 +54,6 @@ test('shows the empty screen when no conformance run has completed', async ({ pa
 
   await page.goto('/conformance');
 
-  await expect(page.getByRole('heading', { name: 'Conformance' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '적합성' })).toBeVisible();
   await expect(page.getByText('No observations compared yet')).toBeVisible();
 });

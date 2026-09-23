@@ -12,6 +12,17 @@ type Verdict = ReviewDiffGroupResponse['verdict'];
 type NonNullVerdict = Exclude<Verdict, null>;
 type GateBlocker = ChangeReviewResponse['gate']['blockers'][number];
 type Severity = ReviewDiffGroupResponse['severity'];
+type Effect = ReviewDiffGroupResponse['fromEffect'];
+
+const EFFECT_LABEL: Record<Effect, string> = {
+  allow: '허용',
+  ask: '확인 필요',
+  deny: '차단',
+};
+
+export function effectLabel(effect: Effect): string {
+  return EFFECT_LABEL[effect];
+}
 
 export const VERDICT_OPTIONS: readonly NonNullVerdict[] = ['expected', 'investigate', 'unexpected'];
 

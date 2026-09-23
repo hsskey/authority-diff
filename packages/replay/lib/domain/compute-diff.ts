@@ -67,7 +67,7 @@ const CAPABILITY_WORD: Record<Capability, string> = {
   fetch: '가져오기',
   send: '전송',
   commit: 'commit',
-  push: '저장소로의 push',
+  push: 'push',
   rewrite: '이력 재작성',
   deploy: '배포',
 };
@@ -89,6 +89,13 @@ const EFFECT_WORD: Record<Effect, string> = {
   deny: '차단',
 };
 
+/** "으로" after a batchim-final syllable, "로" otherwise (e.g. 허용으로, 차단으로, 필요로). */
+function directionalParticle(word: string): '으로' | '로' {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
+  return hasBatchim ? '으로' : '로';
+}
+
 /** The Headline is rendered from a group but is excluded from resultHash. */
 type HeadlineInput = Omit<DiffGroup, 'headline'>;
 
@@ -102,10 +109,11 @@ type HeadlineInput = Omit<DiffGroup, 'headline'>;
 export function renderHeadline(group: HeadlineInput): string {
   const top = group.targetSummary[0];
   invariant(top !== undefined, 'a Diff Group always has at least one Target Summary entry');
+  const toEffectWord = EFFECT_WORD[group.toEffect];
   const sentence =
     `${top.key} 등 ${group.targetSummary.length}곳으로의 ` +
     `${CAPABILITY_WORD[group.capability]} ${group.actionCount}건이 ` +
-    `'${EFFECT_WORD[group.fromEffect]}'에서 '${EFFECT_WORD[group.toEffect]}'로 바뀝니다.`;
+    `'${EFFECT_WORD[group.fromEffect]}'에서 '${toEffectWord}'${directionalParticle(toEffectWord)} 바뀝니다.`;
   if (group.fromZone === group.toZone) {
     return sentence;
   }
