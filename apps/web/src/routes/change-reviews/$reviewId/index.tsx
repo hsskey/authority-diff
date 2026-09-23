@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
@@ -24,6 +24,7 @@ const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
 
 function ChangeReviewPage() {
   const { reviewId } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const reviewQuery = useQuery({
     queryKey: ['change-review', reviewId],
@@ -37,7 +38,8 @@ function ChangeReviewPage() {
     refetchInterval: (query) => (query.state.data?.status === 'computing' ? 3000 : false),
   });
 
-  const isComputing = reviewQuery.data?.status === 'computing';
+  const reviewStatus = reviewQuery.data?.status;
+  const isComputing = reviewStatus === 'computing';
 
   const groupsQuery = useQuery({
     queryKey: ['change-review-diff-groups', reviewId],
@@ -53,6 +55,14 @@ function ChangeReviewPage() {
     },
     refetchInterval: isComputing ? 3000 : false,
   });
+
+  useEffect(() => {
+    if (reviewStatus && reviewStatus !== 'computing') {
+      void queryClient.invalidateQueries({
+        queryKey: ['change-review-diff-groups', reviewId],
+      });
+    }
+  }, [reviewStatus, reviewId, queryClient]);
 
   return (
     <section>

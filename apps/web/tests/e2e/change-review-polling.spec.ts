@@ -106,3 +106,38 @@ test('the page polls while computing and enables controls once the review is rea
   await expect(page.getByLabel('execute 판정')).toBeEnabled({ timeout: 10_000 });
   await expect(page.getByText('판정하지 않은 group 1개').first()).toBeVisible();
 });
+
+test('once ready, diff-groups are fetched even though they were empty while computing', async ({
+  page,
+}) => {
+  let reviewCalls = 0;
+  let ready = false;
+
+  await page.route(`**/api/v1/change-reviews/${REVIEW_ID}`, (route) => {
+    reviewCalls += 1;
+    const computing = reviewCalls <= 2;
+    if (!computing) {
+      ready = true;
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(buildReview(computing)),
+    });
+  });
+  await page.route(`**/api/v1/change-reviews/${REVIEW_ID}/diff-groups*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: ready ? [wideningGroup()] : [], nextCursor: null }),
+    }),
+  );
+
+  await page.goto(`/change-reviews/${REVIEW_ID}`);
+
+  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await expect(page.getByText('넓어진 group이 없습니다.')).toBeVisible();
+
+  await expect(page.getByLabel('execute 판정')).toBeEnabled({ timeout: 10_000 });
+  await expect(page.getByText('넓어진 group이 없습니다.')).toHaveCount(0);
+});
