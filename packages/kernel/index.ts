@@ -8,6 +8,7 @@ export {
 } from './lib/domain/schemas.ts';
 export type { Effect, IsoTimestamp } from './lib/domain/schemas.ts';
 export { invariant, assertNever } from './lib/domain/errors.ts';
+export { homeToTilde } from './lib/domain/home-path.ts';
 export type { AppError } from './lib/domain/errors.ts';
 export type {
   Clock,

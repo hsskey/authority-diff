@@ -7,7 +7,7 @@ beforeAll(async () => {
   classify = await createClassifier();
 });
 
-function bash(command: string): ToolCall {
+function bash(command: string, over: Partial<ToolCall> = {}): ToolCall {
   return {
     toolUseId: 'synthetic',
     toolName: 'Bash',
@@ -16,6 +16,7 @@ function bash(command: string): ToolCall {
     workspaceRoot: '/work/repo',
     gitBranch: 'main',
     repoRemotes: { origin: 'git@github.com:acme/toolkit.git' },
+    ...over,
   };
 }
 
@@ -131,6 +132,74 @@ describe('git remote resolution outside the session workspace', () => {
     const op = remoteOp('git -C /tmp/other push https://github.com/acme/other.git main');
     expect(op?.target).toMatchObject({ remoteName: null, remoteKey: 'github.com/acme/other' });
     expect(op?.signals).toEqual([]);
+  });
+});
+
+describe('git repository operands that are local paths', () => {
+  function fetchOp(command: string): Operation | undefined {
+    return classify(bash(command)).find((o) => o.program === 'git');
+  }
+
+  test.each([
+    ['git fetch /tmp/other main', 'fetch', '/tmp/other', false],
+    ['git fetch ../sibling', 'fetch', '/work/sibling', false],
+    ['git fetch ./vendor/lib feature', 'fetch', '/work/repo/vendor/lib', true],
+    ['git pull file:///tmp/other main', 'fetch', '/tmp/other', false],
+    ['git clone ~/src/other dest', 'fetch', '~/src/other', false],
+    ['git ls-remote . refs/heads/main', 'fetch', '/work/repo', true],
+    ['git push /tmp/mirror main', 'push', '/tmp/mirror', false],
+  ])('%s targets the path', (command, capability, path, isInsideWorkspace) => {
+    const op = fetchOp(command);
+    expect(op?.capability).toBe(capability);
+    expect(op?.target).toEqual({ kind: 'path', path, isInsideWorkspace });
+    expect(op?.analyzability).toBe('full');
+    expect(op?.signals).toEqual([]);
+  });
+
+  test.each([
+    'git fetch upstream main',
+    'git fetch origin',
+    'git clone https://github.com/acme/other.git',
+  ])('%s stays a vcs_remote', (command) => {
+    expect(fetchOp(command)?.target.kind).toBe('vcs_remote');
+  });
+
+  test('an expanded repository operand is not read as a path', () => {
+    const op = fetchOp('git fetch "$MIRROR" main');
+    expect(op?.target.kind).toBe('vcs_remote');
+  });
+});
+
+describe('remote resolution when the workspace root is recorded with ~', () => {
+  const home = { workspaceRoot: '~/work/repo' };
+
+  function remoteOp(command: string): Operation | undefined {
+    return classify(bash(command, home)).find((o) => o.target.kind === 'vcs_remote');
+  }
+
+  test.each([
+    'cd /Users/alice/work/repo && git fetch origin',
+    'cd /home/alice/work/repo/packages && git push origin main',
+    'git -C /Users/alice/work/repo/packages fetch origin',
+    'cd ~/work/repo/packages && gh pr view 1',
+    'cd /root/work/repo && gh pr view 1',
+  ])('%s resolves the session remote', (command) => {
+    const op = remoteOp(command);
+    expect(op?.target).toMatchObject({
+      remoteName: 'origin',
+      remoteKey: 'github.com/acme/toolkit',
+    });
+    expect(op?.signals).not.toContain('remote_dir_mismatch');
+  });
+
+  test.each([
+    'cd /Users/alice/work/other && git fetch origin',
+    'cd /Users/alice/work && gh pr view 1',
+    'git -C /opt/work/repo fetch origin',
+  ])('%s keeps only the remote name', (command) => {
+    const op = remoteOp(command);
+    expect(op?.target).toMatchObject({ remoteName: 'origin', remoteKey: null });
+    expect(op?.signals).toContain('remote_dir_mismatch');
   });
 });
 

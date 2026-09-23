@@ -292,6 +292,9 @@ importers:
 
   packages/action:
     dependencies:
+      '@authority/kernel':
+        specifier: workspace:*
+        version: link:../kernel
       tree-sitter-bash:
         specifier: 0.25.1
         version: 0.25.1

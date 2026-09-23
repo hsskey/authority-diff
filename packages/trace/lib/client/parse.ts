@@ -1,3 +1,4 @@
+import { homeToTilde } from '@authority/kernel';
 import { canonicalJson } from '@authority/kernel/hash';
 import { ParsedSessionSchema, type ObservedOutcome, type ParseTranscript } from '../../schema.ts';
 import { redactStructuredInput, redactText } from './redact.ts';
@@ -9,10 +10,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function nonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
-}
-
-function homeToTilde(path: string): string {
-  return path.replace(/^\/(?:Users|home)\/[^/]+/, '~').replace(/^\/root(?=\/|$)/, '~');
 }
 
 const TIMESTAMP_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/;
