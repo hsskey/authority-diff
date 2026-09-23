@@ -93,33 +93,60 @@ architecture:
 
 ## 5. MVP user journey
 
+journey는 "import → 활동 파악 → 첫 정책(draft) → 도입 preview → 검토·채택 → [Authority Diff 밖] managed settings 반영 → 변경 review → conformance" 순서입니다.
+최초 도입 review의 근거는 ADR-0010, 측정은 `docs/evidence/adoption-preview.md`입니다.
+
 1. `authority import ~/.claude/projects`를 실행합니다.
    CLI가 transcript를 parse하고 secret literal을 치환한 뒤 local server로 보냅니다.
    server가 classify해서 저장합니다.
-2. Activity Shape 화면에서 분석한 Action 수, Capability 분포, baseline 정책 기준 Zone 분포, `full` / `partial` / `none` 비율을 봅니다.
+2. Activity Overview 화면(`/`)에서 Policy 없이 가져온 Action 수, Session 수, Capability 분포, Target Kind 분포, `full` / `partial` / `none` 비율, 상위 program을 봅니다.
+   Effect와 Zone은 정책이 있어야 계산되므로 여기에 없습니다.
    추이 chart와 개인별 통계는 없습니다.
-3. baseline version에서 draft를 만들고 JSON을 고칩니다.
+3. "첫 조직 정책 만들기"로 기본 template의 draft version 1을 만들고 JSON(Rule과 Environment Profile)을 고쳐 저장하고 검증합니다.
+   accepted version은 아직 없습니다.
+   조직의 Policy는 하나이고 두 번째 Policy 생성은 거부됩니다.
+4. draft에서 "최초 도입 검토 만들기"를 누릅니다.
+   server가 accepted version이 없는 것을 보고 kind `adoption`의 Change Review와 baseline 없는 `adoption` Replay Run을 만듭니다.
+   화면 상단에서 평가한 Action 수와 허용 / 확인 필요 / 차단 건수와 비율을 봅니다.
+   이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.
+5. 확인 필요 group 표와 차단 group 표를 봅니다.
+   group마다 평문 한 문장, program 구성(Program Summary), target 상위 목록, 건수가 나옵니다.
+   Adoption Group은 `[effect, capability, zone]` 단위라 Policy가 내린 판단 하나와 같고, severity는 없습니다.
+6. group마다 `expected`(의도한 제한), `investigate`(보류), `unexpected`(정책 수정 필요)를 기록합니다.
+   ask와 deny group 전부가 대상이고 하나라도 `expected`가 아니면 채택 버튼이 잠깁니다.
+7. 전부 `expected`가 되면 "최초 정책 채택"을 누릅니다.
+   version 1이 `accepted`가 되고 baseline hash가 null인 Decision Record가 남습니다.
+   Evidence report에는 정책 `contentHash`, 기간, 분석 규모, 허용 / 확인 필요 / 차단 건수와 비율, group 표와 Verdict, Decision Record의 sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
+8. [Authority Diff 밖] managed settings 반영.
+   `accepted`는 검토 기록이지 배포나 집행이 아닙니다.
+   runtime 설정에 반영하는 일은 Authority Diff 밖에서 하고, Authority Diff는 반영 여부를 저장하지 않습니다.
+9. accepted version 1에서 draft version 2를 만들고 JSON을 고칩니다.
    예: `push` + `trusted_remote`를 `ask`에서 `allow`로, `trustedRemotes`에 조직 저장소 pattern 추가.
-4. Change Review를 만듭니다.
-   draft가 고정되고 server가 같은 Action 집합에 두 version을 대입합니다.
-5. 화면 상단에서 "변경된 Action 47건, Widening group 6개, critical 1개" 같은 요약을 봅니다.
-   group마다 평문 한 문장, target 상위 목록, 건수가 나옵니다.
-6. critical group을 엽니다.
-   `trustedRemotes = github.com/**`라는 실수로 조직 밖 저장소로의 실제 과거 push가 `ask`에서 `allow`로 바뀐 것을 저장소 이름과 함께 확인합니다.
-   이 장면의 Action이 실제 기록인지 `synthetic` fixture인지를 화면과 Evidence report가 표시합니다.
-7. group마다 `expected`, `investigate`, `unexpected`를 기록합니다.
-   판정이 없거나 `investigate`, `unexpected`인 Widening group이 남아 있으면 수락 버튼이 잠깁니다.
-8. `unexpected`가 나왔으므로 반려하고 draft를 고쳐 새 review를 만들고 전부 `expected`가 된 뒤 "정책 변경 수락"을 누릅니다.
-9. Evidence report를 내려받습니다.
-   두 version의 `contentHash`, 기간, 분석한 Action 수와 `none` 비율, transition 표, Action Effect가 그대로일 때의 operation-level widening 표, group과 Verdict, 검토자와 시각, Decision Record의 audit chain sequence와 hash, 보고서 생성 시점 audit chain tail의 sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
+10. "변경 검토 만들기"를 누릅니다.
+    server가 accepted version이 있는 것을 보고 kind `change`의 Change Review와 `version_diff` Replay Run을 만듭니다.
+    draft가 고정되고 같은 Action 집합에 두 version을 대입합니다.
+11. 화면 상단에서 "변경된 Action 47건, Widening group 6개, critical 1개" 같은 요약을 봅니다.
+    group마다 평문 한 문장, target 상위 목록, 건수가 나옵니다.
+12. critical group을 엽니다.
+    `trustedRemotes = github.com/**`라는 실수로 조직 밖 저장소로의 실제 과거 fetch가 `ask`에서 `allow`로 바뀐 것을 저장소 이름과 함께 확인합니다.
+    이 장면의 Action이 실제 기록인지 `synthetic` fixture인지를 화면과 Evidence report가 표시합니다.
+13. Widening group마다 `expected`, `investigate`, `unexpected`를 기록합니다.
+    판정이 없거나 `investigate`, `unexpected`인 Widening group이 남아 있으면 수락 버튼이 잠깁니다.
+14. `unexpected`가 나왔으므로 반려하고 draft를 고쳐 새 review를 만들고 전부 `expected`가 된 뒤 "정책 변경 수락"을 누릅니다.
+15. Evidence report를 내려받습니다.
+    두 version의 `contentHash`, 기간, 분석한 Action 수와 `none` 비율, transition 표, Action Effect가 그대로일 때의 operation-level widening 표, group과 Verdict, 검토자와 시각, Decision Record의 audit chain sequence와 hash, 보고서 생성 시점 audit chain tail의 sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
+16. hook 관측(`install-hooks`, `spool-flush`)이 쌓이면 conformance 화면(`/conformance`)에서 Disposition과 accepted version의 Effect가 어긋난 finding을 봅니다.
+    이 화면만이 runtime이 실제로 어떻게 동작했는지를 말합니다.
 
 > 이 기록은 정책 변경을 위 과거 기록에 비추어 검토했다는 사실을 남깁니다.
 > Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.
 
-용어는 "정책 변경 수락(Accept Policy Change)"과 "정책 변경 반려(Reject Policy Change)"로 정합니다.
+용어는 "정책 변경 수락(Accept Policy Change)"과 "정책 변경 반려(Reject Policy Change)", 최초 도입 review에서는 "최초 정책 채택"과 "최초 정책 반려"로 정합니다.
 "Approve Review"는 review 자체를 승인한다는 뜻으로 읽히고 "Mark Reviewed"는 수락과 반려를 구분하지 못합니다.
 Policy Version 상태는 `draft -> in_review -> accepted | rejected`, 철회는 `in_review -> draft`입니다.
-Policy의 baseline은 가장 최근 `accepted` version입니다.
+첫 version도 `draft`로 시작하고 `accepted`는 review의 결정으로만 생깁니다.
+Policy의 baseline은 가장 최근 `accepted` version이고, 없으면 Change Review 대신 최초 도입 review가 만들어집니다.
+`accepted`를 active, applied, enforced로 쓰지 않습니다.
 
 ## 6. MVP architecture
 
@@ -132,7 +159,7 @@ flowchart LR
         TR --> LP["tools/local-pipeline: measure, replay-local"]
     end
     subgraph SRV["local server (docker compose)"]
-        WEB["apps/web: 화면 3개"] --> HTTP["apps/server: HTTP + process 안 replay 실행"]
+        WEB["apps/web: Activity Overview, Policy Version, Change Review, Conformance"] --> HTTP["apps/server: HTTP + process 안 replay 실행"]
         HTTP --> PKG["packages: trace, policy, replay, review"]
         PKG --> PG[("PostgreSQL 16")]
     end
@@ -174,6 +201,8 @@ flowchart BT
 | HTTP | `@hono/zod-openapi` | Hono + `contracts`의 Zod schema 검증 | 생성물을 하나 줄임 |
 | integration test DB | Testcontainers | docker compose의 PostgreSQL에 test 전용 database, run마다 global setup이 한 번 migration | 의존성 하나 제거 |
 | 관측 | metric endpoint, audit | structured log만 | V1에서 지키는 invariant 없음 |
+| 첫 Policy Version | 첫 version이 곧 비교 기준(활성 version) | 첫 version은 `draft`. accepted version이 없으면 kind `adoption`의 최초 도입 review를 거쳐 `accepted`가 된다. `accepted`는 배포나 집행 상태가 아니다 | transcript만으로는 과거 runtime의 승인 여부를 알 수 없어 baseline을 추정하지 않는다(ADR-0010) |
+| Policy 수 | 조직 안에 여러 Policy | 조직 Policy 하나. 두 번째 생성은 `policy.organization_policy_exists`로 거부하고 여러 개가 있어도 하나를 고르지 않는다 | 단일 사용자, 자동 선택이 만드는 모호함 제거 |
 
 계약 변경(설계서 24, 25장 대비):
 
@@ -188,8 +217,12 @@ flowchart BT
 - `Decision`: `policyVersionId` 제거. 순수 평가 함수는 문서만 받는다.
 - `DiffGroup`: `id` 대신 `groupKey`. `zone` 대신 `fromZone`, `toZone`.
   `principalCount`, `mandateDependentCount`, `decidingRuleId` 제거.
-- `ReplayRun`: `kind`와 `DecisionSource` 제거. 저장 계약은 `replay/schema.ts`가 소유한다: `ReplayRun`, `StoredDiffGroup`(`DiffGroup` + `replayRunId`), `StoredChangedAction`(`replayRunId`, `actionKey`, `groupKey`, `fromEffect`, `toEffect`).
-- `PolicyVersionStatus`: `draft`, `in_review`, `accepted`, `rejected`.
+- `ReplayRun`: `DecisionSource` union 제거. `kind`는 `version_diff`, `conformance`, `adoption`의 discriminated union이고(ADR-0010) `adoption`은 `baselineVersionId`가 null, stats는 `AdoptionStats`(totalActions, evaluatedActions, excludedActions, effectCounts, analyzability, cells)다.
+  저장 계약은 `replay/schema.ts`가 소유한다: `ReplayRun`, `StoredDiffGroup`(`DiffGroup` + `replayRunId`), `StoredChangedAction`(`replayRunId`, `actionKey`, `groupKey`, `fromEffect`, `toEffect`), `StoredAdoptionGroup`, `StoredAdoptionAssignment`(`replayRunId`, `actionKey`, `groupKey`, `effect`).
+- `AdoptionGroup`(ADR-0010): signature `[effect, capability, zone]`, `groupKey`는 그 signature의 sha256. `program`은 항상 null이고 `programSummary`(상위 10개)와 `distinctProgramCount`가 group 안의 근거다. severity 없음. `allow` Action은 group이 없다. 정렬은 deny → ask → `actionCount` 내림차순 → `sessionCount` 내림차순 → `groupKey`.
+  headline template은 `<zone>에서의 <capability> N건이 이 정책에서 '확인 필요' 대상이 됩니다.` / `… '차단' 대상이 됩니다.`
+- `ActivityOverview`(`GET /activity-overview?windowDays`, trace module): `sessionCount`, `actionCount`(중복 제거), `evaluableActionCount`, `capabilityCounts`와 `targetKindCounts`(Operation 기준), `analyzability`(Action 기준), `topPrograms`, `topRemoteKeys`(web은 host만 표시). Effect와 Zone 없음.
+- `PolicyVersionStatus`: `draft`, `in_review`, `accepted`, `rejected`. `createPolicy`는 version 1을 `draft`로 만들고 `getBaseline`은 accepted가 없으면 `policy.no_accepted_version`이다. `POST /policies`는 `201 CreatePolicyResponse { policy, initialVersion }`을 돌려준다.
 - `PolicyRule.mandateException`: schemaVersion 1에서 제거합니다.
   V1 문서에는 V1이 평가하는 개념만 들어갑니다.
   자연어 Mandate 조건이 필요해지면 명시적인 schemaVersion 2 migration으로 추가합니다.
@@ -197,7 +230,8 @@ flowchart BT
   `decidingRule` 선택은 ruleId 사전순만 씁니다(설계서 13.5의 "Mandate Exception이 없는 rule 우선" 조항 제거).
 - `ChangeReview.status`: `computing`, `ready`, `accepted`, `rejected`, `failed`.
   probe와 stale 관련 field 제거.
-- 신규 `review_decisions`(insert와 select만, trigger가 UPDATE, DELETE, TRUNCATE 차단): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`, `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`에 audit hash chain column `sequence`, `prevHash`, `hash`를 더한다(계약은 `docs/acr/0006-review-decision-hash-chain.md`).
+- `ChangeReview.kind`: `change` | `adoption`. 요청은 kind를 받지 않고 server가 accepted version 유무로 정한다. `baselineVersionId`는 `adoption`일 때만 null(migration 0009의 CHECK). 한 Policy에 열린 review는 kind와 무관하게 1개.
+- 신규 `review_decisions`(insert와 select만, trigger가 UPDATE, DELETE, TRUNCATE 차단): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`(kind `adoption`이면 null), `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`에 audit hash chain column `sequence`, `prevHash`, `hash`를 더한다(계약은 `docs/acr/0006-review-decision-hash-chain.md`).
 - gate blocker: `replay_incomplete`, `replay_failed`, `widening_unreviewed`, `widening_investigate`, `widening_unexpected` 다섯 개. 최초 도입 review(kind `adoption`, ADR-0010)는 `widening_*` 대신 `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`로 닫힌다.
 - `kernel` port: `Clock`, `IdGenerator`, `Logger`, `TransactionRunner`만 남깁니다.
 
@@ -219,6 +253,8 @@ headline 예:
 diff 검토 판정 전에는 두 계약을 조정할 수 있습니다. Target 종류별 `targetSummary.key` 생성 규칙과
 Diff Group signature에 `program`을 넣을지 여부입니다. 이 둘은 판정 전 변경에 ACR이 필요 없지만,
 PR 본문에 변경 전후 group 수와 이유를 적습니다. 판정을 통과하면 다른 `schema.ts` 계약과 같이 ACR 대상입니다.
+Adoption Group signature는 `program`을 넣지 않기로 확정했습니다(ADR-0010, `docs/evidence/adoption-preview.md`).
+Diff Group signature는 그대로 `program`을 포함하며, 두 grouping을 통일하는 조건은 ADR-0010의 reversal trigger에 있습니다.
 
 ## 7. Target architecture
 
@@ -654,3 +690,23 @@ Tier 3 유지(일요일 이후 또는 영구): calibration platform, LLM baselin
 
 수락(Accept)의 의미는 5장 그대로다. 관측을 수집해도 V1은 runtime 동작을 예측한다고 말하지 않는다(1장 R3).
 ````
+
+## 18. 개정 2: 최초 도입 review
+
+첫 정책을 검토하고 채택하는 lifecycle을 V1에 넣는다.
+5장과 6장은 본문을 고쳤고, 4장 Tier 표와 14장의 "Activity Shape"는 이 개정으로 "Activity Overview"로 읽는다(`CONTEXT.md`).
+근거는 ADR-0010, 측정은 `docs/evidence/adoption-preview.md`.
+
+V1 범위에 추가:
+- `adoption` Replay Run: baseline 없이 candidate Policy Version 하나를 과거 Action에 대입하는 단일 평가. Adoption Group은 `[effect, capability, zone]` 단위이고 severity가 없다. table `replay_adoption_groups`, `replay_adoption_assignments`(migration 0008).
+- Policy lifecycle: version 1은 `draft`, `getBaseline`은 `accepted`만, 조직 Policy는 하나.
+- Change Review `kind`(`change` | `adoption`), adoption gate blocker 3개, adoption Evidence Report(migration 0009).
+- Activity Overview(`GET /activity-overview`)와 `/` 화면의 상태 3개(Policy 없음 / draft만 있음 / accepted 있음). Policy가 2개 이상이면 지원하지 않는 상태로 표시하고 자동 선택하지 않는다.
+
+지키는 invariant:
+- Initial Adoption, Policy Change(`version_diff`), Conformance 세 흐름을 섞지 않는다. adoption은 과거 runtime의 승인 여부를 추정하지 않는다.
+- transcript의 observedOutcome을 Effect로 바꾸지 않는다. `historical_activity` Decision Source를 두지 않는다. Policy가 2개 이상일 때 하나를 고르지 않는다. Adoption Group에 widening용 severity를 재사용하지 않는다.
+- `accepted`는 applied, active, enforced가 아니다. lifecycle은 "accepted → [Authority Diff 밖] managed settings 반영 → runtime 관측 → conformance"로 그린다.
+- 기존 `version_diff`·`conformance`의 `resultHash`, Decision Record hash, main에 병합된 migration 파일, 평가·Zone·classifier 결과는 그대로다.
+
+수락(Accept)의 의미는 5장 그대로다. 최초 도입 review의 "최초 정책 채택"도 검토 기록이며 runtime 동작을 예측한다고 말하지 않는다(1장 R3).

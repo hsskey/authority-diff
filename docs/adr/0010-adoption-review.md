@@ -1,9 +1,10 @@
 # ADR-0010 최초 도입 review는 baseline 없는 단일 평가이고 Adoption Group은 정책 판단 단위다
 
-Status: accepted (V1). 출처: docs/cutline.md 5·6장과 최초 도입(Initial Adoption) review 계약. replay core에서 확정한 결정의 기록이며, policy lifecycle과 adoption review(gate, decision record)의 결정은 그 변경에서 이 문서에 덧붙인다.
+Status: accepted (V1). 출처: docs/cutline.md 5·6·18장과 최초 도입(Initial Adoption) review 계약. replay core, policy lifecycle, adoption review(gate, decision record), Activity Overview에 걸쳐 확정한 결정을 한 문서에 모았다. 측정은 docs/evidence/adoption-preview.md.
 
 - Context:
   V1의 첫 Policy Version은 accepted 상태로 seed됐고 Change Review는 accepted baseline과 candidate를 비교하는 `version_diff`만 있었다.
+  V1이 증명하려던 질문이 "이 정책 변경을 적용하면 어떤 과거 Action의 Effect가 달라지는가"였고, 그 비교에는 baseline이 있어야 했기 때문이다. Gate 2와 Gate 3는 `seedAcceptedPolicy`가 만든 accepted version 1 위에서 돌았고, 첫 정책을 어떻게 검토하고 채택하는지는 정의하지 않았다.
   조직이 처음 정책을 도입할 때는 baseline이 없고, 과거 runtime이 각 Action을 실제로 승인했는지도 transcript만으로는 알 수 없다.
   그래서 "과거에 실제로 있었던 Agent 행동에 이 최초 정책을 적용하면 앞으로 각각 allow/ask/deny 중 무엇이 되는가"를 보여 주는 별도의 Replay Run kind가 필요했다.
   이 preview에서 사람이 판정하는 단위(Adoption Group)의 signature도 정해야 했다.
@@ -23,6 +24,7 @@ Status: accepted (V1). 출처: docs/cutline.md 5·6장과 최초 도입(Initial 
   조직의 Policy는 하나다. policy module의 `createPolicy`는 Policy가 이미 있으면 `policy.organization_policy_exists`로 거부하고, 여러 개가 있어도 그중 하나를 고르지 않는다.
   이 invariant는 application 계층(policy module)에 있다. 저장소(`createPolicyRepository`)는 여러 Policy row를 허용하는데, integration test가 공유 database에서 test마다 Policy 하나로 격리하기 때문이다. database 제약은 그 격리 방식을 바꾼 뒤에 둔다.
   `seedAcceptedPolicy`는 legacy·test 전용이다. 그 경로로 seed된 accepted version 1 row는 그대로 유효하다.
+  `accepted`는 검토 결과이지 배포나 집행 상태가 아니다. lifecycle은 `draft → in_review → accepted → [Authority Diff 밖] managed settings 반영 → runtime 관측 → conformance`로 그린다. 반영은 조직의 설정 배포 도구가 하고 Authority Diff는 반영 여부를 저장하지 않는다. accepted를 active, applied, enforced로 쓰지 않는다.
 - Decision (adoption review):
   Change Review에 `kind`(`change` | `adoption`)를 저장하고 `baselineVersionId`는 `adoption`일 때만 null이다(migration 0009의 CHECK).
   요청은 kind를 받지 않는다. server가 derive한다: accepted version이 없으면 `adoption`(adoption run), 있으면 `change`(version_diff run). candidate가 accepted 자체이면 transition 거부로 409다.
@@ -30,6 +32,9 @@ Status: accepted (V1). 출처: docs/cutline.md 5·6장과 최초 도입(Initial 
   adoption gate는 모든 ask group과 deny group에 verdict를 요구한다. `expected`만 통과하고 미판정, `investigate`, `unexpected`는 각각 `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`로 닫힌다. change kind의 `widening_*` 계산은 그대로다.
   adoption accept는 candidate를 accepted로 만들고, Decision Record의 `baselineContentHash`는 null이다. audit hash chain은 그 null을 그대로 직렬화하므로 기존 record 검증은 바뀌지 않는다.
   adoption Evidence Report는 정책 hash, window, 분석 규모, allow/ask/deny 건수와 비율, 확인 필요 group 표, 차단 group 표, verdict, 결정 기록, Decision Record hash, 고정 고지와 "이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다"를 담는다.
+- Decision (Activity Overview):
+  Policy가 없는 화면은 가져온 Action만으로 Activity Overview(Session 수, Action 수, Capability와 Target Kind 분포, Analyzability, 상위 program, Remote Key host)를 보여 준다. Environment Profile이 없으므로 Effect와 Zone은 내지 않는다.
+  `/`는 Policy 없음, draft만 있음, accepted 있음의 세 상태를 가진다. Policy가 2개 이상이면 지원하지 않는 상태로 표시하고 자동으로 고르지 않는다.
 - Alternatives:
   signature A. group마다 program이 하나라 가장 구체적이지만 같은 Rule 판단이 최대 117개 group으로 흩어지고, "정책 수정 필요" verdict를 Policy에 반영할 단위(Rule 또는 Zone 설정)와 group이 어긋난다.
   observedOutcome을 baseline으로 쓰는 `historical_activity` Decision Source. 승인 여부를 복원하지 못한 값으로 전이를 만들게 된다.
@@ -38,6 +43,7 @@ Status: accepted (V1). 출처: docs/cutline.md 5·6장과 최초 도입(Initial 
   Change Review signature를 adoption에 맞춰 program을 빼는 것. Change Review evidence가 아직 적어 판단할 근거가 없다.
 - Consequences:
   review kind별로 grouping 단위가 다르다. UI와 문서는 두 grouping을 구분해 적어야 한다.
+  `/`는 Change Review replay 없이도 Activity Overview로 채워진다. Effect 분포는 accepted version이 생긴 뒤에만 나온다.
   `ReplayRunSchema`는 kind별 discriminated union이 되고 `adoption` run의 `stats`는 `AdoptionStats`다. 기존 `version_diff`·`conformance` row는 backfill 없이 parse된다.
   Adoption Group 하나에 program이 여러 개 섞일 수 있다. group detail은 `programSummary`를 보여 줘야 "expected" 판정이 무엇을 승인하는지 드러난다.
   저장 table `replay_adoption_groups`와 `replay_adoption_assignments`가 추가된다(migration 0008).
