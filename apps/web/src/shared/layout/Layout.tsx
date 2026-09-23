@@ -10,8 +10,8 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="layout-header">
         <div className="layout-brand">Authority Diff</div>
         <nav className="layout-nav" aria-label="Primary">
-          <Link to="/">Activity Shape</Link>
-          <Link to="/conformance">Conformance</Link>
+          <Link to="/">활동 분포</Link>
+          <Link to="/conformance">적합성</Link>
           {!hasToken ? <Link to="/login">Sign in</Link> : null}
         </nav>
         {hasToken ? (

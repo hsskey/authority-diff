@@ -37,7 +37,7 @@ function ActivityShapePage() {
 
   return (
     <section>
-      <h1 className="page-title">Activity Shape</h1>
+      <h1 className="page-title">활동 분포</h1>
       {mapQuery.isPending ? <LoadingState label="Loading the authority map" /> : null}
       {mapQuery.isError ? (
         <ErrorState

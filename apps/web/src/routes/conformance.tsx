@@ -25,7 +25,7 @@ function ConformanceFindingListPage() {
 
   return (
     <section>
-      <h1 className="page-title">Conformance</h1>
+      <h1 className="page-title">적합성</h1>
       {findingsQuery.isPending ? <LoadingState label="Loading conformance findings" /> : null}
       {findingsQuery.isError ? (
         <ErrorState

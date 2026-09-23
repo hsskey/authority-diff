@@ -638,8 +638,8 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      'example.invalid/synthetic/project 등 1곳으로의 저장소로의 push 1건이 ' +
-        "'확인 필요'에서 '허용'로 바뀝니다. " +
+      'example.invalid/synthetic/project 등 1곳으로의 push 1건이 ' +
+        "'확인 필요'에서 '허용'으로 바뀝니다. " +
         '기준 정책에서는 신뢰 목록에 없는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다.',
     );
   });
@@ -656,7 +656,7 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      "workspace 등 1곳으로의 쓰기 1건이 '확인 필요'에서 '허용'로 바뀝니다.",
+      "workspace 등 1곳으로의 쓰기 1건이 '확인 필요'에서 '허용'으로 바뀝니다.",
     );
   });
 

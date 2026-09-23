@@ -10,6 +10,7 @@ import {
   blockerLabel,
   buildReviewReport,
   bySeverityThenImpact,
+  effectLabel,
   formatZoneTransition,
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
@@ -185,7 +186,7 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
             <th scope="col">baseline \ candidate</th>
             {EFFECTS.map((to) => (
               <th key={to} scope="col" className="num">
-                {to}
+                {effectLabel(to)}
               </th>
             ))}
           </tr>
@@ -193,7 +194,7 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
         <tbody>
           {EFFECTS.map((from) => (
             <tr key={from}>
-              <th scope="row">{from}</th>
+              <th scope="row">{effectLabel(from)}</th>
               {EFFECTS.map((to) => {
                 const count = counts.get(`${from}->${to}`) ?? 0;
                 const isDiagonal = from === to;

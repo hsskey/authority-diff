@@ -22,7 +22,7 @@ test('shows the empty screen when no run has completed', async ({ page }) => {
 
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Activity Shape' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '활동 분포' })).toBeVisible();
   await expect(page.getByText('No completed run yet')).toBeVisible();
 });
 
