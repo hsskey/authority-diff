@@ -638,7 +638,7 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      'example.invalid/synthetic/project 등 1곳으로의 push 1건이 ' +
+      'example.invalid/synthetic/project 1곳으로의 push 1건이 ' +
         "'확인 필요'에서 '허용'으로 바뀝니다. " +
         '기준 정책에서는 신뢰 목록에 없는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다.',
     );
@@ -656,7 +656,41 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      "workspace 등 1곳으로의 쓰기 1건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+      "workspace 1곳으로의 쓰기 1건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+    );
+  });
+
+  test('counts distinct Target keys beyond the five-entry Target Summary', () => {
+    const hosts = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((name) => `${name}.invalid`);
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario(
+      hosts.map((host, index) => ({
+        action: action(hex(String(index)), '2026-01-02T03:04:05.000Z', [
+          operation(0, 'fetch', { kind: 'host', host, scheme: 'https' }),
+        ]),
+        baseline: decision('ask', [opDecision(0, 'ask', 'unknown_remote')]),
+        candidate: decision('allow', [opDecision(0, 'allow', 'unknown_remote')]),
+      })),
+    );
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+    expect(result.groups[0]?.targetSummary).toHaveLength(5);
+    expect(result.groups[0]?.headline).toBe(
+      "a.invalid 등 7곳으로의 가져오기 7건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+    );
+  });
+
+  test('uses 으로 after 차단', () => {
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario([
+      {
+        action: action(hex('a'), '2026-01-02T03:04:05.000Z', [
+          operation(0, 'write', workspacePath),
+        ]),
+        baseline: decision('allow', [opDecision(0, 'allow', 'workspace')]),
+        candidate: decision('deny', [opDecision(0, 'deny', 'workspace')]),
+      },
+    ]);
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+    expect(result.groups[0]?.headline).toBe(
+      "workspace 1곳으로의 쓰기 1건이 '허용'에서 '차단'으로 바뀝니다.",
     );
   });
 

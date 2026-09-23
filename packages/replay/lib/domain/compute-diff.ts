@@ -7,6 +7,7 @@ import type { ActionForReplay } from '@authority/trace/schema';
 import type { DiffGroup, DiffResult, ReplayStats } from '../../schema.ts';
 import {
   CAPABILITY_WORD,
+  deriveTargetKey,
   directionalParticle,
   EFFECT_ORDER,
   EFFECT_RANK,
@@ -35,17 +36,18 @@ type HeadlineInput = Omit<DiffGroup, 'headline'>;
 /**
  * Renders the fixed plain-Korean Headline for a Diff Group.
  *
- * The template carries no command text, ruleId, or regular expression. The
- * target count is the number of summarized Target keys, the only distinct-target
- * count the frozen schema exposes. A Zone change adds one sentence.
+ * The template carries no command text, ruleId, or regular expression.
+ * `targetCount` is the number of distinct Target keys over the whole group,
+ * not the length of the five-entry Target Summary. A Zone change adds one
+ * sentence.
  */
-export function renderHeadline(group: HeadlineInput): string {
+export function renderHeadline(group: HeadlineInput, targetCount: number): string {
   const top = group.targetSummary[0];
   invariant(top !== undefined, 'a Diff Group always has at least one Target Summary entry');
   const toEffectWord = EFFECT_WORD[group.toEffect];
+  const where = targetCount === 1 ? `${top.key} 1곳으로의` : `${top.key} 등 ${targetCount}곳으로의`;
   const sentence =
-    `${top.key} 등 ${group.targetSummary.length}곳으로의 ` +
-    `${CAPABILITY_WORD[group.capability]} ${group.actionCount}건이 ` +
+    `${where} ${CAPABILITY_WORD[group.capability]} ${group.actionCount}건이 ` +
     `'${EFFECT_WORD[group.fromEffect]}'에서 '${toEffectWord}'${directionalParticle(toEffectWord)} 바뀝니다.`;
   if (group.fromZone === group.toZone) {
     return sentence;
@@ -156,7 +158,8 @@ function buildGroup(groupKey: string, entries: readonly ChangedEntry[]): BuiltGr
       anyIrreversible ||
       analyzabilityNoneCount > 0);
 
-  const summary = targetSummary(entries.map((entry) => entry.signatureOperation.target));
+  const targetKeys = entries.map((entry) => deriveTargetKey(entry.signatureOperation.target));
+  const summary = targetSummary(targetKeys);
   const core: HeadlineInput = {
     groupKey,
     direction: first.direction,
@@ -177,7 +180,8 @@ function buildGroup(groupKey: string, entries: readonly ChangedEntry[]): BuiltGr
     targetSummary: summary,
     sampleActionKeys: sampleActionKeys(entries.map((entry) => entry.action)),
   };
-  return { full: { ...core, headline: renderHeadline(core) }, hashed: core };
+  const headline = renderHeadline(core, new Set(targetKeys).size);
+  return { full: { ...core, headline }, hashed: core };
 }
 
 function directionOf(baseline: Effect, candidate: Effect): 'widening' | 'narrowing' {
