@@ -50,7 +50,7 @@ export interface PolicyRepository {
     input: CreatePolicyInput,
   ): Promise<Result<{ policy: Policy; initialVersion: PolicyVersion }, AppError>>;
   listPolicies(cursor: string | null, limit: number): Promise<Result<PolicyPage, AppError>>;
-  /** The Policy's versions in version order, oldest first; the cursor is the last version's id. */
+  /** The Policy's versions in version order, oldest first; the cursor is the last version's versionNumber. */
   listVersions(
     policyId: PolicyId,
     cursor: string | null,
@@ -210,19 +210,36 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
     },
 
     async listVersions(policyId, cursor, limit) {
+      let after: number | null = null;
+      if (cursor !== null) {
+        if (!/^\d+$/.test(cursor)) {
+          return err({
+            code: 'validation.invalid_request',
+            message: `invalid policy versions cursor ${cursor}`,
+            isRetryable: false,
+            details: { cursor },
+            cause: null,
+          });
+        }
+        after = Number(cursor);
+      }
       try {
         const rows = await db
           .select()
           .from(policyVersions)
           .where(
-            cursor === null
+            after === null
               ? eq(policyVersions.policyId, policyId)
-              : and(eq(policyVersions.policyId, policyId), gt(policyVersions.id, cursor)),
+              : and(
+                  eq(policyVersions.policyId, policyId),
+                  gt(policyVersions.versionNumber, after),
+                ),
           )
           .orderBy(asc(policyVersions.versionNumber))
           .limit(limit + 1);
         const items = rows.slice(0, limit).map(toVersion);
-        const nextCursor = rows.length > limit ? (items.at(-1)?.id ?? null) : null;
+        const last = items.at(-1);
+        const nextCursor = rows.length > limit && last !== undefined ? String(last.versionNumber) : null;
         return ok({ items, nextCursor });
       } catch (cause) {
         return err(internal(cause));

@@ -194,7 +194,8 @@ export const CreatePolicyResponseSchema = z.object({
 export type CreatePolicyResponse = z.infer<typeof CreatePolicyResponseSchema>;
 
 // GET /policies/{policyId}/versions
-// Every version of the Policy in version order, oldest first.
+// Every version of the Policy in version order, oldest first. The cursor is the
+// last returned version's versionNumber as a decimal string.
 export const ListPolicyVersionsQuerySchema = z.object({
   cursor: CursorSchema.optional(),
   limit: LimitSchema,
