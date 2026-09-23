@@ -135,16 +135,20 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
     async failReview(input: FailReviewInput): Promise<void> {
       await database.transactionRunner.run(async (transaction) => {
         const tx = narrowTransaction(transaction);
+        const [failed] = await tx
+          .update(changeReviews)
+          .set({ status: 'failed' })
+          .where(and(eq(changeReviews.id, input.changeReviewId), eq(changeReviews.status, 'computing')))
+          .returning();
+        if (failed === undefined) {
+          return;
+        }
         const policy = createPolicyRepository({ db: tx, clock, idGenerator });
         const withdrawn = await policy.transitionVersion(input.candidateVersionId, 'withdraw');
         invariant(
           withdrawn.ok || withdrawn.error.code === 'policy.transition_not_allowed',
           `failReview: candidate ${input.candidateVersionId} could not be withdrawn`,
         );
-        await tx
-          .update(changeReviews)
-          .set({ status: 'failed' })
-          .where(eq(changeReviews.id, input.changeReviewId));
       });
     },
 

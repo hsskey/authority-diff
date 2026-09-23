@@ -583,3 +583,105 @@ test('a failed replay fails the review, returns the candidate to draft, and free
   await waitReady(retry.review.id);
   expect(retry.review.status).not.toBe('failed');
 });
+
+function gate(): { promise: Promise<void>; open: () => void } {
+  let open!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { promise, open };
+}
+
+test('a stale repeated sync does not withdraw a candidate a new review has claimed', async () => {
+  const failingReplay = createReplayModule({
+    database,
+    reader: duplicateActionReader(),
+    policy: makePolicyReader(repository),
+    clock,
+    idGenerator,
+    logger: createMemoryLogger(),
+    classifierVersion: 'synthetic-classifier',
+  });
+
+  // Both concurrent syncs read the review as `computing`; the second sync's
+  // failReview is held inside its getRun until a new review claims the candidate.
+  let racedRunId: string | null = null;
+  let armed = false;
+  let failedGetRunCalls = 0;
+  const bothReachedGetRun = gate();
+  const secondSyncMayProceed = gate();
+
+  const gatedReplay: ReplayModule = {
+    ...failingReplay,
+    async getRun(id) {
+      const run = await failingReplay.getRun(id);
+      if (armed && id === racedRunId && run?.status === 'failed') {
+        failedGetRunCalls += 1;
+        if (failedGetRunCalls === 1) {
+          await bothReachedGetRun.promise;
+        } else if (failedGetRunCalls === 2) {
+          bothReachedGetRun.open();
+          await secondSyncMayProceed.promise;
+        }
+      }
+      return run;
+    },
+  };
+  const gatedReview = createReviewModule({
+    database,
+    replay: gatedReplay,
+    policy: makePolicyReviewRepository(repository),
+    clock,
+    idGenerator,
+  });
+
+  const candidateId = await createDraftVersionOne();
+  const created = await gatedReview.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  const runId = created.value.replaySummary.replayRunId;
+  if (runId === null) {
+    throw new Error('expected a replay run');
+  }
+  racedRunId = runId;
+
+  // Let the run fail without syncing the review, so it stays `computing`.
+  let runFailed = false;
+  for (let attempt = 0; attempt < 200 && !runFailed; attempt++) {
+    const run = await failingReplay.getRun(runId);
+    runFailed = run?.status === 'failed';
+    if (!runFailed) {
+      await sleep(25);
+    }
+  }
+  if (!runFailed) {
+    throw new Error('timed out waiting for the replay run to fail');
+  }
+
+  armed = true;
+  const firstSync = gatedReview.listDiffGroups(created.value.review.id, { limit: 200 });
+  const secondSync = gatedReview.listDiffGroups(created.value.review.id, { limit: 200 });
+
+  const first = await Promise.race([firstSync, secondSync]);
+  if (!first.ok) {
+    throw new Error(first.error.code);
+  }
+  const withdrawn = await repository.getVersion(candidateId);
+  expect(withdrawn.ok && withdrawn.value.status).toBe('draft');
+
+  const claiming = await createReview(candidateId);
+  const claimed = await repository.getVersion(candidateId);
+  expect(claimed.ok && claimed.value.status).toBe('in_review');
+
+  secondSyncMayProceed.open();
+  await Promise.all([firstSync, secondSync]);
+
+  const afterStaleSync = await repository.getVersion(candidateId);
+  expect(afterStaleSync.ok && afterStaleSync.value.status).toBe('in_review');
+  const claimingView = await review.getChangeReview(claiming.review.id);
+  expect(claimingView.ok && claimingView.value.review.status).not.toBe('failed');
+});
