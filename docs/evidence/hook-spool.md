@@ -35,8 +35,9 @@ realistic PermissionRequest payload로 직접 실행했다.
 
 - hook command는 exit status 0으로 끝났고 stdout은 비었다. 즉 Decision을 출력하지 않는다.
 - `permission_request` line이 spool에 추가됐다.
-- hook이 읽는 field는 `session_id`, `cwd`, `tool_name`, `tool_input`, `tool_use_id`다.
+- hook이 읽는 field는 `session_id`, `cwd`, `tool_name`, `tool_input`, `tool_use_id`, `permission_mode`다.
   이는 Claude Code PermissionRequest payload의 shape과 일치한다.
+  `permission_mode`는 spool의 `permissionMode`에 그대로 기록되고, 없으면 `null`이다(근거 ACR-0008).
 - payload에 `tool_use_id`가 있으면 spool의 `toolUseId`에 그대로 기록되고,
   없으면 `toolUseId`는 `null`이다. `toolUseId` field는 nullable이다.
 - raw command와 argument는 spool이나 이 문서에 남기지 않았다. `tool_input`은 hash로만 남는다.
