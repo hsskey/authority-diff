@@ -209,7 +209,7 @@ critical = widening 이고 아래 중 하나
   - baseline 기준 reversibility 가 irreversible
   - 결정 Operation 의 analyzability 가 none
 headline 예:
-  "github.com/acme-oss/toolkit 등 저장소 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.
+  "github.com/acme-oss/toolkit 등 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.
    기준 정책에서는 신뢰하지 않는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다."
 ```
 

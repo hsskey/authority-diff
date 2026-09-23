@@ -8,7 +8,9 @@
  * dry-run flag transmits nothing and is `execute`. A network subcommand
  * targets a `vcs_remote` whose Remote Key is resolved from an explicit URL, the
  * named remote, or the default `origin`. A named remote resolves through the
- * session `repoRemotes` only while git runs inside the session workspace.
+ * session `repoRemotes` only while git runs inside the session workspace. A
+ * repository operand that is a local path (`/`, `./`, `../`, `~`, `file://`)
+ * targets that `path` instead of a remote.
  */
 import type { Capability, Target } from '../../schema.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
@@ -194,6 +196,16 @@ function remoteOp(
   const positional = nonFlagArgs(rest);
   const signals: string[] = [];
 
+  const repository = positional[0];
+  const localPath =
+    repository === undefined || repository.hasExpansion
+      ? null
+      : localRepositoryPath(repository.text);
+  if (localPath !== null) {
+    const resolved = resolvePath(localPath, cmd.cwd, cmd.workspaceRoot);
+    return draft(capability, pathTarget(resolved), 'full', 'git', cmd.raw);
+  }
+
   // clone takes a URL directly; push/fetch/pull take a remote name.
   const urlArg = positional.find((w) => looksLikeRemoteUrl(w.text) && !w.hasExpansion);
   let remoteName: string | null = null;
@@ -267,6 +279,14 @@ function hasPlusRefspec(args: readonly ShellWord[]): boolean {
   // A leading `+` force-updates the ref, with or without a `:` (for example
   // `git push origin +main` and `git push origin +src:dst`).
   return nonFlagArgs(args).some((w) => w.text.startsWith('+') && w.text.length > 1);
+}
+
+/** The path form of a repository operand git reads from disk, or null for a remote. */
+function localRepositoryPath(text: string): string | null {
+  if (text.startsWith('file://')) return text.slice('file://'.length);
+  if (text === '.' || text === '..') return text;
+  const local = ['/', './', '../', '~'].some((prefix) => text.startsWith(prefix));
+  return local ? text : null;
 }
 
 function looksLikeRemoteUrl(text: string): boolean {

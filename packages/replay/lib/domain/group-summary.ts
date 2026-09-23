@@ -120,8 +120,8 @@ export function topCounts<K extends string | null>(
 }
 
 /** The Target Summary of the signature Operations: the top five Target keys. */
-export function targetSummary(targets: readonly Target[]): { key: string; count: number }[] {
-  return topCounts(targets.map(deriveTargetKey), 5);
+export function targetSummary(targetKeys: readonly string[]): { key: string; count: number }[] {
+  return topCounts(targetKeys, 5);
 }
 
 /** The first five and last five Actions by (occurredAt, actionKey), or all when at most ten. */

@@ -5,6 +5,7 @@
  * strings into the normalized {@link Target} shapes the contract fixes in
  * `packages/action/schema.ts`.
  */
+import { homeToTilde } from '@authority/kernel';
 import type { Target } from '../../schema.ts';
 import type { ShellWord } from '../shell/ast.ts';
 
@@ -70,7 +71,8 @@ function normalizeSegments(path: string): string {
  * previous) outside the workspace or not statically known, or a cwd an earlier
  * `cd` moved outside the workspace or to an unknown directory. Callers without
  * such directory options (for example `gh`) pass none, leaving only the cwd
- * check.
+ * check. The recorded workspace root writes the home directory as `~` while
+ * command text keeps it absolute, so the directory is compared in both forms.
  */
 export function dirOutsideWorkspace(
   cwd: string | null,
@@ -88,7 +90,7 @@ export function dirOutsideWorkspace(
     if (word.hasExpansion) return true;
     dir = resolvePath(word.text, dir.path, workspaceRoot);
   }
-  return !dir.isInsideWorkspace;
+  return !dir.isInsideWorkspace && !isUnder(homeToTilde(dir.path), workspaceRoot);
 }
 
 export function pathTarget(resolved: ResolvedPath): Target {

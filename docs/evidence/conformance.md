@@ -11,6 +11,7 @@ No repository names, host paths, or raw command text appear below.
 - Candidate is policy A from the v2 environment profile, not the default template.
 - Window: 2026-09-22T12:00:00.000Z .. 2026-09-23T05:10:14.000Z.
 - Import: 1,036 sessions, 34,036 agent_actions accepted, 196 duplicates, 7 sessions failed import (NUL in jsonb; out of window).
+- Re-import after the NUL fix (2026-09-24, fresh stack): the 7 failed sessions imported with 904 Actions accepted, 0 duplicates, 0 failures; all 904 fall outside the window.
 - Spool: copies of hook observations flushed into an isolated scratch home; only copies were renamed.
 - Run completed in 69 ms; classifierVersion 0.2.1.
 

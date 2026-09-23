@@ -13,6 +13,7 @@ import type {
 import { buildAnalyzabilityCounts, buildMatrix } from './build-matrix.ts';
 import {
   CAPABILITY_WORD,
+  deriveTargetKey,
   EFFECT_WORD,
   sampleActionKeys,
   sortedUniqueRuleIds,
@@ -93,7 +94,7 @@ function buildGroup(groupKey: string, entries: readonly AdoptionEntry[]): BuiltG
     firstOccurredAt: occurredAts.reduce((min, at) => (at < min ? at : min)),
     lastOccurredAt: occurredAts.reduce((max, at) => (at > max ? at : max)),
     decidingRuleIds: sortedUniqueRuleIds(entries.map((entry) => entry.decision.decidingRuleId)),
-    targetSummary: targetSummary(entries.map((entry) => entry.operation.target)),
+    targetSummary: targetSummary(entries.map((entry) => deriveTargetKey(entry.operation.target))),
     sampleActionKeys: sampleActionKeys(entries.map((entry) => entry.action)),
   };
   return { full: { ...core, headline: renderAdoptionHeadline(core) }, hashed: core };
