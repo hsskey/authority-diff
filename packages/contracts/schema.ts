@@ -355,3 +355,6 @@ export const CreateDecisionRequestSchema = z.object({
   reviewerName: z.string().min(1),
 });
 export type CreateDecisionRequest = z.infer<typeof CreateDecisionRequestSchema>;
+
+// GET /change-reviews/{id}/report (text/markdown)
+export const ChangeReviewReportResponseSchema = z.string();

@@ -82,7 +82,8 @@ export async function callRoute<Res, Req>(
     return err({ kind: 'network', message });
   }
 
-  const body: unknown = await response.json().catch(() => null);
+  const isJson = response.headers.get('Content-Type')?.includes('application/json') ?? false;
+  const body: unknown = isJson ? await response.json().catch(() => null) : await response.text();
 
   if (!response.ok) {
     const envelope = ErrorEnvelopeSchema.safeParse(body);

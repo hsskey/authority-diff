@@ -458,6 +458,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       const stats = run?.stats ?? null;
       const baseline = await policy.getVersion(review.baselineVersionId);
       const baselineContentHash = baseline.ok ? baseline.value.contentHash : '';
+      const chained = await store.getChainedDecision(review.id);
 
       const markdown = renderReport({
         changeReviewId: review.id,
@@ -473,14 +474,16 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         operationWidening: stats?.operationWidening ?? null,
         groups,
         decision:
-          review.decidedBy !== null && review.decidedAt !== null
-            ? {
-                decision: review.status === 'accepted' ? 'accept' : 'reject',
-                reviewerName: review.decidedBy,
-                decidedAt: review.decidedAt,
-                note: review.decisionNote ?? '',
-              }
-            : null,
+          chained === null
+            ? null
+            : {
+                decision: chained.decision.decision,
+                reviewerName: chained.decision.reviewerName,
+                decidedAt: chained.decision.decidedAt,
+                note: chained.decision.note,
+                sequence: chained.sequence,
+                hash: chained.hash,
+              },
       });
       return ok(markdown);
     },

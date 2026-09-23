@@ -365,3 +365,37 @@ test('reject is allowed even when the gate is closed, and transitions the candid
   const decision = await review.getDecision(reviewId);
   expect(decision.ok && decision.value?.decision).toBe('reject');
 });
+
+test("a decided review's report carries its Decision Record sequence and hash", async () => {
+  const candidateId = await seedCandidate();
+  const created = await review.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  const reviewId = created.value.review.id;
+  await waitReady(reviewId);
+  const rejected = await review.decide({
+    changeReviewId: reviewId,
+    decision: 'reject',
+    note: '',
+    reviewerName: 'tester',
+  });
+  if (!rejected.ok) {
+    throw new Error(rejected.error.code);
+  }
+  const [row] = await database.db.execute<{ sequence: string; hash: string }>(
+    `select sequence, hash from review_decisions where change_review_id = '${reviewId}'`,
+  );
+  if (row === undefined) {
+    throw new Error('decision record missing');
+  }
+
+  const report = await review.getReport(reviewId);
+
+  expect(report.ok && report.value).toContain(
+    `- Decision Record sequence: ${row.sequence}\n- Decision Record hash: \`${row.hash}\``,
+  );
+});

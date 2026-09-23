@@ -5,6 +5,7 @@ import type { ReportInput } from '../index.ts';
 
 const BASELINE_HASH = 'a'.repeat(64);
 const CANDIDATE_HASH = 'b'.repeat(64);
+const DECISION_HASH = 'c'.repeat(64);
 
 function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
   return {
@@ -35,6 +36,8 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
       reviewerName: 'reviewer',
       decidedAt: IsoTimestampSchema.parse('2026-02-02T00:00:00.000Z'),
       note: '검토 완료',
+      sequence: 7,
+      hash: DECISION_HASH,
     },
     ...overrides,
   };
@@ -62,6 +65,13 @@ test('the report names the reviewer and decision when decided', () => {
   const report = renderReport(makeInput());
   expect(report).toContain('reviewer');
   expect(report).toContain('정책 변경 수락');
+});
+
+test('the report records the Decision Record sequence and hash when decided', () => {
+  const report = renderReport(makeInput());
+  expect(report).toContain(
+    `- Decision Record sequence: 7\n- Decision Record hash: \`${DECISION_HASH}\``,
+  );
 });
 
 test('an undecided review still renders without a reviewer line', () => {

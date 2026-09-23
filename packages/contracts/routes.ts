@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import {
   ActionResponseSchema,
   AuthorityMapResponseSchema,
+  ChangeReviewReportResponseSchema,
   ChangeReviewResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
@@ -146,6 +147,7 @@ export const routes = {
     CreateDecisionRequestSchema,
     ChangeReviewResponseSchema,
   ),
+  getChangeReviewReport: get(`${API}/change-reviews/:id/report`, ChangeReviewReportResponseSchema),
 } as const;
 
 export type Routes = typeof routes;

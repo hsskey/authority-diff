@@ -13,6 +13,7 @@ import {
   type ReviewDecision,
 } from '../../schema.ts';
 import type {
+  ChainedDecision,
   DecideStoreInput,
   ReviewStore,
   StoredVerdict,
@@ -152,6 +153,17 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
         .where(eq(reviewDecisions.changeReviewId, changeReviewId))
         .limit(1);
       return row === undefined ? null : ReviewDecisionSchema.parse(row);
+    },
+
+    async getChainedDecision(changeReviewId: ChangeReviewId): Promise<ChainedDecision | null> {
+      const [row] = await db
+        .select()
+        .from(reviewDecisions)
+        .where(eq(reviewDecisions.changeReviewId, changeReviewId))
+        .limit(1);
+      return row === undefined
+        ? null
+        : { decision: ReviewDecisionSchema.parse(row), sequence: row.sequence, hash: row.hash };
     },
 
     // Inserts the decision and transitions the candidate version in one
