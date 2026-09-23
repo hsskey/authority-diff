@@ -146,7 +146,7 @@ function unchangedWriteCase(actionKey: string, occurredAt: string): Case {
 }
 
 /** The hashed projection: exactly the fields resultHash covers (headline excluded). */
-function hashedProjection(result: DiffResult): unknown {
+function hashedProjection(result: DiffResult) {
   return {
     stats: result.stats,
     groups: result.groups.map((group) => ({
@@ -254,6 +254,7 @@ describe('stats and transitions', () => {
         { from: 'deny', to: 'ask', count: 1 },
         { from: 'deny', to: 'deny', count: 0 },
       ],
+      operationWidening: [],
     });
   });
 
@@ -267,6 +268,68 @@ describe('stats and transitions', () => {
     const sum = result.stats.transitions.reduce((total, cell) => total + cell.count, 0);
     expect(sum).toBe(result.stats.evaluatedActions);
     expect(result.stats.evaluatedActions).toBe(2);
+  });
+
+  test('counts operation-level widening when Action effect stays ask', () => {
+    const privateOne: Target = {
+      kind: 'vcs_remote',
+      remoteName: 'origin',
+      remoteKey: 'github.example/acme/private-one',
+      branch: 'main',
+    };
+    const privateTwo: Target = {
+      kind: 'vcs_remote',
+      remoteName: 'origin',
+      remoteKey: 'github.example/acme/private-two',
+      branch: 'main',
+    };
+    const registry: Target = {
+      kind: 'package',
+      ecosystem: 'npm',
+      source: 'registry.npmjs.org',
+    };
+    const ops = [
+      operation(0, 'write', workspacePath),
+      operation(1, 'push', privateOne, { program: 'git' }),
+      operation(2, 'push', privateTwo, { program: 'git' }),
+      operation(3, 'push', registry, { program: 'npm' }),
+    ];
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario([
+      {
+        action: action(hex('a'), '2026-01-02T03:04:05.000Z', ops),
+        baseline: decision('ask', [
+          opDecision(0, 'ask', 'workspace'),
+          opDecision(1, 'ask', 'unknown_remote'),
+          opDecision(2, 'ask', 'unknown_remote'),
+          opDecision(3, 'ask', 'public_remote'),
+        ]),
+        candidate: decision('ask', [
+          opDecision(0, 'ask', 'workspace'),
+          opDecision(1, 'allow', 'trusted_remote'),
+          opDecision(2, 'allow', 'trusted_remote'),
+          opDecision(3, 'allow', 'trusted_remote'),
+        ]),
+      },
+    ]);
+
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+
+    expect(result.stats.changedActions).toBe(0);
+    expect(result.groups).toEqual([]);
+    expect(result.changedActions).toEqual([]);
+    expect(result.stats.operationWidening).toEqual([
+      { capability: 'push', fromZone: 'public_remote', toZone: 'trusted_remote', count: 1 },
+      { capability: 'push', fromZone: 'unknown_remote', toZone: 'trusted_remote', count: 2 },
+    ]);
+    expect(result.resultHash).toBe(sha256Hex(canonicalJson(hashedProjection(result))));
+    expect(
+      sha256Hex(
+        canonicalJson({
+          ...hashedProjection(result),
+          stats: { ...result.stats, operationWidening: [] },
+        }),
+      ),
+    ).not.toBe(result.resultHash);
   });
 });
 

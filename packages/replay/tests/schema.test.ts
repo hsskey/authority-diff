@@ -33,6 +33,7 @@ const validDiffResult = {
       { from: 'deny', to: 'ask', count: 0 },
       { from: 'deny', to: 'deny', count: 0 },
     ],
+    operationWidening: [],
   },
   groups: [
     {
@@ -76,6 +77,13 @@ describe('replay schema', () => {
       PolicyDocumentSchema.safeParse(candidateFixture).success,
       DiffResultSchema.safeParse(validDiffResult).success,
     ]).toEqual([true, true, true, true]);
+  });
+
+  test('operationWidening defaults to empty when omitted from stored stats', () => {
+    const { operationWidening: _omitted, ...statsWithout } = validDiffResult.stats;
+    expect(
+      DiffResultSchema.parse({ ...validDiffResult, stats: statsWithout }).stats.operationWidening,
+    ).toEqual([]);
   });
 
   test('rejects a Diff Group with 11 sample Action Keys', () => {

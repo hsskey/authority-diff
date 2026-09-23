@@ -470,6 +470,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         changedActions: stats?.changedActions ?? null,
         analyzabilityNoneCount,
         transitions: stats?.transitions ?? null,
+        operationWidening: stats?.operationWidening ?? null,
         groups,
         decision:
           review.decidedBy !== null && review.decidedAt !== null

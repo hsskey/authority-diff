@@ -99,6 +99,18 @@ export function renderReplayMarkdown(input: ReplayReportInput): string {
     '',
   ].join('\n');
 
+  const wideningRows = stats.operationWidening.map(
+    (row) => `| ${row.capability} | ${row.fromZone} | ${row.toZone} | ${String(row.count)} |`,
+  );
+  const operationWidening = [
+    '## Action effect unchanged, operation-level widening',
+    '',
+    '| capability | fromZone | toZone | count |',
+    '| --- | --- | --- | --- |',
+    ...wideningRows,
+    '',
+  ].join('\n');
+
   const groupHeader =
     '| headline | direction | severity | capability | zone | effect | actions | sessions | top targets | baselineRuleIds | candidateRuleIds | groupKey |';
   const groupDivider = `| ${Array.from({ length: 12 }, () => '---').join(' | ')} |`;
@@ -127,7 +139,7 @@ export function renderReplayMarkdown(input: ReplayReportInput): string {
     '',
   ].join('\n');
 
-  return [header, transitions, groups].join('\n');
+  return [header, transitions, operationWidening, groups].join('\n');
 }
 
 export interface GroupSampleAction {
