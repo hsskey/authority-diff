@@ -55,6 +55,12 @@ const CASES: readonly KindCase[] = [
     sensitive: 'npm_SYNTHETICCANARY000000000000000',
   },
   {
+    kind: 'figma_token',
+    secret: 'figd_SYNTHETICCANARY0000000000',
+    marker: '__REDACTED_FIGMA_TOKEN__',
+    sensitive: 'figd_SYNTHETICCANARY0000000000',
+  },
+  {
     kind: 'bearer_header',
     secret: 'Authorization: Bearer SYNTHBEARERTOKEN0001',
     marker: '__REDACTED_BEARER_HEADER__',
