@@ -208,6 +208,9 @@ test('verdict filter is applied before pagination: no empty page with a non-null
   // that broke before the fix: a verdict=unexpected&limit=1 query's first
   // replay page holds only the 'expected' group.
   const [firstByKey, ...rest] = ordered;
+  if (!firstByKey) {
+    throw new Error('expected at least one widening group');
+  }
   const expectedUnexpectedKeys = rest.map((g) => g.groupKey);
   {
     const r = await review.recordVerdict({
