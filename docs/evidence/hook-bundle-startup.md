@@ -5,6 +5,10 @@
 
 `sh -c 'mkdir -p $HOME/.authority 2>/dev/null; <node> <entry> hook <event> 2>>$HOME/.authority/hook-errors.log || exit 0'`
 
+`<node>` is the interpreter path `install-hooks` resolves at registration time.
+When the running node lives in a versioned Homebrew Cellar directory, `install-hooks` pins `<node>` to a stable symlink (`<prefix>/bin/node`, the formula's `opt/<formula>/bin/node`, or `/usr/local/bin/node`) that resolves to the same binary, so `brew upgrade` cannot delete the path out from under every installed hook; otherwise it keeps the running interpreter.
+`authority install-hooks --print` reports the chosen path and the reason on a `node` line.
+
 ## Measurement
 
 Method: 50 cold-ish runs per path on Node 22, `hook pre-tool-use`, empty stdin, `performance.now()` wall time including process spawn (median and p95).
