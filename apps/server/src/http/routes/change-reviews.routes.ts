@@ -6,6 +6,8 @@ import {
   ChangeReviewResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
+  ListReviewAdoptionGroupsQuerySchema,
+  ListReviewAdoptionGroupsResponseSchema,
   ListReviewDiffGroupsQuerySchema,
   ListReviewDiffGroupsResponseSchema,
   RecordVerdictRequestSchema,
@@ -24,7 +26,7 @@ import {
 const REVIEW_STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'review.not_found': 404,
   'review.not_open': 409,
-  'review.no_active_baseline': 409,
+  'review.open_review_exists': 409,
   'review.gate_blocked': 409,
   'policy.version_not_found': 404,
   'policy.transition_not_allowed': 409,
@@ -106,6 +108,27 @@ export function registerChangeReviewsRoutes(app: Hono<AppEnv>, review: ReviewMod
       return respondReviewError(c, result.error);
     }
     return c.json(ListReviewDiffGroupsResponseSchema.parse(result.value));
+  });
+
+  app.get('/api/v1/change-reviews/:id/adoption-groups', async (c) => {
+    const id = ChangeReviewIdSchema.safeParse(c.req.param('id'));
+    if (!id.success) {
+      return respondReviewError(c, reviewNotFound());
+    }
+    const query = ListReviewAdoptionGroupsQuerySchema.safeParse(c.req.query());
+    if (!query.success) {
+      return respondError(c, validationInvalidRequest({ issues: query.error.issues }));
+    }
+    const result = await review.listAdoptionGroups(id.data, {
+      effect: query.data.effect,
+      verdict: query.data.verdict,
+      cursor: query.data.cursor,
+      limit: query.data.limit,
+    });
+    if (!result.ok) {
+      return respondReviewError(c, result.error);
+    }
+    return c.json(ListReviewAdoptionGroupsResponseSchema.parse(result.value));
   });
 
   app.put('/api/v1/change-reviews/:id/verdicts/:groupKey', async (c) => {

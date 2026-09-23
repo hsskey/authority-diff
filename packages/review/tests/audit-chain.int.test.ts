@@ -69,14 +69,17 @@ async function seedInReviewCandidate(): Promise<PolicyVersionId> {
   return submitted.value.id;
 }
 
-function decision(changeReviewId: ChangeReviewId): ReviewDecision {
+function decision(
+  changeReviewId: ChangeReviewId,
+  baselineContentHash: ReviewDecision['baselineContentHash'] = HASH,
+): ReviewDecision {
   return {
     changeReviewId,
     decision: 'accept',
     note: 'synthetic decision',
     reviewerName: 'synthetic-reviewer',
     decidedAt: IsoTimestampSchema.parse(new Date().toISOString()),
-    baselineContentHash: HASH,
+    baselineContentHash,
     candidateContentHash: HASH,
     replayInputsHash: HASH,
     replayResultHash: HASH,
@@ -85,10 +88,15 @@ function decision(changeReviewId: ChangeReviewId): ReviewDecision {
   };
 }
 
-async function decideOnce(): Promise<ChangeReviewId> {
+async function decideOnce(
+  baselineContentHash: ReviewDecision['baselineContentHash'] = HASH,
+): Promise<ChangeReviewId> {
   const candidateVersionId = await seedInReviewCandidate();
   const changeReviewId = ChangeReviewIdSchema.parse(idGenerator.next('rev'));
-  const decided = await store.decide({ decision: decision(changeReviewId), candidateVersionId });
+  const decided = await store.decide({
+    decision: decision(changeReviewId, baselineContentHash),
+    candidateVersionId,
+  });
   if (!decided.ok) {
     throw new Error(decided.error.code);
   }
@@ -143,6 +151,18 @@ test('decisions recorded concurrently extend one intact chain', async () => {
 
   const verification = await verifyAuditChain(database);
 
+  expect(verification).toMatchObject({ isIntact: true, firstBrokenSequence: null });
+});
+
+test('an adoption decision with a null baselineContentHash chains between other decisions and verifies', async () => {
+  await decideOnce();
+  const adoption = await decideOnce(null);
+  await decideOnce();
+
+  const stored = await store.getDecision(adoption);
+  const verification = await verifyAuditChain(database);
+
+  expect(stored?.baselineContentHash).toBeNull();
   expect(verification).toMatchObject({ isIntact: true, firstBrokenSequence: null });
 });
 

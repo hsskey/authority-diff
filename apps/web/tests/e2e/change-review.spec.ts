@@ -64,6 +64,7 @@ function buildReview(store: Store): unknown {
     id: REVIEW_ID,
     policyId: POLICY_ID,
     candidateVersionId: CANDIDATE_VERSION_ID,
+    kind: 'change',
     candidateContentHash: CONTENT_HASH,
     baselineVersionId: BASELINE_VERSION_ID,
     windowFrom: TS,

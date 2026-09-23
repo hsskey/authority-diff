@@ -1,15 +1,15 @@
 import type { Effect, IsoTimestamp } from '@authority/kernel';
-import type { ReplayStats } from '@authority/replay/schema';
+import type { AdoptionEffect, AdoptionStats, ReplayStats } from '@authority/replay/schema';
 import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
 
 /**
  * The two headline-wording fixes (R3) live in replay's headline rendering, so
- * this report reproduces each Diff Group's `headline` as given and never
- * rewrites it. The report deliberately carries no raw command text, `ruleId`,
- * or regex: only plain-language headlines, Target key summaries, counts,
- * transitions, operation-level widening while Action Effect is unchanged,
- * Verdicts, hashes, the Decision Record's audit chain sequence, and the
- * reviewer (docs/cutline.md section 5, item 9).
+ * this report reproduces each group's `headline` as given and never rewrites
+ * it. The report deliberately carries no raw command text, `ruleId`, or regex:
+ * only plain-language headlines, Target key summaries, counts, transitions,
+ * operation-level widening while Action Effect is unchanged, Verdicts, hashes,
+ * the Decision Record's audit chain sequence and hash, and the reviewer
+ * (docs/cutline.md section 5, item 9).
  */
 export interface ReportTransition {
   readonly from: Effect;
@@ -59,6 +59,30 @@ export interface ReportInput {
   readonly decision: ReportDecision | null;
 }
 
+/** An Adoption Group as the report shows it: the headline, counts, Targets, and Verdict. */
+export interface AdoptionReportGroup {
+  readonly effect: AdoptionEffect;
+  readonly headline: string;
+  readonly actionCount: number;
+  readonly sessionCount: number;
+  readonly targetSummary: readonly ReportTarget[];
+  readonly verdict: Verdict | null;
+}
+
+/** `stats` is null until the adoption run completes. */
+export interface AdoptionReportInput {
+  readonly changeReviewId: string;
+  readonly status: ChangeReviewStatus;
+  readonly candidateContentHash: string;
+  readonly windowFrom: IsoTimestamp;
+  readonly windowTo: IsoTimestamp;
+  readonly stats: AdoptionStats | null;
+  readonly groups: readonly AdoptionReportGroup[];
+  readonly decision: ReportDecision | null;
+}
+
+const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
+
 const EFFECT_LABEL: Record<Effect, string> = {
   allow: '허용',
   ask: '확인 필요',
@@ -76,9 +100,16 @@ const DIRECTION_LABEL: Record<'widening' | 'narrowing', string> = {
   narrowing: '좁아짐',
 };
 
-const DECISION_LABEL: Record<'accept' | 'reject', string> = {
+type DecisionLabel = Record<'accept' | 'reject', string>;
+
+const CHANGE_DECISION_LABEL: DecisionLabel = {
   accept: '정책 변경 수락',
   reject: '정책 변경 반려',
+};
+
+const ADOPTION_DECISION_LABEL: DecisionLabel = {
+  accept: '최초 정책 채택',
+  reject: '최초 정책 반려',
 };
 
 const FIXED_NOTICE = [
@@ -86,11 +117,18 @@ const FIXED_NOTICE = [
   '> Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.',
 ].join('\n');
 
+const ADOPTION_NOTICE =
+  '> 이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.';
+
 function ratio(part: number, whole: number): string {
   if (whole === 0) {
     return '0%';
   }
   return `${((part / whole) * 100).toFixed(1)}%`;
+}
+
+function verdictLabel(verdict: Verdict | null): string {
+  return verdict === null ? '미판정' : VERDICT_LABEL[verdict];
 }
 
 function renderNoneRatio(input: ReportInput): string {
@@ -141,7 +179,7 @@ function renderGroup(group: ReportGroup): string {
     `- 방향: ${DIRECTION_LABEL[group.direction]}`,
     `- Effect: ${EFFECT_LABEL[group.fromEffect]} → ${EFFECT_LABEL[group.toEffect]}`,
     `- Action ${group.actionCount}건`,
-    `- Verdict: ${group.verdict === null ? '미판정' : VERDICT_LABEL[group.verdict]}`,
+    `- Verdict: ${verdictLabel(group.verdict)}`,
   ];
   if (group.targetSummary.length > 0) {
     lines.push('- 주요 Target:');
@@ -168,12 +206,12 @@ function renderGroups(groups: readonly ReportGroup[]): string {
   return sections.join('\n');
 }
 
-function renderDecision(decision: ReportDecision | null): string {
+function renderDecision(decision: ReportDecision | null, label: DecisionLabel): string {
   if (decision === null) {
     return '아직 결정되지 않았습니다.';
   }
   return [
-    `- 결정: ${DECISION_LABEL[decision.decision]}`,
+    `- 결정: ${label[decision.decision]}`,
     `- 검토자: ${decision.reviewerName}`,
     `- 시각: ${decision.decidedAt}`,
     `- 메모: ${decision.note === '' ? '(없음)' : decision.note}`,
@@ -182,7 +220,17 @@ function renderDecision(decision: ReportDecision | null): string {
   ].join('\n');
 }
 
-/** Renders a Change Review's Evidence Report as Markdown. */
+function renderReplayHashes(decision: ReportDecision | null): string[] {
+  if (decision === null) {
+    return [];
+  }
+  return [
+    `- Replay inputsHash: \`${decision.replayInputsHash}\``,
+    `- Replay resultHash: \`${decision.replayResultHash}\``,
+  ];
+}
+
+/** Renders a change review's Evidence Report as Markdown. */
 export function renderReport(input: ReportInput): string {
   return [
     '# Evidence Report',
@@ -193,12 +241,7 @@ export function renderReport(input: ReportInput): string {
     '',
     `- 기준 Policy Version contentHash: \`${input.baselineContentHash}\``,
     `- 변경안 Policy Version contentHash: \`${input.candidateContentHash}\``,
-    ...(input.decision === null
-      ? []
-      : [
-          `- Replay inputsHash: \`${input.decision.replayInputsHash}\``,
-          `- Replay resultHash: \`${input.decision.replayResultHash}\``,
-        ]),
+    ...renderReplayHashes(input.decision),
     '',
     '## 검토 기간',
     '',
@@ -222,11 +265,101 @@ export function renderReport(input: ReportInput): string {
     '',
     '## 결정',
     '',
-    renderDecision(input.decision),
+    renderDecision(input.decision, CHANGE_DECISION_LABEL),
     '',
     '## 고지',
     '',
     FIXED_NOTICE,
+    '',
+  ].join('\n');
+}
+
+function renderAdoptionScale(stats: AdoptionStats | null): string {
+  if (stats === null) {
+    return '아직 replay가 완료되지 않아 분석 수치가 없습니다.';
+  }
+  const none = stats.analyzability.none;
+  return [
+    `- 분석한 Action: ${stats.evaluatedActions}건 (전체 ${stats.totalActions}건, 제외 ${stats.excludedActions}건)`,
+    `- 그중 analyzability none: ${none}건 (${ratio(none, stats.evaluatedActions)})`,
+  ].join('\n');
+}
+
+function renderEffectCounts(stats: AdoptionStats | null): string {
+  if (stats === null) {
+    return '아직 replay가 완료되지 않아 Effect 표가 없습니다.';
+  }
+  const rows = EFFECTS.map((effect) => {
+    const count = stats.effectCounts[effect];
+    return `| ${EFFECT_LABEL[effect]} | ${count} | ${ratio(count, stats.evaluatedActions)} |`;
+  });
+  return ['| Effect | Action 수 | 비율 |', '| --- | --- | --- |', ...rows].join('\n');
+}
+
+function renderAdoptionGroupTable(
+  groups: readonly AdoptionReportGroup[],
+  effect: AdoptionEffect,
+): string {
+  const rows = groups.filter((group) => group.effect === effect);
+  if (rows.length === 0) {
+    return `'${EFFECT_LABEL[effect]}' 대상 Adoption Group이 없습니다.`;
+  }
+  return [
+    '| Adoption Group | Action 수 | Session 수 | 주요 Target | Verdict |',
+    '| --- | --- | --- | --- | --- |',
+    ...rows.map((group) => {
+      const targets = group.targetSummary
+        .map((target) => `${target.key} (${target.count}건)`)
+        .join(', ');
+      return `| ${group.headline} | ${group.actionCount} | ${group.sessionCount} | ${targets} | ${verdictLabel(group.verdict)} |`;
+    }),
+  ].join('\n');
+}
+
+/**
+ * Renders an adoption review's Evidence Report as Markdown: the candidate's
+ * hash, the window, the analysis size, the Effect counts and rates, one table
+ * per reviewed Effect with each group's Verdict, the decision, and the notices.
+ */
+export function renderAdoptionReport(input: AdoptionReportInput): string {
+  return [
+    '# Evidence Report',
+    '',
+    `최초 도입 검토 \`${input.changeReviewId}\``,
+    '',
+    '## 정책 Version',
+    '',
+    `- 제안 Policy Version contentHash: \`${input.candidateContentHash}\``,
+    ...renderReplayHashes(input.decision),
+    '',
+    '## 검토 기간',
+    '',
+    `- ${input.windowFrom} ~ ${input.windowTo}`,
+    '',
+    '## 분석 규모',
+    '',
+    renderAdoptionScale(input.stats),
+    '',
+    '## 정책 적용 결과',
+    '',
+    renderEffectCounts(input.stats),
+    '',
+    '## 확인 필요 Adoption Group과 Verdict',
+    '',
+    renderAdoptionGroupTable(input.groups, 'ask'),
+    '',
+    '## 차단 Adoption Group과 Verdict',
+    '',
+    renderAdoptionGroupTable(input.groups, 'deny'),
+    '',
+    '## 결정',
+    '',
+    renderDecision(input.decision, ADOPTION_DECISION_LABEL),
+    '',
+    '## 고지',
+    '',
+    FIXED_NOTICE,
+    ADOPTION_NOTICE,
     '',
   ].join('\n');
 }

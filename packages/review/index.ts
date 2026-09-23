@@ -38,21 +38,29 @@ export { recordSeedOnlyAcceptance, SEED_ONLY_AUDIT_NOTE } from './lib/infra/seed
 export type { RecordSeedOnlyAcceptanceInput } from './lib/infra/seed-audit.ts';
 export { assembleReviewModule } from './lib/app/module.ts';
 export { computeGate } from './lib/domain/gate.ts';
-export { renderReport } from './lib/domain/report.ts';
+export { renderAdoptionReport, renderReport } from './lib/domain/report.ts';
 export type {
   AssembleReviewModuleDeps,
   ChangeReviewView,
   CreateChangeReviewInput,
   DecideInput,
+  ListReviewAdoptionGroupsInput,
   ListReviewDiffGroupsInput,
   PolicyReviewRepository,
   RecordedVerdict,
   RecordVerdictInput,
   ReplaySummary,
+  ReviewAdoptionGroup,
+  ReviewAdoptionGroupsResult,
   ReviewDiffGroup,
   ReviewDiffGroupsResult,
   ReviewModule,
 } from './lib/app/module.ts';
 export type { ReviewStore } from './lib/app/ports.ts';
 export type { GateInput } from './lib/domain/gate.ts';
-export type { ReportGroup, ReportInput } from './lib/domain/report.ts';
+export type {
+  AdoptionReportGroup,
+  AdoptionReportInput,
+  ReportGroup,
+  ReportInput,
+} from './lib/domain/report.ts';

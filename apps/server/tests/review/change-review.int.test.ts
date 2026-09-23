@@ -187,6 +187,9 @@ test('accept is refused while a widening group is unreviewed, then allowed once 
   // createChangeReview transitions the draft candidate into review.
   const candidateAfterCreate = await repository.getVersion(candidateId);
   expect(candidateAfterCreate.ok && candidateAfterCreate.value.status).toBe('in_review');
+  // A Policy with an accepted version gets a change review against that baseline.
+  expect(created.value.review.kind).toBe('change');
+  expect(created.value.review.baselineVersionId).not.toBeNull();
 
   const reviewId = created.value.review.id;
   const ready = await waitReady(reviewId);

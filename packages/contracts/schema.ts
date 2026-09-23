@@ -328,6 +328,9 @@ export const ListConformanceFindingsResponseSchema = z.object({
 export type ListConformanceFindingsResponse = z.infer<typeof ListConformanceFindingsResponseSchema>;
 
 // POST /change-reviews, GET /change-reviews/{id}
+// The request carries no review kind: the server derives `change` when the
+// Policy has an accepted version to compare against and `adoption` when it has
+// none, so the candidate is the first version to adopt.
 export const CreateChangeReviewRequestSchema = z.object({
   candidateVersionId: PolicyVersionIdSchema,
   windowFrom: IsoTimestampSchema,
@@ -366,6 +369,27 @@ export type ListReviewDiffGroupsQuery = z.infer<typeof ListReviewDiffGroupsQuery
 
 export const ListReviewDiffGroupsResponseSchema = pageOf(ReviewDiffGroupResponseSchema);
 export type ListReviewDiffGroupsResponse = z.infer<typeof ListReviewDiffGroupsResponseSchema>;
+
+// GET /change-reviews/{id}/adoption-groups
+// An adoption review's Adoption Groups in the run's review order, each with the
+// review's Verdict; an empty page for a change review.
+export const ReviewAdoptionGroupResponseSchema = AdoptionGroupSchema.extend({
+  verdict: VerdictSchema.nullable(),
+});
+export type ReviewAdoptionGroupResponse = z.infer<typeof ReviewAdoptionGroupResponseSchema>;
+
+export const ListReviewAdoptionGroupsQuerySchema = z.object({
+  effect: AdoptionEffectSchema.optional(),
+  verdict: VerdictSchema.optional(),
+  cursor: CursorSchema.optional(),
+  limit: LimitSchema,
+});
+export type ListReviewAdoptionGroupsQuery = z.infer<typeof ListReviewAdoptionGroupsQuerySchema>;
+
+export const ListReviewAdoptionGroupsResponseSchema = pageOf(ReviewAdoptionGroupResponseSchema);
+export type ListReviewAdoptionGroupsResponse = z.infer<
+  typeof ListReviewAdoptionGroupsResponseSchema
+>;
 
 // PUT /change-reviews/{id}/verdicts/{groupKey}
 export const RecordVerdictRequestSchema = z.object({
