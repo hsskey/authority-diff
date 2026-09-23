@@ -68,7 +68,7 @@ export interface FailStaleRunsInput {
   readonly errorCode: string;
 }
 
-/** A completed run and its stored matrix, for the authority-map query. */
+/** A completed run and its stored matrix and analyzability counts, for the authority-map query. */
 export interface AuthorityMapRunView {
   readonly replayRunId: ReplayRunId;
   readonly candidateVersionId: PolicyVersionId;
