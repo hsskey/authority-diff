@@ -138,7 +138,9 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
         const [failed] = await tx
           .update(changeReviews)
           .set({ status: 'failed' })
-          .where(and(eq(changeReviews.id, input.changeReviewId), eq(changeReviews.status, 'computing')))
+          .where(
+            and(eq(changeReviews.id, input.changeReviewId), eq(changeReviews.status, 'computing')),
+          )
           .returning();
         if (failed === undefined) {
           return;
