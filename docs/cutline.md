@@ -268,7 +268,7 @@ ADR과 이 표가 자리 예약입니다.
 | `action` | 구현(전부) | 없음 | classifier가 순수 함수. corpus와 property test로 검증 가능 |
 | `trace` | 구현(축소) | observation, hook, `mandates` 없음. 재분류 추가 | redaction 전 문자열이 단말 밖으로 나가지 않음 |
 | `policy` | 구현(축소) | 활성화, rollback, export, prose 없음. 순수 entry `evaluate.ts` 추가 | `draft`가 아닌 문서는 불변 |
-| `replay` | 구현(축소) | `version_diff`만. 순수 entry `diff.ts` 추가. R1 반영 | replay 결과는 한 번 쓰고 바꾸지 않음. 사람의 판정을 모름 |
+| `replay` | 구현(축소) | `version_diff`만. 순수 entry `diff.ts` 추가. R1 반영. baseline 없는 `adoption` run kind는 ADR-0010으로 추가했다 | replay 결과는 한 번 쓰고 바꾸지 않음. 사람의 판정을 모름 |
 | `review` | 구현(축소) | probe blocker, stale 없음. report 생성과 `review_decisions` 추가 | 바뀌는 상태(Verdict, 결정)가 replay 결과와 섞이지 않음 |
 | `probe` | Tier 2에 도달하면 최소 구현. 아니면 만들지 않음 | calibration, provider 상태, LLM baseline 없음 | 해당 없음 |
 | `audit` | 만들지 않음 | `review_decisions`로 대체 | 해당 없음 |
@@ -417,7 +417,7 @@ agent가 이 목록의 code를 만들기 시작하면 중단시킵니다.
 - [ ] Testcontainers.
 - [ ] `scenarios`, `probe_runs`, `probe_results`, `provider_calibrations` table과 API, `/scenarios` 화면.
 - [ ] calibration 계산(Wilson threshold 산출, ECE, Brier, bin), provider 상태 기계, `decision-provider.llm-baseline.ts`.
-- [ ] `DecisionSource` union, `replay_runs.kind`. `replay_runs.kind`(기본값 `version_diff`)는 축소 형태로 구현하고 `DecisionSource` union은 만들지 않았다(ACR-0007, 17장).
+- [ ] `DecisionSource` union, `replay_runs.kind`. `replay_runs.kind`(기본값 `version_diff`)는 축소 형태로 구현하고 `DecisionSource` union은 만들지 않았다(ACR-0007, 17장). 이후 baseline 없는 `adoption` kind를 ADR-0010으로 추가했다.
 - [ ] 합성 조직 trace 생성기(S1), workload 3종, RAR과 fidelity 계산.
 - [ ] rule 표 form editor(Tier 2 전까지), `/trace-imports` 화면, Overview의 기간 선택과 cell drill-down.
 - [ ] Codex parser, `TraceSource` port.
