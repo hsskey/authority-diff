@@ -33,6 +33,7 @@ const idGenerator = createUlidGenerator();
 let database: Database;
 let review: ReviewModule;
 let replay: ReplayModule;
+let trace: ReturnType<typeof createTraceModule>;
 let repository: ReturnType<typeof createPolicyRepository>;
 
 const WIDE_OPEN: PolicyDocument = {
@@ -106,7 +107,7 @@ beforeAll(async () => {
   database = createDatabase(config.value);
 
   repository = createPolicyRepository({ db: database.db, clock, idGenerator });
-  const trace = createTraceModule({ database, clock, idGenerator });
+  trace = createTraceModule({ database, clock, idGenerator });
   const imported = await trace.importTrace(ParsedSessionSchema.parse(sessionFixture));
   if (!imported.ok) {
     throw new Error('importTrace failed');
@@ -519,6 +520,7 @@ test('a review withdrawn while computing stays withdrawn after its replay comple
       },
     },
     policy: makePolicyReviewRepository(repository),
+    traceSources: trace,
     clock,
     idGenerator,
   });
