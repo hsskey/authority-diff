@@ -420,7 +420,9 @@ test('a ready review is withdrawn and its draft can start a new review', async (
   await expect(page.getByRole('heading', { name: '검토 철회됨' })).toBeVisible();
   await expect(page.getByText('철회됨', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '정책 변경 수락' })).toHaveCount(0);
-  await expect(page.getByLabel('execute 판정')).toBeDisabled();
+  await expect(
+    page.getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정'),
+  ).toBeDisabled();
 
   await page.getByRole('link', { name: 'draft version 열기' }).click();
   await expect(page.getByRole('button', { name: '변경 검토 만들기' })).toBeEnabled();
