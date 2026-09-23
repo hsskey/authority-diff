@@ -219,10 +219,15 @@ export const ListDiffGroupsResponseSchema = pageOf(DiffGroupResponseSchema);
 export type ListDiffGroupsResponse = z.infer<typeof ListDiffGroupsResponseSchema>;
 
 // GET /diff-groups/{runId}/{groupKey}/samples
+// `targetKeys[i]` is the Target key of `action.operations[i]`. The rationale
+// maps are keyed by ruleId and cover the rules that decided an Operation.
 export const DiffGroupSampleSchema = z.object({
   action: StoredAgentActionSchema,
+  targetKeys: z.array(z.string()),
   baselineDecision: DecisionSchema,
   candidateDecision: DecisionSchema,
+  baselineRuleRationales: z.record(z.string(), z.string()),
+  candidateRuleRationales: z.record(z.string(), z.string()),
 });
 export type DiffGroupSample = z.infer<typeof DiffGroupSampleSchema>;
 

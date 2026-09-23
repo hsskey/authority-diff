@@ -342,6 +342,24 @@ describe('replay module', () => {
     expect(sample?.candidateDecision.effect).toBe('allow');
   });
 
+  test('samples carry each Operation Target key and the deciding rule rationale', async () => {
+    const { module } = makeModule();
+    const { run } = await runToCompletion(module);
+    const listed = await module.listDiffGroups(run.id, { limit: 50 });
+    const groupKey = listed.ok ? listed.value.items[0]?.groupKey : undefined;
+    if (groupKey === undefined) {
+      throw new Error('expected one diff group');
+    }
+
+    const samples = await module.getSamples(run.id, groupKey);
+
+    expect(samples.ok ? samples.value[0] : null).toMatchObject({
+      targetKeys: ['example.invalid/synthetic/project'],
+      baselineRuleRationales: { push_policy: 'Synthetic rule controls remote publication.' },
+      candidateRuleRationales: { push_policy: 'Synthetic rule controls remote publication.' },
+    });
+  });
+
   test('listDiffGroups on an unknown run returns replay.run_not_found', async () => {
     const { module } = makeModule();
     const missing = ReplayRunIdSchema.parse('rpl_0000000000000000000000000Z');

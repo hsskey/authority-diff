@@ -2,7 +2,7 @@ import { err, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import { createEvaluator } from '@authority/policy/evaluate';
-import type { Decision, PolicyVersionId } from '@authority/policy/schema';
+import type { Decision, PolicyDocument, PolicyVersionId } from '@authority/policy/schema';
 import type { ActionReader } from '@authority/trace';
 import type {
   ActionForReplay,
@@ -21,10 +21,19 @@ import type {
 import { buildAnalyzabilityCounts, buildMatrix } from '../domain/build-matrix.ts';
 import type { AnalyzabilityCounts, AuthorityMapCell } from '../domain/build-matrix.ts';
 import { computeConformanceWith } from '../domain/compute-conformance.ts';
-import { computeDiffWith } from '../domain/compute-diff.ts';
+import { computeDiffWith, deriveTargetKey } from '../domain/compute-diff.ts';
 import type { PolicyReader, RecordCompletionInput, ReplayStore } from './ports.ts';
 
 const BATCH_SIZE = 5_000;
+
+function decidingRationales(decision: Decision, document: PolicyDocument): Record<string, string> {
+  const decidingRuleIds = new Set(decision.operations.map((operation) => operation.decidingRuleId));
+  return Object.fromEntries(
+    document.rules
+      .filter((rule) => decidingRuleIds.has(rule.ruleId))
+      .map((rule) => [rule.ruleId, rule.rationale]),
+  );
+}
 const STALE_RUN_MS = 60_000;
 
 export interface RequestReplayInput {
@@ -60,10 +69,17 @@ export interface ConformanceFindingsView {
   readonly items: readonly ConformanceFinding[];
 }
 
+/**
+ * `targetKeys[i]` is the Target key of `action.operations[i]`. Each rationale
+ * map covers only the rules that decided an Operation in that Decision.
+ */
 export interface DiffGroupSample {
   readonly action: StoredAgentAction;
+  readonly targetKeys: readonly string[];
   readonly baselineDecision: Decision;
   readonly candidateDecision: Decision;
+  readonly baselineRuleRationales: Readonly<Record<string, string>>;
+  readonly candidateRuleRationales: Readonly<Record<string, string>>;
 }
 
 export interface AuthorityMapView {
@@ -416,7 +432,14 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         if (baselineDecision === null || candidateDecision === null) {
           continue;
         }
-        samples.push({ action, baselineDecision, candidateDecision });
+        samples.push({
+          action,
+          targetKeys: action.operations.map((operation) => deriveTargetKey(operation.target)),
+          baselineDecision,
+          candidateDecision,
+          baselineRuleRationales: decidingRationales(baselineDecision, baseline.document),
+          candidateRuleRationales: decidingRationales(candidateDecision, candidate.document),
+        });
       }
       return ok(samples);
     },
