@@ -1806,7 +1806,7 @@ REST 하나만 씁니다.
 | `POST /change-reviews/{id}/decisions` | 승인, 반려 | `{ decision: 'approve' \| 'reject', note, probeWaiverReason \| null }` | `201 ChangeReviewResponse` | `review.gate_blocked`(409, blocker 포함), `review.evidence_stale`(409), `review.not_open` | `Idempotency-Key` |
 | `POST /replay-runs` | 임의 replay, conformance 실행 | `{ kind, baseline, candidate, windowFrom, windowTo }` | `202 ReplayRunResponse`(같은 `inputsHash`의 완료 run이 있으면 `200`) | `replay.source_invalid`(422), `replay.classifier_version_mismatch`(409) | `inputsHash`로 자연 멱등 |
 | `GET /replay-runs/{id}` | 상태와 진행률 | 없음 | `ReplayRunResponse` + `progress` | `replay.run_not_found` | 해당 없음 |
-| `GET /authority-map` | Overview용 집계 | `windowDays` | active version 기준 최신 run의 matrix, 없으면 `{ run: null }` | 없음 | 해당 없음 |
+| `GET /authority-map` | Overview용 집계 | 없음(기간은 run의 `windowFrom`/`windowTo`가 실음) | active version 기준 최신 run의 matrix, 없으면 `{ run: null }` | 없음 | 해당 없음 |
 | `GET /scenarios` / `POST /scenarios` | 목록, 작성 | filter 또는 `ScenarioInput` | page 또는 `201` | `validation.invalid_request` | `Idempotency-Key` |
 | `POST /scenario-batches` | template에서 일괄 생성 | `{ policyVersionId, templateSet }` | `201 { createdCount }` | `policy.version_not_found` | `Idempotency-Key` |
 | `PUT /scenarios/{id}` | 기대 Effect 확정, golden 지정, 폐기 | `{ expectedEffect, status, isGolden }` | `ScenarioResponse` | `probe.scenario_not_found` | PUT이라 멱등 |
