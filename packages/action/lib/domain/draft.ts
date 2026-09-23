@@ -6,6 +6,8 @@
  * (adding the `fragment_truncated` signal) from the frozen Operation contract.
  */
 import type { Analyzability, Capability, Operation, Target } from '../../schema.ts';
+import type { ShellWord } from '../shell/ast.ts';
+import { hasFlag } from './command.ts';
 
 /** An Operation before its `index` is assigned. */
 export interface OperationDraft {
@@ -28,6 +30,25 @@ export function draft(
   signals: readonly string[] = [],
 ): OperationDraft {
   return { capability, target, analyzability, program, fragment, signals };
+}
+
+/**
+ * Downgrades a publish or push draft to a partial `execute` when a help or
+ * dry-run flag means the command transmits nothing, keeping its Target and
+ * adding the `help` or `dry_run` signal.
+ */
+export function unlessNoEffect(
+  op: OperationDraft,
+  args: readonly ShellWord[],
+  dryRunFlags: readonly string[] = ['--dry-run'],
+): OperationDraft {
+  const signal = hasFlag(args, '--help', '-h')
+    ? 'help'
+    : hasFlag(args, ...dryRunFlags)
+      ? 'dry_run'
+      : null;
+  if (signal === null) return op;
+  return draft('execute', op.target, 'partial', op.program, op.fragment, [...op.signals, signal]);
 }
 
 /** Assigns indices and applies the fragment length cap. */

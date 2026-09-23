@@ -26,8 +26,19 @@ function toToolCall(input: CorpusCase['input']): ToolCall {
   };
 }
 
-function includes(ops: readonly Operation[], capability: string, targetKind: string): boolean {
-  return ops.some((o) => o.capability === capability && o.target.kind === targetKind);
+type Required = CorpusCase['mustInclude'][number];
+
+function remoteKeyOf(op: Operation): string | null | undefined {
+  return op.target.kind === 'vcs_remote' ? op.target.remoteKey : undefined;
+}
+
+function includes(ops: readonly Operation[], required: Required): boolean {
+  return ops.some(
+    (o) =>
+      o.capability === required.capability &&
+      o.target.kind === required.targetKind &&
+      (!('remoteKey' in required) || remoteKeyOf(o) === required.remoteKey),
+  );
 }
 
 describe('adversarial corpus', () => {
@@ -40,7 +51,7 @@ describe('adversarial corpus', () => {
     (_name, testCase) => {
       const ops = classify(toToolCall(testCase.input));
       for (const required of testCase.mustInclude) {
-        expect(includes(ops, required.capability, required.targetKind)).toBe(true);
+        expect(includes(ops, required)).toBe(true);
       }
     },
   );

@@ -84,6 +84,127 @@ describe('git global options before the subcommand', () => {
   });
 });
 
+describe('git remote resolution outside the session workspace', () => {
+  function remoteOp(command: string): Operation | undefined {
+    return classify(bash(command)).find((o) => o.target.kind === 'vcs_remote');
+  }
+
+  test.each([
+    ['git -C /tmp/other fetch origin', null],
+    ['git -C .. fetch origin', null],
+    ['git -C "$DIR" fetch origin', null],
+    ['git --git-dir=/tmp/other/.git fetch origin', null],
+    ['git --git-dir .git fetch origin', null],
+    ['git --work-tree=/tmp/other push origin main', 'main'],
+    ['git --work-tree /tmp/other push origin main', 'main'],
+    ['cd /tmp/other && git push origin main', 'main'],
+    ['cd "$DIR" && git push origin main', 'main'],
+    ['cd ~ && git push origin main', 'main'],
+  ])('%s keeps only the remote name', (command, branch) => {
+    const op = remoteOp(command);
+    expect(op?.target).toEqual({
+      kind: 'vcs_remote',
+      remoteName: 'origin',
+      remoteKey: null,
+      branch,
+    });
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.signals).toContain('remote_dir_mismatch');
+  });
+
+  test.each([
+    'git -C packages/action fetch origin',
+    'git -C /work/repo/packages fetch origin',
+    'git --work-tree=src fetch origin',
+    'cd packages && git fetch origin',
+  ])('%s inside the workspace resolves the session remote', (command) => {
+    const op = remoteOp(command);
+    expect(op?.target).toMatchObject({
+      remoteName: 'origin',
+      remoteKey: 'github.com/acme/toolkit',
+    });
+    expect(op?.analyzability).toBe('full');
+    expect(op?.signals).toEqual([]);
+  });
+
+  test('an explicit URL outside the workspace still resolves its Remote Key', () => {
+    const op = remoteOp('git -C /tmp/other push https://github.com/acme/other.git main');
+    expect(op?.target).toMatchObject({ remoteName: null, remoteKey: 'github.com/acme/other' });
+    expect(op?.signals).toEqual([]);
+  });
+});
+
+describe('gh remote resolution outside the session workspace', () => {
+  function remoteOp(command: string): Operation | undefined {
+    return classify(bash(command)).find((o) => o.target.kind === 'vcs_remote');
+  }
+
+  test.each(['cd /tmp/other && gh pr merge 5', 'cd "$DIR" && gh pr merge 5'])(
+    '%s keeps only the remote name',
+    (command) => {
+      const op = remoteOp(command);
+      expect(op?.target).toEqual({
+        kind: 'vcs_remote',
+        remoteName: 'origin',
+        remoteKey: null,
+        branch: 'main',
+      });
+      expect(op?.analyzability).toBe('partial');
+      expect(op?.signals).toContain('remote_dir_mismatch');
+    },
+  );
+
+  test('cd inside the workspace resolves the session remote', () => {
+    const op = remoteOp('cd packages && gh pr merge 5');
+    expect(op?.target).toMatchObject({
+      remoteName: 'origin',
+      remoteKey: 'github.com/acme/toolkit',
+    });
+    expect(op?.signals).not.toContain('remote_dir_mismatch');
+  });
+
+  test('an explicit -R outside the workspace still resolves its Remote Key', () => {
+    const op = remoteOp('cd /tmp/other && gh pr merge 5 -R acme/other');
+    expect(op?.target).toMatchObject({ remoteName: null, remoteKey: 'github.com/acme/other' });
+    expect(op?.signals).not.toContain('remote_dir_mismatch');
+  });
+});
+
+describe('publish and push with a help or dry-run flag transmit nothing', () => {
+  test.each([
+    ['npm publish --dry-run', 'dry_run'],
+    ['pnpm publish --dry-run', 'dry_run'],
+    ['yarn publish --help', 'help'],
+    ['npm publish -h', 'help'],
+    ['docker push --dry-run ghcr.io/acme/app:1', 'dry_run'],
+    ['docker push --help', 'help'],
+    ['git push --dry-run origin main', 'dry_run'],
+    ['git push -n origin main', 'dry_run'],
+    ['git push --force --dry-run origin main', 'dry_run'],
+    ['git push --help', 'help'],
+    ['git push -h', 'help'],
+  ])('%s is a partial execute with the %s signal', (command, signal) => {
+    const ops = classify(bash(command));
+    expect(ops.map((o) => o.capability)).toEqual(['execute']);
+    expect(ops[0]?.analyzability).toBe('partial');
+    expect(ops[0]?.signals).toContain(signal);
+  });
+
+  test.each([
+    ['npm publish --tag next', 'push'],
+    ['docker push ghcr.io/acme/app:1', 'push'],
+    ['git push origin main', 'push'],
+    ['git push --force origin main', 'rewrite'],
+  ])('%s without such a flag keeps %s', (command, capability) => {
+    expect(classify(bash(command)).map((o) => o.capability)).toEqual([capability]);
+  });
+
+  test('a real push after a dry run in the same command is still a push', () => {
+    const ops = classify(bash('git push --dry-run origin main && git push origin main'));
+    expect(ops.map((o) => o.capability)).toEqual(['execute', 'push']);
+  });
+});
+
 describe('force-push refspec detection', () => {
   test('git push origin +main (colon-less force refspec) is rewrite', () => {
     const ops = classify(bash('git push origin +main'));

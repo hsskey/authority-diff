@@ -6,6 +6,7 @@
  * `packages/action/schema.ts`.
  */
 import type { Target } from '../../schema.ts';
+import type { ShellWord } from '../shell/ast.ts';
 
 /** Resolved path plus whether it lies inside the workspace root. */
 export interface ResolvedPath {
@@ -60,6 +61,34 @@ function normalizeSegments(path: string): string {
     out.push(seg);
   }
   return (absolute ? '/' : '') + out.join('/');
+}
+
+/**
+ * True when a command runs against a directory other than the session
+ * workspace, so the session `repoRemotes` may not describe its remotes: an
+ * explicit `--git-dir`, a `-C`/`--work-tree` path (each resolved against the
+ * previous) outside the workspace or not statically known, or a cwd an earlier
+ * `cd` moved outside the workspace or to an unknown directory. Callers without
+ * such directory options (for example `gh`) pass none, leaving only the cwd
+ * check.
+ */
+export function dirOutsideWorkspace(
+  cwd: string | null,
+  workspaceRoot: string | null,
+  dirs: readonly ShellWord[] = [],
+  hasGitDir = false,
+): boolean {
+  if (hasGitDir) return true;
+  // Without a workspace root the cwd cannot be compared; only an explicit
+  // directory change is known to leave the session repository.
+  if (workspaceRoot === null) return dirs.length > 0;
+  if (cwd === null) return true;
+  let dir = resolvePath('.', cwd, workspaceRoot);
+  for (const word of dirs) {
+    if (word.hasExpansion) return true;
+    dir = resolvePath(word.text, dir.path, workspaceRoot);
+  }
+  return !dir.isInsideWorkspace;
 }
 
 export function pathTarget(resolved: ResolvedPath): Target {

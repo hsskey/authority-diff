@@ -11,7 +11,7 @@
 import type { Analyzability, Capability, Target } from '../../schema.ts';
 import type { ShellWord } from '../shell/ast.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
-import { draft, type OperationDraft } from './draft.ts';
+import { draft, unlessNoEffect, type OperationDraft } from './draft.ts';
 import { scanInline } from './inline.ts';
 import {
   hostTarget,
@@ -478,7 +478,8 @@ function dockerOps(cmd: NormalizedCommand): OperationDraft[] {
     const host =
       image === undefined || image.hasExpansion ? null : registryHostFromImage(image.text);
     const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
-    return [draft('push', target, host === null ? 'partial' : 'full', 'docker', cmd.raw)];
+    const op = draft('push', target, host === null ? 'partial' : 'full', 'docker', cmd.raw);
+    return [unlessNoEffect(op, cmd.args)];
   }
   if (sub === 'pull') return [runnerDraft('fetch', cmd, 'partial')];
   return [runnerDraft('execute', cmd, 'partial')];
@@ -726,11 +727,15 @@ function remoteOrUnparseable(key: string): SpecKind {
     : { kind: 'remote', source: result.remoteKey };
 }
 
-/** Emits a push Operation whose target is the ecosystem registry (publish). */
+/**
+ * Emits a push Operation whose target is the ecosystem registry (publish), or a
+ * partial execute when a help or dry-run flag means nothing is published.
+ */
 function publishDraft(cmd: NormalizedCommand, ecosystem: Ecosystem): OperationDraft {
   const source = findRegistryHost(cmd.args) ?? defaultRegistry(ecosystem);
   const target: Target = { kind: 'package', ecosystem, source };
-  return draft('push', target, source === null ? 'partial' : 'full', cmd.program, cmd.raw);
+  const op = draft('push', target, source === null ? 'partial' : 'full', cmd.program, cmd.raw);
+  return unlessNoEffect(op, cmd.args);
 }
 
 function basename(program: string): string {
