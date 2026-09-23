@@ -6,7 +6,8 @@
  * clone/fetch/pull are `fetch`; push is `push`; force pushes, `reset --hard`,
  * `branch -D`, and `clean` are `rewrite` or `delete`. A network subcommand
  * targets a `vcs_remote` whose Remote Key is resolved from an explicit URL, the
- * named remote, or the default `origin`.
+ * named remote, or the default `origin`. A named remote resolves through the
+ * session `repoRemotes` only while git runs inside the session workspace.
  */
 import type { Capability, Target } from '../../schema.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
@@ -84,17 +85,35 @@ const GIT_GLOBAL_VALUE_FLAGS: ReadonlySet<string> = new Set([
   '--super-prefix',
 ]);
 
+/** git global options split from the subcommand argv. */
+interface GitGlobals {
+  readonly args: ShellWord[];
+  /** `-C` and `--work-tree` values, in order, each resolved against the previous. */
+  readonly dirs: ShellWord[];
+  readonly hasGitDir: boolean;
+}
+
 /**
  * Drops git global options (and their values) that precede the subcommand so
  * `git -C <dir> push` and `git -c k=v commit` resolve to push/commit instead of
- * falling through to an unknown subcommand.
+ * falling through to an unknown subcommand, and keeps the options that move git
+ * to another repository.
  */
-function stripGitGlobals(args: readonly ShellWord[]): ShellWord[] {
+function splitGitGlobals(args: readonly ShellWord[]): GitGlobals {
+  const dirs: ShellWord[] = [];
+  let hasGitDir = false;
   let i = 0;
   while (i < args.length) {
-    const t = args[i]?.text ?? '';
-    if (t.length === 0) break;
+    const word = args[i];
+    const t = word?.text ?? '';
+    if (word === undefined || t.length === 0) break;
+    if (t === '--git-dir' || t.startsWith('--git-dir=')) hasGitDir = true;
+    if (t.startsWith('--work-tree=')) {
+      dirs.push({ ...word, text: t.slice('--work-tree='.length) });
+    }
     if (GIT_GLOBAL_VALUE_FLAGS.has(t)) {
+      const value = args[i + 1];
+      if ((t === '-C' || t === '--work-tree') && value !== undefined) dirs.push(value);
       i += 2;
       continue;
     }
@@ -104,22 +123,44 @@ function stripGitGlobals(args: readonly ShellWord[]): ShellWord[] {
     }
     break;
   }
-  return args.slice(i);
+  return { args: args.slice(i), dirs, hasGitDir };
+}
+
+/**
+ * True when git runs against a directory other than the session workspace, so
+ * the session `repoRemotes` may not describe its remotes: `--git-dir`, a `-C` or
+ * `--work-tree` path outside the workspace or not statically known, or a cwd an
+ * earlier `cd` moved outside the workspace or to an unknown directory.
+ */
+function remoteDirMismatch(cmd: NormalizedCommand, globals: GitGlobals): boolean {
+  if (globals.hasGitDir) return true;
+  // Without a workspace root the cwd cannot be compared; only an explicit
+  // directory change is known to leave the session repository.
+  if (cmd.workspaceRoot === null) return globals.dirs.length > 0;
+  if (cmd.cwd === null) return true;
+  let dir = resolvePath('.', cmd.cwd, cmd.workspaceRoot);
+  for (const word of globals.dirs) {
+    if (word.hasExpansion) return true;
+    dir = resolvePath(word.text, dir.path, cmd.workspaceRoot);
+  }
+  return !dir.isInsideWorkspace;
 }
 
 export function classifyGit(cmd: NormalizedCommand): OperationDraft[] {
-  const args = stripGitGlobals(cmd.args);
+  const globals = splitGitGlobals(cmd.args);
+  const args = globals.args;
   const gitCmd: NormalizedCommand = { ...cmd, args };
+  const dirMismatch = remoteDirMismatch(cmd, globals);
   const positional = nonFlagArgs(args);
   const sub = positional[0]?.text ?? '';
   const rest = args.filter((a) => a !== positional[0]);
 
   if (FETCH_SUBS.has(sub)) {
-    return [remoteOp('fetch', gitCmd, sub, rest)];
+    return [remoteOp('fetch', gitCmd, sub, rest, dirMismatch)];
   }
   if (sub === 'push') {
     const forced = hasForceFlag(args) || hasPlusRefspec(rest);
-    return [remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest)];
+    return [remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest, dirMismatch)];
   }
   if (sub === 'reset') {
     return [localOp(hasFlag(args, '--hard') ? 'rewrite' : 'commit', gitCmd)];
@@ -161,6 +202,7 @@ function remoteOp(
   cmd: NormalizedCommand,
   sub: string,
   rest: readonly ShellWord[],
+  dirMismatch: boolean,
 ): OperationDraft {
   const positional = nonFlagArgs(rest);
   const signals: string[] = [];
@@ -184,7 +226,8 @@ function remoteOp(
     const named = positional.find((w) => !w.hasExpansion && !w.text.includes(':'));
     remoteName = named?.text ?? 'origin';
     if (named === undefined) analyzability = 'partial';
-    const url = cmd.repoRemotes?.[remoteName];
+    const url = dirMismatch ? undefined : cmd.repoRemotes?.[remoteName];
+    if (dirMismatch) signals.push('remote_dir_mismatch');
     if (url === undefined) {
       analyzability = 'partial';
     } else {

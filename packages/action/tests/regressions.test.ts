@@ -84,6 +84,56 @@ describe('git global options before the subcommand', () => {
   });
 });
 
+describe('git remote resolution outside the session workspace', () => {
+  function remoteOp(command: string): Operation | undefined {
+    return classify(bash(command)).find((o) => o.target.kind === 'vcs_remote');
+  }
+
+  test.each([
+    ['git -C /tmp/other fetch origin', null],
+    ['git -C .. fetch origin', null],
+    ['git -C "$DIR" fetch origin', null],
+    ['git --git-dir=/tmp/other/.git fetch origin', null],
+    ['git --git-dir .git fetch origin', null],
+    ['git --work-tree=/tmp/other push origin main', 'main'],
+    ['git --work-tree /tmp/other push origin main', 'main'],
+    ['cd /tmp/other && git push origin main', 'main'],
+    ['cd "$DIR" && git push origin main', 'main'],
+    ['cd ~ && git push origin main', 'main'],
+  ])('%s keeps only the remote name', (command, branch) => {
+    const op = remoteOp(command);
+    expect(op?.target).toEqual({
+      kind: 'vcs_remote',
+      remoteName: 'origin',
+      remoteKey: null,
+      branch,
+    });
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.signals).toContain('remote_dir_mismatch');
+  });
+
+  test.each([
+    'git -C packages/action fetch origin',
+    'git -C /work/repo/packages fetch origin',
+    'git --work-tree=src fetch origin',
+    'cd packages && git fetch origin',
+  ])('%s inside the workspace resolves the session remote', (command) => {
+    const op = remoteOp(command);
+    expect(op?.target).toMatchObject({
+      remoteName: 'origin',
+      remoteKey: 'github.com/acme/toolkit',
+    });
+    expect(op?.analyzability).toBe('full');
+    expect(op?.signals).toEqual([]);
+  });
+
+  test('an explicit URL outside the workspace still resolves its Remote Key', () => {
+    const op = remoteOp('git -C /tmp/other push https://github.com/acme/other.git main');
+    expect(op?.target).toMatchObject({ remoteName: null, remoteKey: 'github.com/acme/other' });
+    expect(op?.signals).toEqual([]);
+  });
+});
+
 describe('force-push refspec detection', () => {
   test('git push origin +main (colon-less force refspec) is rewrite', () => {
     const ops = classify(bash('git push origin +main'));

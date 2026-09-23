@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { createClassifier } from '../index.ts';
+import { CLASSIFIER_VERSION, createClassifier } from '../index.ts';
 import type { ClassifyToolCall, ToolCall } from '../schema.ts';
 import corpus from '../../../tests/corpus/labels.json' with { type: 'json' };
 
@@ -110,7 +110,7 @@ describe('classifier benchmark', () => {
     const { overall, noneOps, totalOps, byCapability, mismatches } = measure();
 
     const report = {
-      classifierVersion: '0.2.0',
+      classifierVersion: CLASSIFIER_VERSION,
       corpusSize: corpus.cases.length,
       overall: {
         precision: precision(overall),

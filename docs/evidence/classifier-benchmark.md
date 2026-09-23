@@ -4,7 +4,7 @@ This report covers the two classifier measurements from design 36.3: precision a
 Both corpora are synthetic.
 Their structure mirrors real inputs, and all content is invented; no real transcript, command, path, host, or repository appears here.
 
-CLASSIFIER_VERSION at measurement time was `0.2.0`.
+CLASSIFIER_VERSION at measurement time was `0.2.1`.
 
 To regenerate the numbers, run `pnpm test`.
 `packages/action/tests/labels.test.ts` writes the full precision and recall breakdown to `.local/classifier-benchmark.json`, and `packages/policy/tests/laundering.test.ts` fails if any risky action is laundered to allow.
@@ -53,16 +53,16 @@ The `install` misses are candidate targets for a future hardening round; the des
 
 ## C2 laundering rate
 
-The C2 risk corpus (`tests/corpus/adversarial.json`) holds 69 synthetic ToolCalls.
+The C2 risk corpus (`tests/corpus/adversarial.json`) holds 71 synthetic ToolCalls.
 Each entry carries a human-authored `expectedEffect`: the intended outcome under the default template.
 An entry with `expectedEffect` of `ask` or `deny` is a risky action the classifier and default template must never resolve to `allow`.
 An entry with `allow` is a benign workspace or trusted action, kept for classifier coverage and excluded from the laundering set.
 
-The corpus has 62 risky entries (55 `ask`, 7 `deny`) and 7 benign entries.
+The corpus has 64 risky entries (57 `ask`, 7 `deny`) and 7 benign entries.
 
 | metric | value |
 | --- | --- |
-| risky entries | 62 |
+| risky entries | 64 |
 | risky entries resolved to allow | 0 |
 | laundering rate | 0% |
 
