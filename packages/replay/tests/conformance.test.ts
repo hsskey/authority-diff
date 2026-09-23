@@ -18,6 +18,11 @@ const ASKED: Evidence = { event: 'permission_request', hookDecision: null };
 const HOOK_ALLOWED: Evidence = { event: 'permission_request', hookDecision: 'allow' };
 const HOOK_DENIED: Evidence = { event: 'permission_request', hookDecision: 'deny' };
 
+const WINDOW = {
+  from: IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z'),
+  to: IsoTimestampSchema.parse('2026-12-31T23:59:59.999Z'),
+};
+
 function operation(
   index: number,
   capability: Capability,
@@ -105,7 +110,7 @@ describe('pairPermissionRequests', () => {
     const pre = hookEvent('pre_tool_use', '2026-01-02T00:00:00.000Z', { actionKey: FIRST_KEY });
     const request = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
 
-    const result = pairPermissionRequests([request, pre]);
+    const result = pairPermissionRequests([request, pre], WINDOW);
 
     expect(result).toEqual({
       observations: [pre, { ...request, actionKey: FIRST_KEY }],
@@ -120,7 +125,7 @@ describe('pairPermissionRequests', () => {
     });
     const request = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
 
-    const result = pairPermissionRequests([pre, request]);
+    const result = pairPermissionRequests([pre, request], WINDOW);
 
     expect(result).toEqual({ observations: [pre, request], unpairedPermissionRequests: 1 });
   });
@@ -130,7 +135,7 @@ describe('pairPermissionRequests', () => {
     const nearer = hookEvent('pre_tool_use', '2026-01-02T00:00:01.000Z', { actionKey: SECOND_KEY });
     const request = hookEvent('permission_request', '2026-01-02T00:00:01.100Z');
 
-    const result = pairPermissionRequests([older, nearer, request]);
+    const result = pairPermissionRequests([older, nearer, request], WINDOW);
 
     expect(result).toEqual({
       observations: [older, nearer, { ...request, actionKey: SECOND_KEY }],
@@ -143,11 +148,39 @@ describe('pairPermissionRequests', () => {
     const first = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
     const second = hookEvent('permission_request', '2026-01-02T00:00:00.200Z');
 
-    const result = pairPermissionRequests([pre, first, second]);
+    const result = pairPermissionRequests([pre, first, second], WINDOW);
 
     expect(result).toEqual({
       observations: [pre, { ...first, actionKey: FIRST_KEY }, second],
       unpairedPermissionRequests: 1,
+    });
+  });
+
+  test('an unpaired permission_request before the window is not counted for the run', () => {
+    const window = {
+      from: IsoTimestampSchema.parse('2026-01-02T00:00:00.000Z'),
+      to: IsoTimestampSchema.parse('2026-01-03T00:00:00.000Z'),
+    };
+    const request = hookEvent('permission_request', '2026-01-01T23:59:59.000Z');
+
+    const result = pairPermissionRequests([request], window);
+
+    expect(result).toEqual({ observations: [request], unpairedPermissionRequests: 0 });
+  });
+
+  test('a request inside the window still pairs with a pre_tool_use before the window edge', () => {
+    const window = {
+      from: IsoTimestampSchema.parse('2026-01-02T00:00:00.000Z'),
+      to: IsoTimestampSchema.parse('2026-01-03T00:00:00.000Z'),
+    };
+    const pre = hookEvent('pre_tool_use', '2026-01-01T23:59:59.000Z', { actionKey: FIRST_KEY });
+    const request = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
+
+    const result = pairPermissionRequests([pre, request], window);
+
+    expect(result).toEqual({
+      observations: [pre, { ...request, actionKey: FIRST_KEY }],
+      unpairedPermissionRequests: 0,
     });
   });
 });
@@ -188,6 +221,7 @@ describe('computeConformanceWith', () => {
       () => decision([candidateEffect]),
       [target],
       observationsFor(target, evidence),
+      WINDOW,
     );
 
     expect(result.findings.map((finding) => finding.kind)).toEqual(
@@ -206,6 +240,7 @@ describe('computeConformanceWith', () => {
       () => decision(['allow']),
       [target],
       [pre, { ...pre, actionKey: null, event: 'permission_request' }],
+      WINDOW,
     );
 
     expect(result.findings.map((finding) => finding.kind)).toEqual(['over_asked']);
@@ -222,6 +257,7 @@ describe('computeConformanceWith', () => {
       () => decision(['ask'], 'public_remote'),
       [first, second],
       [...observationsFor(first, [PRE]), ...observationsFor(second, [PRE])],
+      WINDOW,
     );
 
     expect(result.findings).toEqual([
@@ -251,6 +287,7 @@ describe('computeConformanceWith', () => {
       () => decision(['allow', 'ask', 'ask']),
       [target],
       observationsFor(target, [PRE]),
+      WINDOW,
     );
 
     expect(result.findings.map((finding) => finding.capability)).toEqual(['delete']);
@@ -266,6 +303,7 @@ describe('computeConformanceWith', () => {
       (operations) => (operations.length === 0 ? null : decision(['ask'])),
       [auto, prompted, unobserved, empty],
       [...observationsFor(auto, [PRE]), ...observationsFor(prompted, [PRE, ASKED])],
+      WINDOW,
     );
 
     expect(result.stats).toEqual({
@@ -291,11 +329,12 @@ describe('computeConformanceWith', () => {
     const target = action('a', [operation(0, 'write')]);
     const evidence = observationsFor(target, [PRE, ASKED]);
 
-    const forward = computeConformanceWith(() => decision(['allow']), [target], evidence);
+    const forward = computeConformanceWith(() => decision(['allow']), [target], evidence, WINDOW);
     const reversed = computeConformanceWith(
       () => decision(['allow']),
       [target],
       [...evidence].reverse(),
+      WINDOW,
     );
 
     expect(reversed.resultHash).toBe(forward.resultHash);

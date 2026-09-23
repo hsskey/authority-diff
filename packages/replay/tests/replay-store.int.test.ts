@@ -253,7 +253,10 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   const observations = await trace.reader.getObservations([
     ...new Set(streamed.map((a) => a.sessionExternalId)),
   ]);
-  const local = computeConformanceWith(createEvaluator(candidate.document), streamed, observations);
+  const local = computeConformanceWith(createEvaluator(candidate.document), streamed, observations, {
+    from: window.windowFrom,
+    to: window.windowTo,
+  });
   const replay = createReplayModule({
     database,
     reader: trace.reader,

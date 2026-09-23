@@ -1,5 +1,5 @@
 import { invariant } from '@authority/kernel';
-import type { Effect } from '@authority/kernel';
+import type { Effect, IsoTimestamp } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision } from '@authority/policy/schema';
@@ -126,6 +126,7 @@ export function computeConformanceWith(
   evaluateCandidate: EvaluateAction,
   actions: readonly ActionForReplay[],
   observations: readonly ObservationForReplay[],
+  window: { readonly from: IsoTimestamp; readonly to: IsoTimestamp },
 ): ConformanceResult {
   const seen = new Set<string>();
   for (const action of actions) {
@@ -133,7 +134,10 @@ export function computeConformanceWith(
     seen.add(action.actionKey);
   }
 
-  const { observations: paired, unpairedPermissionRequests } = pairPermissionRequests(observations);
+  const { observations: paired, unpairedPermissionRequests } = pairPermissionRequests(
+    observations,
+    window,
+  );
   const observationsByAction = new Map<string, ObservationForReplay[]>();
   for (const observation of paired) {
     if (observation.actionKey === null) {

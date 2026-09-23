@@ -316,7 +316,10 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         inputsHash,
         (run) => {
           const evaluateCandidate = createEvaluator(candidate.document);
-          const result = computeConformanceWith(evaluateCandidate, actions, observations);
+          const result = computeConformanceWith(evaluateCandidate, actions, observations, {
+            from: input.windowFrom,
+            to: input.windowTo,
+          });
           return {
             resultHash: result.resultHash,
             stats: {

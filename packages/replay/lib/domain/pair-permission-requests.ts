@@ -1,9 +1,15 @@
+import type { IsoTimestamp } from '@authority/kernel';
 import { canonicalJson } from '@authority/kernel/hash';
 import type { ObservationForReplay } from '@authority/trace/schema';
 
 export interface PairedObservations {
   readonly observations: readonly ObservationForReplay[];
   readonly unpairedPermissionRequests: number;
+}
+
+interface Window {
+  readonly from: IsoTimestamp;
+  readonly to: IsoTimestamp;
 }
 
 const EVENT_ORDER: Record<ObservationForReplay['event'], number> = {
@@ -39,10 +45,14 @@ function pairingKeyOf(observation: ObservationForReplay): string | null {
  * the closest earlier pre_tool_use that has the same sessionExternalId,
  * toolName, and toolInputHash and is not paired yet; a pre_tool_use at the same
  * instant counts as earlier. A permission_request without such a pre_tool_use
- * keeps a null actionKey and is counted as unpaired.
+ * keeps a null actionKey. Pairing is session-wide so a permission_request can
+ * still pair with a pre_tool_use just outside the window edge, but an unpaired
+ * permission_request is counted only when its occurredAt is within the run
+ * window, matching the run's permission_requests the report speaks of.
  */
 export function pairPermissionRequests(
   observations: readonly ObservationForReplay[],
+  window: Window,
 ): PairedObservations {
   const waiting = new Map<string, string[]>();
   let unpairedPermissionRequests = 0;
@@ -59,7 +69,9 @@ export function pairPermissionRequests(
     }
     const actionKey = key === null ? undefined : waiting.get(key)?.pop();
     if (actionKey === undefined) {
-      unpairedPermissionRequests += 1;
+      if (observation.occurredAt >= window.from && observation.occurredAt <= window.to) {
+        unpairedPermissionRequests += 1;
+      }
       return observation;
     }
     return { ...observation, actionKey };
