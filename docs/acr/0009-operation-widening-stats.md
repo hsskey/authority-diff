@@ -14,7 +14,7 @@ Action Effect is the most restrictive Operation Effect. A compound Action can st
 - `ReplayStats.operationWidening` is `{ capability, fromZone, toZone, count }[]`, counting Operations whose Effect widened while their Action's Effect did not change.
 - Rows sort by capability, fromZone, then toZone, ascending UTF-16. Count is positive; absent rows are omitted and an empty array is stored.
 - The field is in `stats`, so `resultHash` covers it. Diff Groups, groupKey, and Verdicts are unchanged.
-- replay.md and the Change Review Evidence Report render the table under "Action effect unchanged, operation-level widening".
+- replay.md and the Change Review Evidence Report render the operation-level widening table; the Evidence Report heading is owned by `packages/review/lib/domain/report.ts`.
 - Stored stats that omit the field parse as `[]` (expand-contract).
 
 ## Alternatives

@@ -230,16 +230,14 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           .where(
             after === null
               ? eq(policyVersions.policyId, policyId)
-              : and(
-                  eq(policyVersions.policyId, policyId),
-                  gt(policyVersions.versionNumber, after),
-                ),
+              : and(eq(policyVersions.policyId, policyId), gt(policyVersions.versionNumber, after)),
           )
           .orderBy(asc(policyVersions.versionNumber))
           .limit(limit + 1);
         const items = rows.slice(0, limit).map(toVersion);
         const last = items.at(-1);
-        const nextCursor = rows.length > limit && last !== undefined ? String(last.versionNumber) : null;
+        const nextCursor =
+          rows.length > limit && last !== undefined ? String(last.versionNumber) : null;
         return ok({ items, nextCursor });
       } catch (cause) {
         return err(internal(cause));
