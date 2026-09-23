@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { IsoTimestampSchema } from '@authority/kernel';
 import {
@@ -13,7 +12,7 @@ import type { PolicyVersionId } from '@authority/policy/schema';
 import { createTraceModule } from '@authority/trace';
 import { ParsedSessionSchema } from '@authority/trace/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import { createReplayModule, migrateReplayStore } from '../index.ts';
+import { createReplayModule } from '../index.ts';
 import type { PolicyReader } from '../index.ts';
 import { createEvaluator } from '@authority/policy/evaluate';
 import { computeConformanceWith, computeDiff } from '../diff.ts';
@@ -21,7 +20,6 @@ import sessionFixture from '../../../tests/fixtures/parsed-session.json' with { 
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
-const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 const WINDOW_FROM = IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z');
 
@@ -33,7 +31,7 @@ function freshWindow() {
 
 let database: Database;
 
-beforeAll(async () => {
+beforeAll(() => {
   const config = parseConfig({
     AUTHORITY_DB_URL: TEST_DB_URL,
     AUTHORITY_AUTH_TOKEN: 'test-token',
@@ -43,7 +41,6 @@ beforeAll(async () => {
     throw new Error('test config failed to parse');
   }
   database = createDatabase(config.value);
-  await migrateReplayStore(database.db, MIGRATIONS);
 });
 
 afterAll(async () => {

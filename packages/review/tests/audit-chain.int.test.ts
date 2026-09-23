@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
 import {
@@ -10,13 +9,12 @@ import {
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
-import { createReviewStore, migrateReviewStore, verifyAuditChain } from '@authority/review';
+import { createReviewStore, verifyAuditChain } from '@authority/review';
 import type { ReviewStore } from '@authority/review';
 import { ChangeReviewIdSchema } from '@authority/review/schema';
 import type { ChangeReviewId, ReviewDecision } from '@authority/review/schema';
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
-const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 const HASH = Sha256Schema.parse('a'.repeat(64));
 
 const clock = createSystemClock();
@@ -26,7 +24,7 @@ let database: Database;
 let store: ReviewStore;
 let repository: ReturnType<typeof createPolicyRepository>;
 
-beforeAll(async () => {
+beforeAll(() => {
   const config = parseConfig({
     AUTHORITY_DB_URL: TEST_DB_URL,
     AUTHORITY_AUTH_TOKEN: 'test-token',
@@ -36,7 +34,6 @@ beforeAll(async () => {
     throw new Error('test config failed to parse');
   }
   database = createDatabase(config.value);
-  await migrateReviewStore(database.db, MIGRATIONS);
   repository = createPolicyRepository({ db: database.db, clock, idGenerator });
   store = createReviewStore({ database, clock, idGenerator });
 });

@@ -172,7 +172,7 @@ flowchart BT
 | Action 식별자 | `act_` ULID + `actionKey` | `actionKey`(sha256)가 primary key | 재import와 local/server 양쪽에서 같은 식별자가 나와야 `resultHash`를 비교할 수 있음 |
 | 인증 | token table, role 2종 | 환경 변수의 token 1개. 검토자 이름은 결정할 때 입력 | 단일 사용자 |
 | HTTP | `@hono/zod-openapi` | Hono + `contracts`의 Zod schema 검증 | 생성물을 하나 줄임 |
-| integration test DB | Testcontainers | docker compose의 PostgreSQL에 test 전용 database, test 파일마다 schema | 의존성 하나 제거 |
+| integration test DB | Testcontainers | docker compose의 PostgreSQL에 test 전용 database, run마다 global setup이 한 번 migration | 의존성 하나 제거 |
 | 관측 | metric endpoint, audit | structured log만 | V1에서 지키는 invariant 없음 |
 
 계약 변경(설계서 24, 25장 대비):
