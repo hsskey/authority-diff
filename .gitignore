@@ -9,3 +9,5 @@ coverage/
 .local/
 .DS_Store
 *.log
+test-results/
+playwright-report/

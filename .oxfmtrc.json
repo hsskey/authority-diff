@@ -2,5 +2,13 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
   "proseWrap": "preserve",
-  "ignorePatterns": ["**/*.md", "docs/**", "pnpm-lock.yaml", "drizzle/**", "**/*.gen.ts"]
+  "ignorePatterns": [
+    "**/*.md",
+    "docs/**",
+    "pnpm-lock.yaml",
+    "drizzle/**",
+    "**/*.gen.ts",
+    "test-results/**",
+    "playwright-report/**"
+  ]
 }
