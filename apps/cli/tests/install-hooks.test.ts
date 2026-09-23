@@ -5,6 +5,7 @@ import {
   LEGACY_PERMISSION_REQUEST_COMMAND,
   LEGACY_SESSION_END_COMMAND,
   resolveHookCommand,
+  selectNodePath,
 } from '../src/hook-command.ts';
 import { makeTempHome, runAuthority } from './support/harness.ts';
 
@@ -198,6 +199,7 @@ describe('authority install-hooks', () => {
 
     const change: unknown = JSON.parse(dryRun.stdout.trim());
     expect(change).toEqual({
+      node: selectNodePath().reason,
       PreToolUse: [
         {
           matcher: '*',

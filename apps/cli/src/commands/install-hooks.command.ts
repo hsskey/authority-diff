@@ -7,6 +7,7 @@ import {
   isManagedSessionEndCommand,
   resolveHookCommand,
   resolveRepoRoot,
+  selectNodePath,
 } from '../hook-command.ts';
 import { writeStdout } from '../output.ts';
 import { workspaceLinkWarnings } from '../workspace-link.ts';
@@ -26,6 +27,7 @@ interface SessionEndHookGroup {
 }
 
 interface HookInstallChange {
+  readonly node?: string;
   readonly warnings?: readonly string[];
   readonly PreToolUse?: readonly MatcherHookGroup[];
   readonly PermissionRequest?: readonly MatcherHookGroup[];
@@ -251,13 +253,19 @@ function hasChange(change: HookInstallChange): boolean {
   );
 }
 
-function buildPrintOutput(change: HookInstallChange): HookInstallChange | null {
+function buildPrintOutput(
+  change: HookInstallChange,
+  commandOverride: string | undefined,
+): HookInstallChange | null {
   const warnings = workspaceLinkWarnings(resolveRepoRoot());
-  const output: HookInstallChange = warnings.length > 0 ? { ...change, warnings } : change;
-  if (!hasChange(output) && output.warnings === undefined) {
+  if (!hasChange(change) && warnings.length === 0) {
     return null;
   }
-  return output;
+  return {
+    ...(commandOverride === undefined ? { node: selectNodePath().reason } : {}),
+    ...change,
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export function runInstallHooks(options: {
@@ -269,7 +277,7 @@ export function runInstallHooks(options: {
   const merged = mergeHooks(current, commands);
 
   if (options.printOnly) {
-    const output = buildPrintOutput(merged.change);
+    const output = buildPrintOutput(merged.change, options.commandOverride);
     if (output !== null) {
       writeStdout(JSON.stringify(output, null, 2));
     }
