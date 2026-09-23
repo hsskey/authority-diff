@@ -43,6 +43,12 @@ export interface ReportDecision {
   readonly replayResultHash: string;
 }
 
+/** The top of the audit chain when the report was generated: the latest Decision Record across all reviews. */
+export interface AuditTail {
+  readonly sequence: number;
+  readonly hash: string;
+}
+
 export interface ReportInput {
   readonly changeReviewId: string;
   readonly status: ChangeReviewStatus;
@@ -57,6 +63,7 @@ export interface ReportInput {
   readonly operationWidening: ReplayStats['operationWidening'] | null;
   readonly groups: readonly ReportGroup[];
   readonly decision: ReportDecision | null;
+  readonly auditTail: AuditTail | null;
 }
 
 /** An Adoption Group as the report shows it: the headline, counts, Targets, and Verdict. */
@@ -79,6 +86,7 @@ export interface AdoptionReportInput {
   readonly stats: AdoptionStats | null;
   readonly groups: readonly AdoptionReportGroup[];
   readonly decision: ReportDecision | null;
+  readonly auditTail: AuditTail | null;
 }
 
 const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
@@ -229,6 +237,16 @@ function renderDecision(decision: ReportDecision | null, label: DecisionLabel): 
   ].join('\n');
 }
 
+function renderAuditTail(tail: AuditTail | null): string {
+  if (tail === null) {
+    return '기록된 결정이 아직 없습니다.';
+  }
+  return [
+    `- 보고서 생성 시점의 audit chain sequence: ${tail.sequence}`,
+    `- 보고서 생성 시점의 audit chain hash: \`${tail.hash}\``,
+  ].join('\n');
+}
+
 function renderReplayHashes(decision: ReportDecision | null): string[] {
   if (decision === null) {
     return [];
@@ -275,6 +293,10 @@ export function renderReport(input: ReportInput): string {
     '## 결정',
     '',
     renderDecision(input.decision, CHANGE_DECISION_LABEL),
+    '',
+    '## Audit chain',
+    '',
+    renderAuditTail(input.auditTail),
     '',
     '## 고지',
     '',
@@ -364,6 +386,10 @@ export function renderAdoptionReport(input: AdoptionReportInput): string {
     '## 결정',
     '',
     renderDecision(input.decision, ADOPTION_DECISION_LABEL),
+    '',
+    '## Audit chain',
+    '',
+    renderAuditTail(input.auditTail),
     '',
     '## 고지',
     '',

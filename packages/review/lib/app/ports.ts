@@ -7,6 +7,7 @@ import type {
   ReviewDecision,
   Verdict,
 } from '../../schema.ts';
+import type { AuditTail } from '../domain/report.ts';
 
 export interface StoredVerdict {
   readonly groupKey: string;
@@ -55,4 +56,6 @@ export interface ReviewStore {
   decide(input: DecideStoreInput): Promise<Result<void, AppError>>;
   getDecision(changeReviewId: ChangeReviewId): Promise<ReviewDecision | null>;
   getChainedDecision(changeReviewId: ChangeReviewId): Promise<ChainedDecision | null>;
+  /** The latest Decision Record in the audit chain across all reviews, or null while the chain is empty. */
+  getAuditTail(): Promise<AuditTail | null>;
 }

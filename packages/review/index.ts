@@ -62,6 +62,7 @@ export type { ReviewStore } from './lib/app/ports.ts';
 export type { GateInput } from './lib/domain/gate.ts';
 export type {
   AdoptionReportGroup,
+  AuditTail,
   AdoptionReportInput,
   ReportGroup,
   ReportInput,

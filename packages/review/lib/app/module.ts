@@ -655,6 +655,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       const run = review.replayRunId === null ? null : await replay.getRun(review.replayRunId);
       const chained = await store.getChainedDecision(review.id);
       const decision = chained === null ? null : reportDecisionOf(chained);
+      const auditTail = await store.getAuditTail();
 
       if (review.kind === 'adoption') {
         const groups = await adoptionReportGroups(review, run);
@@ -671,6 +672,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
             stats: run !== null && run.kind === 'adoption' ? run.stats : null,
             groups: groups.value,
             decision,
+            auditTail,
           }),
         );
       }
@@ -696,6 +698,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
           operationWidening: stats?.operationWidening ?? null,
           groups: reportGroups.value.groups,
           decision,
+          auditTail,
         }),
       );
     },

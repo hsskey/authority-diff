@@ -111,7 +111,7 @@ architecture:
    판정이 없거나 `investigate`, `unexpected`인 Widening group이 남아 있으면 수락 버튼이 잠깁니다.
 8. `unexpected`가 나왔으므로 반려하고 draft를 고쳐 새 review를 만들고 전부 `expected`가 된 뒤 "정책 변경 수락"을 누릅니다.
 9. Evidence report를 내려받습니다.
-   두 version의 `contentHash`, 기간, 분석한 Action 수와 `none` 비율, transition 표, Action Effect가 그대로일 때의 operation-level widening 표, group과 Verdict, 검토자와 시각, Decision Record의 audit chain sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
+   두 version의 `contentHash`, 기간, 분석한 Action 수와 `none` 비율, transition 표, Action Effect가 그대로일 때의 operation-level widening 표, group과 Verdict, 검토자와 시각, Decision Record의 audit chain sequence와 hash, 보고서 생성 시점 audit chain tail의 sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
 
 > 이 기록은 정책 변경을 위 과거 기록에 비추어 검토했다는 사실을 남깁니다.
 > Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.
