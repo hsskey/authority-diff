@@ -1,29 +1,69 @@
 # Authority Diff
 
-Authority Diff is a review tool for Agent permission Policy changes.
-It classifies past Agent Actions, evaluates them under two Policy Versions, and shows which Effects would change.
+Authority Diff is a review tool for an organization's Agent permission Policy.
+It classifies past Agent Actions, applies a Policy Version to them, and shows which Effect (allow, ask, deny) each Action would receive.
+It reviews a first Policy before adoption, and a Policy change against the accepted baseline.
 It does not deploy or enforce a Policy, and it does not claim that a runtime will follow the evaluated Effects.
 
-V1 proves one question: if this Policy change is applied, which recent recorded Actions receive a different Effect.
+V1 proves two questions on recorded Actions: what this first Policy would ask or deny, and which Actions a Policy change would move to a different Effect.
+
+## Journey
+
+import → activity overview → first Policy (draft) → adoption preview → review and adopt → [Authority Diff 밖] managed settings 반영 → change review → conformance
+
+1. **Import.** `authority import` loads Claude Code transcripts, redacts secrets, and classifies each tool call into Operations.
+2. **Activity Overview.** With no Policy, `/` shows the imported activity: Sessions, Actions, Capability and Target Kind distribution, analyzability, top programs. No Effect and no Zone yet, because both need a Policy.
+3. **First Policy (draft).** "첫 조직 정책 만들기" creates draft version 1 from the default template. Edit the JSON (Rules and Environment Profile), save, validate. There is one Policy per organization.
+4. **Adoption preview.** "최초 도입 검토 만들기" applies the draft alone to the recorded Actions. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
+5. **Review and adopt.** Every Adoption Group needs a Verdict (의도한 제한 / 보류 / 정책 수정 필요). Only when all of them are 의도한 제한 does "최초 정책 채택" make version 1 `accepted` and write a Decision Record.
+6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Applying the Policy to a runtime (for example through managed settings) happens outside Authority Diff, and Authority Diff does not record whether it happened.
+7. **Change review.** A draft made from the accepted version gets a Change Review: the same Actions under both versions, Widening and Narrowing groups, Verdicts, accept or reject, Evidence Report.
+8. **Conformance.** Observation hooks report what the runtime actually did. Conformance compares those Runtime Observations with the accepted Policy and reports violation, under_asked, and over_asked findings. This is the only screen that says anything about runtime behavior.
 
 ## Result of the recorded journey
 
+Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier TBD022_CLASSIFIER and the corrected environment profile (policy A).
+Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
+
+### Adoption preview (first Policy)
+
+| evaluated Actions | allow | ask | deny | Adoption Groups |
+| ---: | ---: | ---: | ---: | --- |
+| TBD022_EVAL | TBD022_ALLOW | TBD022_ASK | TBD022_DENY | TBD022_GROUPS |
+
+The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
+That is what the Policy says about this corpus, reported as-is.
+Reviewing the whole preview took TBD022_GROUPS_N Verdicts, one per Adoption Group.
+The fresh-volume re-run of the journey showed the same figures on screen.
+
+### Change Review (github.com/** scene)
+
 The core scene is a fetch to another owner's repository after `trustedRemotes` is widened with a host-wide GitHub pattern.
 
-That scene is **6 Actions** (2 `git` fetch, 4 `gh` fetch), not 30.
+That scene is **TBD022_SCENE_N Actions** (TBD022_SCENE_GIT `git` fetch, TBD022_SCENE_GH `gh` fetch).
 Zone moves `unknown_remote` → `trusted_remote`. Effect moves ask → allow. Severity is critical.
 Named remotes used outside the Action workspace do not resolve a Remote Key, so they stay `unknown_remote` even under that pattern.
 
-Journey grade: **medium**. Real-record Widening groups were available to review, and they stayed inside the predicted scene.
+Journey grade: **medium** (중). Real-record Adoption Groups and Widening groups were available to review, and they stayed inside the predicted scene.
+Verdicts in this record were given by an Agent, not a person.
 
 Jev is V2 exploration only (`authority probe`). Replay, Change Review, and conformance do not call it, and a Probe result is not a Gate.
 
 ## How to run
 
-Node 22. The intended local path is compose, seed, import, then hooks.
+Node 22. The intended local path is compose, seed or import, the web journey, then hooks.
 
 1. `docker compose up` — PostgreSQL and the server. The server listens on `http://localhost:8787`. The compose file sets `AUTHORITY_AUTH_TOKEN` to `local-dev-token`.
-2. **Seed** — a seed step is part of this path. The seed command is not in this repository yet; it lands separately. Until then, skip it and import your own transcripts.
+2. **Seed** (optional). One command imports a transcript snapshot and creates the organization Policy with the given document as draft version 1:
+
+   ```sh
+   AUTHORITY_DB_URL=postgres://authority:authority@localhost:55432/authority \
+   AUTHORITY_AUTH_TOKEN=local-dev-token \
+     pnpm seed:demo --snapshot <transcript-directory> --policy <policy-document.json>
+   ```
+
+   The adoption review, its Verdicts, and the acceptance are left to the web journey. The seed refuses a database that already holds a Policy.
+   To start from the web instead, skip the seed and import only (step 3); `/` then offers "첫 조직 정책 만들기".
 3. Import Claude Code transcripts:
 
    ```sh
@@ -32,7 +72,8 @@ Node 22. The intended local path is compose, seed, import, then hooks.
      pnpm authority import <transcript-directory>
    ```
 
-4. Install observation hooks into Claude Code settings (fail-open, no Effect):
+4. Open the web app (`pnpm --filter @authority/web dev`, `http://localhost:5173`, token `local-dev-token`) and follow the journey above.
+5. Install observation hooks into Claude Code settings (fail-open, no Effect):
 
    ```sh
    pnpm authority install-hooks
@@ -44,13 +85,14 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 
 ## Limitations
 
-- **Single-person corpus.** Replay and conformance numbers come from one Principal's Claude Code records.
+- **Single-person corpus.** Adoption preview, replay, and conformance numbers come from one Principal's Claude Code records.
 - **Single runtime.** Parse, import, and hooks cover Claude Code. There is no Codex adapter.
-- **Agent Verdict.** Widening-group review time was measured by an Agent. A person has not recorded Verdicts on those groups.
+- **Agent Verdict.** Adoption Group and Widening group Verdicts in the recorded journey were given by an Agent. A person has not recorded Verdicts on those groups.
+- **Adoption preview is not a runtime baseline.** The preview applies the draft to past Actions. It does not say which of those Actions a runtime approved, and `accepted` does not mean the runtime now behaves this way.
 - **Hook observation gap.** When the hook is down, no Runtime Observation is written. Those Actions get Disposition `executed_prompt_unknown`.
 - **`over_asked` stays near 0.** The PermissionRequest hook input carries no tool use id, so a PermissionRequest pairs to its Action by Session, tool name, and tool input hash, and only when the earlier `pre_tool_use` was observed. This corpus recorded only 2 PermissionRequest observations.
 - **Publish direction.** Zone does not distinguish publish from fetch. `ask_external_disclosure` matches `push` on `public_remote` and `unknown_remote` only. A package publish to a registry listed in `trustedRemotes` is `push` on `trusted_remote` and is not treated as external disclosure.
-- **Worktree host Zone.** `workspace` is the Action's workspace root. Sibling worktree paths resolve as `host`. A Rule that allows read, write, or execute in `workspace` still asks there.
+- **Worktree host Zone.** `workspace` is the Action's workspace root. Sibling worktree paths resolve as `host`. A Rule that allows read, write, or execute in `workspace` still asks there, which is most of the ask share above.
 - **Node path.** `install-hooks` prefers a stable Node symlink over a Homebrew Cellar path, because a Cellar path disappears on upgrade. If no symlink resolves to the same binary, the Cellar path remains and hooks break after upgrade.
 
-Classifier details, Zone publish counts, and hook spool behavior are in `docs/evidence/`. Range is `docs/cutline.md`. Target architecture is `docs/design.md`.
+Classifier details, Zone publish counts, and hook spool behavior are in `docs/evidence/`. Range is `docs/cutline.md`. Target architecture is `docs/design.md`. Terms are `CONTEXT.md`.

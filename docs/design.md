@@ -154,6 +154,9 @@ Team/Enterprise plan에서 Auto Mode는 관리자가 켜야 하고 그 결정을
 - 자율 범위는 사용 경험이 늘수록 넓어집니다.
   같은 자료에서 auto-approve 비율은 사용 경험에 따라 약 20%에서 40% 이상으로 올라갑니다.
   `[확인 필요: 원문 수치]`
+- 정책을 처음 도입하는 조직에는 비교할 baseline이 없습니다.
+  과거 transcript는 tool call이 실행됐다는 사실만 남기고 그 실행이 사람의 승인을 거쳤는지는 남기지 않으므로, 과거 runtime의 판정을 복원해 baseline으로 삼을 수 없습니다.
+  첫 정책은 "과거 행동에 이 정책을 적용하면 무엇이 확인 필요와 차단이 되는가"를 보고 채택해야 하고, 채택은 배포나 집행이 아닙니다(ADR-0010).
 
 ## 6. 기존 제품이 해결하는 부분과 남아 있는 gap
 
@@ -376,9 +379,9 @@ route 규칙: resource는 복수 kebab-case, 상세는 `:id`, page component 이
 
 | route | page | 사용자의 질문 |
 | --- | --- | --- |
-| `/` | `AuthorityOverviewPage` | 지금 우리 Agent는 무엇을 할 수 있고 실제로 무엇을 하고 있는가 |
+| `/` | `AuthorityOverviewPage` | 지금 우리 Agent는 무엇을 할 수 있고 실제로 무엇을 하고 있는가. Policy가 없으면 Activity Overview로 "가져온 행동은 어떤 모양인가"에 답합니다 |
 | `/policies/:policyId/versions/:versionId` | `PolicyVersionEditorPage` | 이 rule을 바꾸면 명세가 어떻게 되는가 |
-| `/change-reviews/:reviewId` | `ChangeReviewDetailPage` | 이 변경을 승인해도 되는가 |
+| `/change-reviews/:reviewId` | `ChangeReviewDetailPage` | 이 변경(또는 최초 도입)을 승인해도 되는가 |
 | `/change-reviews/:reviewId/groups/:groupId` | `DiffGroupDetailPage` | 이 group의 action은 실제로 무엇이었는가 |
 | `/scenarios` | `ScenarioListPage` | 정책 문장 중 어디가 두 가지로 읽히는가 |
 | `/conformance` | `ConformanceFindingListPage` | runtime이 명세대로 움직이고 있는가 |
@@ -396,6 +399,12 @@ route 규칙: resource는 복수 kebab-case, 상세는 `:id`, page component 이
 - error: 집계 run이 없거나 실패하면 "집계 다시 실행" 버튼과 error code.
 - 표시하지 않는 것: 개발자별 순위, action 수 추이 chart, 비용.
 - 존재 이유: 조직장의 첫 질문 "지금 무엇이 가능한가"에 한 화면으로 답합니다.
+- Policy 상태별 세 가지 모습(ADR-0010).
+  Policy가 없으면 Activity Overview(Session 수, Action 수, Capability와 Target Kind 분포, Analyzability 비율, 상위 program, Remote Key host)와 "첫 조직 정책 만들기".
+  Effect와 Zone은 Environment Profile이 없어 계산하지 않습니다.
+  draft만 있고 accepted가 없으면 같은 Activity Overview 아래에 "최초 정책 설정 계속하기"와 도입 preview(최초 도입 검토가 끝났으면 제안 정책 적용 시 allow/ask/deny 건수와 비율).
+  accepted가 있으면 위의 matrix와 변경 workflow.
+  Policy가 2개 이상이면 지원하지 않는 상태를 알리고 어느 것도 자동으로 고르지 않습니다.
 
 ### 12.2 Policy Version Editor
 
@@ -428,6 +437,10 @@ route 규칙: resource는 복수 kebab-case, 상세는 `:id`, page component 이
 - 표시하지 않는 것: 변경되지 않은 action 목록, 개별 개발자 이름.
 - 존재 이유: 제품의 중심 산출물입니다.
   조직장은 이 화면의 상단 요약과 critical group만 읽고 결정합니다.
+- Review Kind가 `adoption`(최초 도입 검토)이면 baseline이 없으므로 transition matrix와 severity가 없습니다.
+  상단 요약은 평가한 action 수와 allow/ask/deny 건수와 비율, 그 아래에 확인 필요 group 표와 차단 group 표(Adoption Group: capability, zone, program 구성, action 수, 세션 수, 판정).
+  Verdict 라벨은 의도한 제한 / 보류 / 정책 수정 필요, blocker는 `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`, 주 동작은 "최초 정책 채택".
+  채택 뒤에는 "채택은 검토 기록이며 runtime 반영은 Authority Diff 밖"이라는 문장을 표시하고, 적용됨이나 활성이라는 말을 쓰지 않습니다.
 
 ### 12.4 Diff Group Detail
 
@@ -440,6 +453,8 @@ route 규칙: resource는 복수 kebab-case, 상세는 `:id`, page component 이
 - error: action이 보존 기간 경과로 삭제됐으면 signature와 통계만 표시.
 - 표시하지 않는 것: redaction 전 원문.
 - 존재 이유: `investigate` 판정을 내리려면 실제 action을 봐야 합니다.
+- Adoption Group detail은 candidate 결정만 보여 주고 Program Summary(상위 program과 건수, 서로 다른 program 수)를 signature 대신 group 안의 근거로 보여 줍니다.
+  경로, 명령 조각, ruleId는 sample panel과 기술 세부 toggle 안에만 둡니다.
 
 ### 12.5 Scenario List `/scenarios`
 
@@ -568,7 +583,8 @@ runtime이 Action에 실제로 보인 동작.
 _Avoid_: observed decision, runtime state
 
 **Replay Run**:
-두 Decision Source를 같은 Action 집합에 대입해 비교한 실행 1회.
+Decision Source를 같은 Action 집합에 대입한 실행 1회.
+`version_diff`는 두 Policy Version을, `conformance`는 관측된 Disposition과 Policy Version을 비교하고, `adoption`은 candidate Policy Version 하나를 baseline 없이 대입합니다.
 
 **Decision Source**:
 Replay에서 Effect를 내는 쪽.
@@ -579,18 +595,44 @@ Effect가 달라진 Action을 같은 signature로 묶은 단위.
 사람이 판정하는 단위입니다.
 _Avoid_: cluster, bucket
 
+**Adoption Group**:
+`adoption` Replay Run에서 candidate가 같은 Capability와 Zone에 같은 Effect(`ask` 또는 `deny`)를 준 Action 묶음.
+signature에 program이 없고 severity도 없습니다.
+_Avoid_: adoption cluster, ask bucket
+
+**Program Summary**:
+Adoption Group에서 signature Operation의 program 상위 10개와 건수.
+_Avoid_: top programs
+
 **Widening / Narrowing**:
 candidate의 Effect가 baseline보다 덜 제한적이면 Widening, 더 제한적이면 Narrowing.
 _Avoid_: loosening, tightening, regression
 
 **Verdict**:
-사람이 Diff Group에 내린 판정.
+사람이 Diff Group 또는 Adoption Group에 내린 판정.
 `expected`, `investigate`, `unexpected`.
 
 **Change Review**:
 Policy Version 하나의 승인 여부를 결정하는 단위.
 Replay Run, Probe Run, Verdict, 승인 기록을 묶습니다.
 _Avoid_: approval request, PR
+
+**Review Kind**:
+Change Review의 종류.
+`change`는 accepted baseline과 candidate를 비교하고 `adoption`은 accepted version이 없을 때 candidate 하나를 단일 평가합니다.
+요청이 아니라 server가 accepted version 유무로 정합니다.
+_Avoid_: review type, review mode
+
+**Activity Overview**:
+Policy 없이 가져온 Action만으로 집계한 활동 요약.
+Effect와 Zone은 없습니다.
+_Avoid_: Activity Shape, dashboard
+
+**Target Kind**:
+Activity Overview에서 Target을 종류로 묶은 값.
+`workspace_path`, `other_path`, `vcs_remote`, `host`, `package`, `mcp`, `deploy_target`, `unknown`.
+Environment Profile 없이 Target 자체에서 정합니다.
+_Avoid_: target type, resource kind
 
 **Scenario**:
 Mandate 문장과 Action 설명의 가상 쌍.
@@ -940,6 +982,25 @@ SHADOW, CANARY, ENFORCE, MONITOR는 상태로 두지 않았습니다.
 이 제품은 강제하지 않으므로 ENFORCE가 없고 관측은 상태가 아니라 active version에 계속 돌아가는 conformance replay입니다.
 CANARY는 설정 배포 도구의 일이라 범위 밖입니다.
 
+V1 lifecycle(`docs/cutline.md` 5장, ADR-0010)은 `approved`, `active`, `superseded` 없이 네 상태만 씁니다.
+
+```mermaid
+flowchart LR
+    draft --> in_review
+    in_review --> accepted
+    in_review --> rejected
+    accepted --> EXT["[Authority Diff 밖] managed settings 반영"]
+    EXT --> OBS["runtime 관측 (hook)"]
+    OBS --> CONF["conformance"]
+```
+
+- 첫 version은 `draft`로 만들어지고 accepted version이 없으면 Change Review의 kind가 `adoption`(최초 도입 검토)이 됩니다.
+  baseline 없이 candidate 하나를 과거 Action에 대입하며 과거 runtime의 승인 여부를 추정하지 않습니다.
+- `accepted`는 검토 결과이지 배포나 집행이 아닙니다.
+  runtime 설정에 반영하는 단계는 Authority Diff 밖에 있고 Authority Diff는 반영 여부를 저장하지 않습니다.
+  accepted를 active, applied, enforced로 쓰지 않습니다.
+- 반영 뒤 runtime 관측과 conformance replay가 실제 동작과 accepted version의 차이를 finding으로 보고합니다.
+
 ### 16.4 Change Review 상태와 gate
 
 Change Review 상태: `collecting_evidence -> ready -> approved | rejected`, 그리고 비종결 상태에서 `stale`.
@@ -956,12 +1017,39 @@ gate blocker code:
 | `widening_unreviewed` | Verdict가 없는 Widening group이 있음 |
 | `widening_investigate` | `investigate`로 남은 group이 있음 |
 | `widening_unexpected` | `unexpected` group이 있음. 승인하려면 정책을 고쳐 새 review를 만들어야 함 |
+| `adoption_unreviewed` | (kind `adoption`) Verdict가 없는 Adoption Group이 있음. ask와 deny group 전부가 대상 |
+| `adoption_investigate` | (kind `adoption`) `investigate`로 남은 Adoption Group이 있음 |
+| `adoption_unexpected` | (kind `adoption`) `unexpected` Adoption Group이 있음. 채택하려면 정책을 고쳐 새 review를 만들어야 함 |
 | `probe_incomplete` | Probe Run이 완료되지 않았고 면제도 없음 |
 | `precedent_conflict` | `conflict` verdict의 Precedent가 있음 |
 | `evidence_stale` | 위 stale 조건 |
 
 Narrowing group은 blocker가 아닙니다.
 요약에 건수만 표시합니다.
+
+### 16.5 최초 도입 replay(`adoption`)
+
+accepted version이 없을 때 candidate 하나를 대입하는 단일 평가입니다(ADR-0010).
+
+```text
+runAdoption(candidate, window):
+  1. 전제 검사는 16.1과 같음
+  2. inputsHash = sha256('adoption', candidateContentHash, window, classifierVersion, action 수, 마지막 actionKey)
+  3. action을 16.1과 같이 stream
+  4. 각 action에 effect = evaluateAction(candidate). Operation이 0개면 제외. baseline과 observed_runtime은 쓰지 않음
+  5. effectCounts[effect], analyzability, cells[capability][zone][effect] 누적
+  6. effect가 ask 또는 deny인 action만 signature (effect, capability, zone)으로 group. allow는 집계만
+  7. group별 action 수, 세션 수, Program Summary(상위 10개), 서로 다른 program 수, target 요약(상위 5개), headline, sample. severity 없음
+     정렬은 deny → ask → action 수 내림차순 → 세션 수 내림차순 → groupKey
+  8. resultHash = sha256(stats + groupKey순 group 집계(headline 제외) + actionKey순 (actionKey, groupKey, effect))
+```
+
+- transcript의 observedOutcome(`executed`, `rejected_by_human`, `blocked_by_runtime`)을 Effect로 바꾸지 않습니다.
+  `executed`는 사람이 승인해 실행됐을 수 있으므로 baseline이 될 수 없습니다.
+- signature에 program이 없는 이유는 Rule이 program을 보지 않기 때문입니다.
+  group 하나가 Policy의 판단 하나와 같아야 "이 제한이 의도한 것인가"라는 Verdict가 Policy로 되돌아갑니다.
+  program은 Program Summary로 group 안에서 보여 줍니다.
+- 같은 `inputsHash`의 완료된 run이 있으면 새로 돌리지 않고 그 run을 반환합니다.
 
 ## 17. 백오브엔벨로프 계산
 
@@ -2180,7 +2268,7 @@ Agent 권한 정책 변경의 근거를 만드는 modular monolith.
 
 ## 34. ADR 목록
 
-이 결정들은 `docs/adr/0001-0007.md`로 분리해 관리합니다.
+이 결정들은 `docs/adr/0001-0010.md`로 분리해 관리합니다.
 
 ## 35. North Star와 guardrail metrics
 

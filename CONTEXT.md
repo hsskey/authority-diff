@@ -83,7 +83,9 @@ Version들의 묶음.
 **Policy Version**:
 불변 문서 하나.
 Rule 목록과 Environment Profile을 포함하며 content hash로 식별합니다.
-_Avoid_: revision, snapshot
+상태는 `draft`, `in_review`, `accepted`, `rejected`입니다.
+`accepted`는 검토 결과이지 배포나 집행 상태가 아닙니다.
+_Avoid_: revision, snapshot, accepted를 가리키는 active, applied, enforced
 
 **Decision**:
 한 Policy Version을 한 Action에 대입한 평가 결과.
@@ -94,6 +96,7 @@ _Avoid_: result, outcome
 Decision Source를 같은 Action 집합에 대입한 실행 1회.
 `version_diff`는 두 Policy Version을, `conformance`는 `observed_runtime`과 Policy Version을 비교합니다.
 `adoption`은 candidate Policy Version 하나를 baseline 없이 대입합니다.
+과거 runtime이 Action을 승인했는지는 어느 kind도 추정하지 않습니다.
 
 **Decision Source**:
 Replay에서 Effect를 내는 쪽.
@@ -119,7 +122,8 @@ Diff Group 또는 Adoption Group signature에서 결정적으로 유도한 식�
 
 **Adoption Group**:
 `adoption` Replay Run에서 candidate Policy Version이 같은 Capability와 Zone에 같은 Effect(`ask` 또는 `deny`)를 준 Action 묶음.
-최초 도입 검토에서 사람이 판정하는 단위이며 signature에 program이 없습니다.
+최초 도입 검토에서 사람이 판정하는 단위이며 signature에 program이 없고 severity도 없습니다.
+`allow` Action은 집계만 하고 Adoption Group으로 만들지 않습니다.
 _Avoid_: adoption cluster, ask bucket
 
 **Program Summary**:
@@ -131,29 +135,40 @@ candidate의 Effect가 baseline보다 덜 제한적이면 Widening, 더 제한�
 _Avoid_: loosening, tightening, regression
 
 **Headline**:
-Diff Group을 설명하는 고정 template의 평문 한 문장.
+Diff Group 또는 Adoption Group을 설명하는 고정 template의 평문 한 문장.
 _Avoid_: summary, description
 
 **Target Summary**:
-Diff Group에서 Target key 상위 5개와 건수.
+Diff Group 또는 Adoption Group에서 Target key 상위 5개와 건수.
 _Avoid_: top targets
 
 **Verdict**:
-사람이 Diff Group에 내린 판정.
+사람이 Diff Group 또는 Adoption Group에 내린 판정.
 `expected`, `investigate`, `unexpected`.
+화면 라벨은 Review Kind에 따라 다릅니다.
+`change`는 예상된 변화 / 조사 필요 / 예상 밖, `adoption`은 의도한 제한 / 보류 / 정책 수정 필요.
 
 **Change Review**:
 Policy Version 하나의 수락 여부를 결정하는 단위.
 Replay Run, Verdict, 결정 기록을 묶습니다.
+Review Kind가 `adoption`이면 최초 도입 검토라고 부르며 baseline Policy Version이 없습니다.
 _Avoid_: approval request, PR
+
+**Review Kind**:
+Change Review의 종류.
+`change`는 accepted baseline과 candidate Policy Version을 `version_diff`로 비교하고, `adoption`은 accepted version이 없을 때 candidate 하나를 `adoption` Replay Run으로 단일 평가합니다.
+요청이 kind를 고르지 않고 server가 Policy의 accepted version 유무로 정합니다.
+_Avoid_: review type, review mode
 
 **Accept Policy Change / Reject Policy Change**:
 Change Review의 두 종결 동작.
-_Avoid_: Approve Review, Mark Reviewed
+Review Kind가 `adoption`이면 최초 정책 채택 / 최초 정책 반려라고 부릅니다.
+_Avoid_: Approve Review, Mark Reviewed, activate
 
 **Decision Record**:
-정책 변경 수락 또는 반려 1건의 불변 기록.
-_Avoid_: approval, activation
+정책 변경 또는 최초 도입의 수락이나 반려 1건의 불변 기록.
+Review Kind가 `adoption`이면 baseline content hash가 null입니다.
+_Avoid_: approval, activation, deployment record
 
 **Evidence Report**:
 Change Review의 결정과 근거 hash를 담아 조직장이 읽는 Markdown 산출물.
@@ -169,7 +184,20 @@ _Avoid_: event, log entry
 
 **Gate**:
 Change Review를 수락할 수 있는지 계산한 결과. blocker 목록이 비어 있으면 열린다. 사람이 아니라 규칙이 계산한다.
+Review Kind가 `change`면 Widening group의 Verdict를, `adoption`이면 모든 Adoption Group의 Verdict를 본다.
 _Avoid_: approval check, guard
+
+**Activity Overview**:
+Policy 없이 가져온 Action만으로 집계한 활동 요약.
+Session 수, Action 수, Capability 분포, Target Kind 분포, Analyzability 비율, 상위 program, Remote Key의 host를 담는다.
+Effect와 Zone은 Policy가 있어야 계산되므로 없다.
+_Avoid_: Activity Shape, dashboard
+
+**Target Kind**:
+Activity Overview에서 Target을 종류로 묶은 값.
+`workspace_path`, `other_path`, `vcs_remote`, `host`, `package`, `mcp`, `deploy_target`, `unknown`.
+Zone과 달리 Environment Profile 없이 Target 자체에서 정한다.
+_Avoid_: target type, resource kind
 
 관계:
 
@@ -178,3 +206,7 @@ _Avoid_: approval check, guard
   0개인 Action은 평가에서 제외합니다.
 - Decision의 Effect는 Operation별 Effect 중 가장 제한적인 값입니다.
 - Change Review는 Replay Run 1개를 참조합니다.
+- 조직의 Policy는 하나입니다.
+  accepted version이 없으면 Review Kind는 `adoption`, 있으면 `change`입니다.
+- Policy Version의 `accepted`는 검토 기록입니다.
+  runtime 설정에 반영하는 일은 Authority Diff 밖에서 이루어지고, 그 뒤의 Runtime Observation과 Conformance Finding이 실제 동작을 말합니다.
