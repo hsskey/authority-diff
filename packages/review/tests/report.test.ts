@@ -90,6 +90,26 @@ test('an undecided review still renders without a reviewer line', () => {
   expect(report).toContain('아직 결정되지 않았습니다.');
 });
 
+test("a group's Target key is deriveTargetKey's first-two-segment form, never a full absolute path", () => {
+  const report = renderReport(
+    makeInput({
+      groups: [
+        {
+          direction: 'widening',
+          headline: "etc/nginx 등 1곳으로의 read 4건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+          fromEffect: 'ask',
+          toEffect: 'allow',
+          actionCount: 4,
+          targetSummary: [{ key: 'etc/nginx', count: 4 }],
+          verdict: 'expected',
+        },
+      ],
+    }),
+  );
+  expect(report).toContain('- etc/nginx (4건)');
+  expect(report).not.toContain('/etc/nginx/nginx.conf');
+});
+
 test('the report lists operation-level widening when Action effect is unchanged', () => {
   const report = renderReport(
     makeInput({

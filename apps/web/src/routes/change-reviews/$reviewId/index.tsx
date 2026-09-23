@@ -34,7 +34,10 @@ function ChangeReviewPage() {
       }
       return result.value;
     },
+    refetchInterval: (query) => (query.state.data?.status === 'computing' ? 3000 : false),
   });
+
+  const isComputing = reviewQuery.data?.status === 'computing';
 
   const groupsQuery = useQuery({
     queryKey: ['change-review-diff-groups', reviewId],
@@ -48,6 +51,7 @@ function ChangeReviewPage() {
       }
       return result.value.items;
     },
+    refetchInterval: isComputing ? 3000 : false,
   });
 
   return (
@@ -96,7 +100,11 @@ function ChangeReviewDetail({
       <ReviewMeta review={review} />
       <SummaryLines review={review} widening={widening} narrowing={narrowing} />
       <TransitionMatrix review={review} />
-      <WideningGroups reviewId={reviewId} groups={widening} />
+      <WideningGroups
+        reviewId={reviewId}
+        groups={widening}
+        computing={review.status === 'computing'}
+      />
       <NarrowingGroups reviewId={reviewId} groups={narrowing} />
       <GateBlockers review={review} />
       <DecisionPanel reviewId={reviewId} review={review} />
@@ -214,9 +222,11 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
 function WideningGroups({
   reviewId,
   groups,
+  computing,
 }: {
   reviewId: string;
   groups: readonly ReviewDiffGroupResponse[];
+  computing: boolean;
 }) {
   const sorted = [...groups].sort(bySeverityThenImpact);
 
@@ -264,6 +274,7 @@ function WideningGroups({
                     groupKey={group.groupKey}
                     capability={group.capability}
                     verdict={group.verdict}
+                    disabled={computing}
                   />
                 </td>
                 <td>
@@ -420,14 +431,16 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
         <input type="text" value={note} onChange={(event) => setNote(event.target.value)} />
       </label>
       {!review.gate.isOpen ? (
-        <p className="state-message hint">
-          gate가 닫혀 있어 수락할 수 없습니다. 모든 widening group을 판정하세요.
-        </p>
+        <ul className="issue-list">
+          {review.gate.blockers.map((blocker) => (
+            <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
+          ))}
+        </ul>
       ) : null}
       <div className="actions">
         <button
           type="button"
-          disabled={!canSubmit || !review.gate.isOpen}
+          disabled={!canSubmit || !review.gate.isOpen || review.status === 'computing'}
           onClick={() => decide.mutate('accept')}
         >
           정책 변경 수락

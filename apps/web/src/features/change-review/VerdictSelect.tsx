@@ -13,11 +13,13 @@ export function VerdictSelect({
   groupKey,
   capability,
   verdict,
+  disabled = false,
 }: {
   reviewId: string;
   groupKey: string;
   capability: string;
   verdict: Verdict;
+  disabled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const record = useMutation({
@@ -43,7 +45,7 @@ export function VerdictSelect({
       <select
         aria-label={`${capability} 판정`}
         value={verdict ?? ''}
-        disabled={record.isPending}
+        disabled={disabled || record.isPending}
         onChange={(event) => {
           const next = VERDICT_OPTIONS.find((option) => option === event.target.value);
           if (next) {
