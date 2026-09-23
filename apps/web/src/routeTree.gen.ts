@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ChangeReviewsReviewIdRouteImport } from './routes/change-reviews/$reviewId'
+import { Route as ChangeReviewsReviewIdIndexRouteImport } from './routes/change-reviews/$reviewId/index'
 import { Route as ChangeReviewsReviewIdGroupsGroupKeyRouteImport } from './routes/change-reviews/$reviewId/groups/$groupKey'
 import { Route as PoliciesPolicyIdVersionsVersionIdRouteImport } from './routes/policies/$policyId/versions/$versionId'
 
@@ -25,16 +25,17 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChangeReviewsReviewIdRoute = ChangeReviewsReviewIdRouteImport.update({
-  id: '/change-reviews/$reviewId',
-  path: '/change-reviews/$reviewId',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const ChangeReviewsReviewIdIndexRoute =
+  ChangeReviewsReviewIdIndexRouteImport.update({
+    id: '/change-reviews/$reviewId/',
+    path: '/change-reviews/$reviewId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ChangeReviewsReviewIdGroupsGroupKeyRoute =
   ChangeReviewsReviewIdGroupsGroupKeyRouteImport.update({
-    id: '/groups/$groupKey',
-    path: '/groups/$groupKey',
-    getParentRoute: () => ChangeReviewsReviewIdRoute,
+    id: '/change-reviews/$reviewId/groups/$groupKey',
+    path: '/change-reviews/$reviewId/groups/$groupKey',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const PoliciesPolicyIdVersionsVersionIdRoute =
   PoliciesPolicyIdVersionsVersionIdRouteImport.update({
@@ -46,14 +47,14 @@ const PoliciesPolicyIdVersionsVersionIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId/': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
   '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
   '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
@@ -61,7 +62,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId/': typeof ChangeReviewsReviewIdIndexRoute
   '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
   '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
@@ -70,7 +71,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/change-reviews/$reviewId'
+    | '/change-reviews/$reviewId/'
     | '/change-reviews/$reviewId/groups/$groupKey'
     | '/policies/$policyId/versions/$versionId'
   fileRoutesByTo: FileRoutesByTo
@@ -84,7 +85,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
-    | '/change-reviews/$reviewId'
+    | '/change-reviews/$reviewId/'
     | '/change-reviews/$reviewId/groups/$groupKey'
     | '/policies/$policyId/versions/$versionId'
   fileRoutesById: FileRoutesById
@@ -92,7 +93,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  ChangeReviewsReviewIdRoute: typeof ChangeReviewsReviewIdRouteWithChildren
+  ChangeReviewsReviewIdIndexRoute: typeof ChangeReviewsReviewIdIndexRoute
+  ChangeReviewsReviewIdGroupsGroupKeyRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
   PoliciesPolicyIdVersionsVersionIdRoute: typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 
@@ -112,19 +114,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/change-reviews/$reviewId': {
-      id: '/change-reviews/$reviewId'
+    '/change-reviews/$reviewId/': {
+      id: '/change-reviews/$reviewId/'
       path: '/change-reviews/$reviewId'
-      fullPath: '/change-reviews/$reviewId'
-      preLoaderRoute: typeof ChangeReviewsReviewIdRouteImport
+      fullPath: '/change-reviews/$reviewId/'
+      preLoaderRoute: typeof ChangeReviewsReviewIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/change-reviews/$reviewId/groups/$groupKey': {
       id: '/change-reviews/$reviewId/groups/$groupKey'
-      path: '/groups/$groupKey'
+      path: '/change-reviews/$reviewId/groups/$groupKey'
       fullPath: '/change-reviews/$reviewId/groups/$groupKey'
       preLoaderRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRouteImport
-      parentRoute: typeof ChangeReviewsReviewIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/policies/$policyId/versions/$versionId': {
       id: '/policies/$policyId/versions/$versionId'
@@ -136,24 +138,12 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ChangeReviewsReviewIdRouteChildren {
-  ChangeReviewsReviewIdGroupsGroupKeyRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
-}
-
-const ChangeReviewsReviewIdRouteChildren: ChangeReviewsReviewIdRouteChildren = {
-  ChangeReviewsReviewIdGroupsGroupKeyRoute:
-    ChangeReviewsReviewIdGroupsGroupKeyRoute,
-}
-
-const ChangeReviewsReviewIdRouteWithChildren =
-  ChangeReviewsReviewIdRoute._addFileChildren(
-    ChangeReviewsReviewIdRouteChildren,
-  )
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  ChangeReviewsReviewIdRoute: ChangeReviewsReviewIdRouteWithChildren,
+  ChangeReviewsReviewIdIndexRoute: ChangeReviewsReviewIdIndexRoute,
+  ChangeReviewsReviewIdGroupsGroupKeyRoute:
+    ChangeReviewsReviewIdGroupsGroupKeyRoute,
   PoliciesPolicyIdVersionsVersionIdRoute:
     PoliciesPolicyIdVersionsVersionIdRoute,
 }
