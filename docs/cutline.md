@@ -650,7 +650,7 @@ Tier 2(수요일 Gate 2 통과 뒤 착수):
 - conformance replay(축소): `observed_runtime` Decision Source, finding 3종, finding 화면. Disposition에 `hook_approved`(plugin hook이 승인) 추가.
 - audit hash chain(`review_decisions` 위에 prev_hash/hash, 검증 명령).
 
-Tier 3 유지(일요일 이후 또는 영구): calibration platform, LLM baseline, 활성화와 rollback lifecycle, 설정 export, job queue, SSO와 다중 tenant, Codex adapter, 합성 조직 S1, RAR.
+Tier 3 유지(일요일 이후 또는 영구): calibration platform, LLM baseline, 활성화와 rollback lifecycle, 설정 export, job queue, SSO와 다중 tenant, Codex adapter, 합성 조직 S1, RAR, publish 방향 분리(`docs/evidence/zone-limitations.md`).
 
 수락(Accept)의 의미는 5장 그대로다. 관측을 수집해도 V1은 runtime 동작을 예측한다고 말하지 않는다(1장 R3).
 ````
