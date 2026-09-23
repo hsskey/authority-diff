@@ -132,15 +132,14 @@ describe('authority import fail-open', () => {
 
     // 1. The command completes without throwing (before the fix the first
     //    network rejection rejected out of the loop and aborted the whole import).
-    await expect(runImport(directory)).resolves.toBeUndefined();
-
-    const summary: unknown = JSON.parse(stdout.join('\n'));
+    const summary = await runImport(directory);
     if (!isRecord(summary)) {
       throw new Error(`expected a summary object, got: ${stdout.join('\n')}`);
     }
     expect(summary.sessions).toBe(4);
     expect(summary.acceptedCount).toBe(2); // a and d
     expect(summary.failedSessions).toBe(2); // b (network) and c (bad body)
+    expect(summary.failedSessionIds).toEqual(['b-neterr', 'c-badbody']);
     expect(process.exitCode).toBe(1); // failedSessions > 0
 
     // 2. Only the two good sessions were accepted; the loop reached d after b failed.

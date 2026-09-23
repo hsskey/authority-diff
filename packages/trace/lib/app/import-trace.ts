@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { deriveActionKey } from '../client/actions.ts';
 import { redactText } from '../client/redact.ts';
 import { importRejected, redactionMissing } from '../domain/errors.ts';
+import { isContentRejection } from '../domain/import-rejection.ts';
 import { stripNul, stripNulDeep } from '../client/strip-nul.ts';
 import { AgentSessionIdSchema, TraceImportIdSchema } from '../../schema.ts';
 import type { ParsedSession, StoredAgentAction } from '../../schema.ts';
@@ -136,7 +137,10 @@ export async function importTrace(
       attemptedCount: session.toolCalls.length,
     });
   } catch (cause) {
-    return err(importRejected(cause));
+    if (isContentRejection(cause)) {
+      return err(importRejected(cause));
+    }
+    throw cause;
   }
 
   return ok({

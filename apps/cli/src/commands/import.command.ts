@@ -96,17 +96,34 @@ function parseSessions(files: readonly string[]): ParsedSession[] {
   return sessions;
 }
 
+export interface ImportSummary {
+  readonly sessions: number;
+  readonly acceptedCount: number;
+  readonly duplicateCount: number;
+  readonly rejectedCount: number;
+  readonly failedSessions: number;
+  readonly failedSessionIds: readonly string[];
+}
+
 /**
  * Parses every transcript under `dir`, enriches each with its git remotes, and
  * posts one import request per Session. Redaction already happened inside
- * parseTranscript; the server re-checks it.
+ * parseTranscript; the server re-checks it. Each Session is imported
+ * independently so a failure does not roll back earlier successes.
  */
-export async function runImport(dir: string): Promise<void> {
+export async function runImport(dir: string): Promise<ImportSummary> {
   const token = authToken();
   if (token === null) {
     writeStderr('AUTHORITY_CLI_TOKEN is not set');
     process.exitCode = 1;
-    return;
+    return {
+      sessions: 0,
+      acceptedCount: 0,
+      duplicateCount: 0,
+      rejectedCount: 0,
+      failedSessions: 0,
+      failedSessionIds: [],
+    };
   }
 
   const sessions = enrichRepoRemotes(parseSessions(discoverTranscripts(dir)));
@@ -114,7 +131,7 @@ export async function runImport(dir: string): Promise<void> {
   let acceptedCount = 0;
   let duplicateCount = 0;
   let rejectedCount = 0;
-  let failedSessions = 0;
+  const failedSessionIds: string[] = [];
 
   for (const session of sessions) {
     try {
@@ -124,7 +141,7 @@ export async function runImport(dir: string): Promise<void> {
         body: JSON.stringify(session),
       });
       if (!response.ok) {
-        failedSessions++;
+        failedSessionIds.push(session.sessionExternalId);
         writeStderr(`import failed for ${session.sessionExternalId}: HTTP ${response.status}`);
         continue;
       }
@@ -133,19 +150,22 @@ export async function runImport(dir: string): Promise<void> {
       duplicateCount += body.duplicateCount;
       rejectedCount += body.rejectedCount;
     } catch {
-      failedSessions++;
+      failedSessionIds.push(session.sessionExternalId);
       writeStderr(`import failed for ${session.sessionExternalId}`);
     }
   }
 
-  writeStdout(
-    JSON.stringify(
-      { sessions: sessions.length, acceptedCount, duplicateCount, rejectedCount, failedSessions },
-      null,
-      2,
-    ),
-  );
-  if (failedSessions > 0) {
+  const summary: ImportSummary = {
+    sessions: sessions.length,
+    acceptedCount,
+    duplicateCount,
+    rejectedCount,
+    failedSessions: failedSessionIds.length,
+    failedSessionIds,
+  };
+  writeStdout(JSON.stringify(summary, null, 2));
+  if (summary.failedSessions > 0) {
     process.exitCode = 1;
   }
+  return summary;
 }

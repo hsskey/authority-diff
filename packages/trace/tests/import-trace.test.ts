@@ -105,7 +105,12 @@ describe('NUL in tool input', () => {
       classify,
       store: {
         ...base,
-        writeImport: () => Promise.reject(new Error('unsupported Unicode escape sequence')),
+        writeImport: () =>
+          Promise.reject(
+            Object.assign(new Error('unsupported Unicode escape sequence'), {
+              cause: { code: '22P05' },
+            }),
+          ),
       },
     });
     const session = loadCanarySession();
@@ -115,6 +120,18 @@ describe('NUL in tool input', () => {
       throw new Error('expected import to fail');
     }
     expect(result.error.code).toBe('trace.import_rejected');
+  });
+
+  test('rethrows a transient storage failure instead of mapping it to 422', async () => {
+    const module = createTestTraceModule({
+      classify,
+      store: {
+        ...createInMemoryTraceStore(),
+        writeImport: () =>
+          Promise.reject(Object.assign(new Error('connection terminated'), { code: 'ECONNRESET' })),
+      },
+    });
+    await expect(module.importTrace(loadCanarySession())).rejects.toThrow('connection terminated');
   });
 });
 
