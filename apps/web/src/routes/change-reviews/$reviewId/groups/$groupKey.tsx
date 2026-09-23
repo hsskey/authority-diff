@@ -74,6 +74,9 @@ function DiffGroupPage() {
   return (
     <section>
       <h1 className="page-title">Diff Group</h1>
+      {reviewQuery.isPending || groupsQuery.isPending ? (
+        <LoadingState label="Diff Group을 불러오는 중" />
+      ) : null}
       {reviewQuery.isError ? (
         <ErrorState
           title="Change Review를 불러오지 못했습니다"
