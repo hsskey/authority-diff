@@ -8,7 +8,6 @@ import { ErrorState } from '../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../shared/components/LoadingState.tsx';
 import {
   blockerLabel,
-  buildReviewReport,
   bySeverityThenImpact,
   effectLabel,
   formatZoneTransition,
@@ -101,7 +100,7 @@ function ChangeReviewDetail({
       <NarrowingGroups reviewId={reviewId} groups={narrowing} />
       <GateBlockers review={review} />
       <DecisionPanel reviewId={reviewId} review={review} />
-      <ReportDownload review={review} groups={groups} />
+      <ReportDownload reviewId={reviewId} />
     </div>
   );
 }
@@ -451,38 +450,43 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   );
 }
 
-function ReportDownload({
-  review,
-  groups,
-}: {
-  review: ChangeReviewResponse;
-  groups: readonly ReviewDiffGroupResponse[];
-}) {
+function ReportDownload({ reviewId }: { reviewId: string }) {
+  const download = useMutation({
+    mutationFn: async () => {
+      const result = await callRoute(routes.getChangeReviewReport, { params: { id: reviewId } });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      saveReport(reviewId, result.value);
+    },
+  });
+
   return (
     <div className="panel stack">
       <h2 className="section-title">보고서</h2>
       <p className="state-message hint">
-        승인 근거로 남길 Change Review 보고서를 Markdown으로 내려받습니다.
+        승인 근거로 남길 Evidence Report를 Markdown으로 내려받습니다.
       </p>
       <div className="actions">
-        <button type="button" onClick={() => downloadReport(review, groups)}>
+        <button type="button" disabled={download.isPending} onClick={() => download.mutate()}>
           보고서 다운로드
         </button>
       </div>
+      {download.error ? (
+        <p className="state-message status-error" role="alert">
+          보고서 다운로드 실패: {download.error.message}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function downloadReport(
-  review: ChangeReviewResponse,
-  groups: readonly ReviewDiffGroupResponse[],
-): void {
-  const report = buildReviewReport(review, groups);
+function saveReport(reviewId: string, report: string): void {
   const blob = new Blob([report], { type: 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `change-review-${review.id}.md`;
+  anchor.download = `change-review-${reviewId}.md`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

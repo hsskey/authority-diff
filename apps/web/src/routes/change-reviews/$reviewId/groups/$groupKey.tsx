@@ -204,7 +204,7 @@ function SampleCard({ sample }: { sample: Sample }) {
   return (
     <div className="panel stack sample-card">
       <div>
-        <h3 className="section-title">Tool input (redacted)</h3>
+        <h3 className="section-title">도구 입력(가림 처리)</h3>
         <pre className="redacted-input">{action.toolInputRedacted}</pre>
       </div>
       <div>

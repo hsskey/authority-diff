@@ -228,6 +228,19 @@ function draftVersion(): unknown {
   };
 }
 
+function reportFor(store: Store): string {
+  return [
+    '# Evidence Report',
+    '',
+    `Change Review \`${REVIEW_ID}\``,
+    '',
+    '## 결정',
+    '',
+    store.decision === null ? '아직 결정되지 않았습니다.' : '- Decision Record sequence: 1',
+    '',
+  ].join('\n');
+}
+
 async function installApi(route: Route, store: Store): Promise<void> {
   const request = route.request();
   const method = request.method();
@@ -264,6 +277,14 @@ async function installApi(route: Route, store: Store): Promise<void> {
   }
   if (method === 'POST' && pathname.endsWith('/change-reviews')) {
     await respond(buildReview(store));
+    return;
+  }
+  if (method === 'GET' && pathname.endsWith('/report')) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/markdown; charset=utf-8',
+      body: reportFor(store),
+    });
     return;
   }
   if (method === 'GET' && pathname.includes('/change-reviews/')) {
@@ -327,13 +348,11 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await expect(page.getByRole('heading', { name: '결정 기록' })).toBeVisible();
   await expect(page.getByText('reviewer-e2e')).toBeVisible();
 
-  // report -> the review downloads as a markdown record
+  // report -> the server's Evidence Report is saved byte for byte
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '보고서 다운로드' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe(`change-review-${REVIEW_ID}.md`);
   const path = await download.path();
-  const report = readFileSync(path, 'utf8');
-  expect(report).toContain(`# Change Review ${REVIEW_ID}`);
-  expect(report).toContain('accepted');
+  expect(readFileSync(path, 'utf8')).toBe(reportFor(store));
 });

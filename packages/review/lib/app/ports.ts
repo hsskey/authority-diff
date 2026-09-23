@@ -22,6 +22,13 @@ export interface UpsertVerdictInput {
   readonly updatedAt: IsoTimestamp;
 }
 
+/** A Decision Record with its position and hash in the audit hash chain. */
+export interface ChainedDecision {
+  readonly decision: ReviewDecision;
+  readonly sequence: number;
+  readonly hash: string;
+}
+
 /**
  * The atomic decision write: inserts the immutable {@link ReviewDecision} and
  * transitions the candidate Policy Version in one transaction (docs/cutline.md
@@ -43,4 +50,5 @@ export interface ReviewStore {
   listVerdicts(changeReviewId: ChangeReviewId): Promise<readonly StoredVerdict[]>;
   decide(input: DecideStoreInput): Promise<Result<void, AppError>>;
   getDecision(changeReviewId: ChangeReviewId): Promise<ReviewDecision | null>;
+  getChainedDecision(changeReviewId: ChangeReviewId): Promise<ChainedDecision | null>;
 }

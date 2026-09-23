@@ -8,7 +8,8 @@ import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
  * rewrites it. The report deliberately carries no raw command text, `ruleId`,
  * or regex: only plain-language headlines, Target key summaries, counts,
  * transitions, operation-level widening while Action Effect is unchanged,
- * Verdicts, hashes, and the reviewer (docs/cutline.md section 5, item 9).
+ * Verdicts, hashes, the Decision Record's audit chain sequence, and the
+ * reviewer (docs/cutline.md section 5, item 9).
  */
 export interface ReportTransition {
   readonly from: Effect;
@@ -36,6 +37,10 @@ export interface ReportDecision {
   readonly reviewerName: string;
   readonly decidedAt: IsoTimestamp;
   readonly note: string;
+  readonly sequence: number;
+  readonly hash: string;
+  readonly replayInputsHash: string;
+  readonly replayResultHash: string;
 }
 
 export interface ReportInput {
@@ -172,6 +177,8 @@ function renderDecision(decision: ReportDecision | null): string {
     `- 검토자: ${decision.reviewerName}`,
     `- 시각: ${decision.decidedAt}`,
     `- 메모: ${decision.note === '' ? '(없음)' : decision.note}`,
+    `- Decision Record sequence: ${decision.sequence}`,
+    `- Decision Record hash: \`${decision.hash}\``,
   ].join('\n');
 }
 
@@ -186,6 +193,12 @@ export function renderReport(input: ReportInput): string {
     '',
     `- 기준 Policy Version contentHash: \`${input.baselineContentHash}\``,
     `- 변경안 Policy Version contentHash: \`${input.candidateContentHash}\``,
+    ...(input.decision === null
+      ? []
+      : [
+          `- Replay inputsHash: \`${input.decision.replayInputsHash}\``,
+          `- Replay resultHash: \`${input.decision.replayResultHash}\``,
+        ]),
     '',
     '## 검토 기간',
     '',
