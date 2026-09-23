@@ -426,18 +426,48 @@ test("a decided review's report carries the audit chain tail as of generation", 
   if (!rejected.ok) {
     throw new Error(rejected.error.code);
   }
-  const [tail] = await database.db.execute<{ sequence: string; hash: string }>(
-    'select sequence, hash from review_decisions order by sequence desc limit 1',
+  const [own] = await database.db.execute<{ sequence: string }>(
+    `select sequence from review_decisions where change_review_id = '${reviewId}'`,
   );
-  if (tail === undefined) {
-    throw new Error('audit chain is empty');
+  if (own === undefined) {
+    throw new Error('decision record missing');
+  }
+
+  // A second decision advances the shared append-only chain past this review's own
+  // decision, so the tail the report renders must be a later Decision Record.
+  const other = await readyReviewOf(await seedCandidate());
+  const otherDecided = await review.decide({
+    changeReviewId: other.review.id,
+    decision: 'reject',
+    note: '',
+    reviewerName: 'tester',
+  });
+  if (!otherDecided.ok) {
+    throw new Error(otherDecided.error.code);
   }
 
   const report = await review.getReport(reviewId);
+  if (!report.ok) {
+    throw new Error(report.error.code);
+  }
 
-  expect(report.ok && report.value).toContain(
-    `- 보고서 생성 시점의 audit chain sequence: ${tail.sequence}\n- 보고서 생성 시점의 audit chain hash: \`${tail.hash}\``,
+  // Integration test files share the one chain and run in parallel, so its tail is
+  // a moving target. Read the pair back out of the report and confirm it names a
+  // real chain row later than this review's own decision, rather than comparing
+  // against a separate global tail query that would race the report's own read.
+  const match = report.value.match(
+    /audit chain sequence: (\d+)\n- 보고서 생성 시점의 audit chain hash: `([0-9a-f]{64})`/,
   );
+  const tailSequence = match?.[1];
+  const tailHash = match?.[2];
+  if (tailSequence === undefined || tailHash === undefined) {
+    throw new Error('report is missing the audit chain tail');
+  }
+  const [tailRow] = await database.db.execute<{ hash: string }>(
+    `select hash from review_decisions where sequence = ${tailSequence}`,
+  );
+  expect(tailRow?.hash).toBe(tailHash);
+  expect(Number(tailSequence)).toBeGreaterThan(Number(own.sequence));
 });
 
 async function readyReviewOf(candidateId: PolicyVersionId): Promise<ChangeReviewView> {
