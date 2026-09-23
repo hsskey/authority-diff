@@ -112,6 +112,29 @@ describe('authority hook', () => {
     },
   );
 
+  test.each([
+    ['permission-request', 'acceptEdits', 'acceptEdits'],
+    ['pre-tool-use', 'bypassPermissions', 'bypassPermissions'],
+    ['session-end', 'plan', 'plan'],
+    ['permission-request', undefined, null],
+  ])('records permissionMode on a %s line from %s', (event, permissionMode, expected) => {
+    const home = makeTempHome();
+    const input = JSON.stringify({
+      session_id: 'session-mode',
+      cwd: '/tmp/project',
+      tool_name: 'Bash',
+      tool_input: { command: 'ls' },
+      permission_mode: permissionMode,
+    });
+
+    runAuthority(['hook', event], { home, input });
+
+    const record: unknown = JSON.parse(readSpoolLines(home)[0] ?? 'null');
+    expect(isRecord(record) ? readNullableString(record, 'permissionMode') : undefined).toBe(
+      expected,
+    );
+  });
+
   test('records a pre-tool-use attempt with tool_use_id and no decision output', () => {
     const home = makeTempHome();
     const toolInput = { command: 'curl https://example.test', description: 'Fetch' };

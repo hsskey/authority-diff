@@ -38,6 +38,7 @@ function buildRecord(
   const sessionId = readString(input, 'session_id');
   const cwd = readString(input, 'cwd');
   const toolUseId = readString(input, 'tool_use_id');
+  const permissionMode = readString(input, 'permission_mode');
   if (sessionId === null || cwd === null) {
     return null;
   }
@@ -56,6 +57,7 @@ function buildRecord(
       toolInputHash,
       toolUseId,
       hookDecision: event === 'permission_request' ? readHookDecision(input) : null,
+      permissionMode,
       cwd,
       runtimeVersion: runtimeVersion(),
     };
@@ -69,6 +71,7 @@ function buildRecord(
     toolInputHash: null,
     toolUseId,
     hookDecision: null,
+    permissionMode,
     cwd,
     runtimeVersion: runtimeVersion(),
   };

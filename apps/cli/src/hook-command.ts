@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { execPath } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -25,9 +25,51 @@ export function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+export interface NodeSelection {
+  readonly path: string;
+  readonly reason: string;
+}
+
+const HOMEBREW_CELLAR_NODE = /^(.+)\/Cellar\/(node(?:@[^/]+)?)\/[^/]+\/bin\/node$/;
+
+function tryRealpath(path: string, realpath: (path: string) => string): string | undefined {
+  try {
+    return realpath(path);
+  } catch {
+    return undefined;
+  }
+}
+
+// A Homebrew Cellar path embeds the node version, so `brew upgrade` deletes it and every
+// installed hook breaks; a stable symlink that resolves to the same binary survives upgrades.
+export function selectNodePath(
+  nodePath: string = execPath,
+  realpath: (path: string) => string = realpathSync,
+): NodeSelection {
+  const cellar = HOMEBREW_CELLAR_NODE.exec(nodePath);
+  if (cellar === null) {
+    return { path: nodePath, reason: `${nodePath} (current node, not a Homebrew Cellar path)` };
+  }
+  const [, prefix = '', formula = ''] = cellar;
+  const target = tryRealpath(nodePath, realpath) ?? nodePath;
+  const candidates = [
+    join(prefix, 'bin', 'node'),
+    join(prefix, 'opt', formula, 'bin', 'node'),
+    '/usr/local/bin/node',
+  ];
+  const stable = candidates.find((candidate) => tryRealpath(candidate, realpath) === target);
+  if (stable === undefined) {
+    return {
+      path: nodePath,
+      reason: `${nodePath} (Homebrew Cellar path; no stable symlink resolves to it, hooks break on upgrade)`,
+    };
+  }
+  return { path: stable, reason: `${stable} (stable symlink to Homebrew Cellar ${nodePath})` };
+}
+
 function resolveCoreHookCommand(event: HookCliEvent): string {
   const repoRoot = resolveRepoRoot();
-  const node = shellQuote(execPath);
+  const node = shellQuote(selectNodePath().path);
   const bundle = join(repoRoot, BUNDLE_ENTRY_RELATIVE);
   if (existsSync(bundle)) {
     return [node, shellQuote(bundle), 'hook', event].join(' ');

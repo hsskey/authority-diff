@@ -8,6 +8,7 @@ export interface SpoolRecord {
   readonly toolInputHash: string | null;
   readonly toolUseId: string | null;
   readonly hookDecision: 'allow' | 'deny' | null;
+  readonly permissionMode: string | null;
   readonly cwd: string;
   readonly runtimeVersion: string | null;
 }

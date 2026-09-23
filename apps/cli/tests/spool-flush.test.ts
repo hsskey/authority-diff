@@ -165,7 +165,7 @@ describe('authority spool-flush fail-open', () => {
     expect(received).toEqual(['sess-a', 'sess-b', 'sess-d']);
   });
 
-  test('forwards pre_tool_use and permission_request lines with toolUseId and hookDecision', async () => {
+  test('forwards pre_tool_use and permission_request lines with toolUseId, hookDecision, and permissionMode', async () => {
     const home = makeTempHome();
     const timestamp = new Date().toISOString();
     const line = (event: string, hookDecision: string | null) =>
@@ -177,6 +177,7 @@ describe('authority spool-flush fail-open', () => {
         toolInputHash: sha256Hex('input'),
         toolUseId: 'toolu_joined',
         hookDecision,
+        permissionMode: 'acceptEdits',
         cwd: '/tmp/project',
         runtimeVersion: '2.1.0',
       });
@@ -197,6 +198,7 @@ describe('authority spool-flush fail-open', () => {
         toolName: 'Bash',
         toolInputHash: sha256Hex('input'),
         hookDecision: null,
+        permissionMode: 'acceptEdits',
         cwd: '/tmp/project',
         runtimeVersion: '2.1.0',
         occurredAt: timestamp,
@@ -208,6 +210,7 @@ describe('authority spool-flush fail-open', () => {
         toolName: 'Bash',
         toolInputHash: sha256Hex('input'),
         hookDecision: 'allow',
+        permissionMode: 'acceptEdits',
         cwd: '/tmp/project',
         runtimeVersion: '2.1.0',
         occurredAt: timestamp,
