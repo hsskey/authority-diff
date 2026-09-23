@@ -1,4 +1,12 @@
-import { index, jsonb, pgTable, primaryKey, text } from 'drizzle-orm/pg-core';
+import {
+  bigserial,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import type { ChangeReviewStatus, Verdict, VerdictSnapshotEntry } from '../../schema.ts';
 
 // docs/design.md 25장. IsoTimestamp 문자열(밀리초 3자리, `Z`)을 그대로 보존하려고 시각은
@@ -35,17 +43,29 @@ export const reviewVerdicts = pgTable(
   (t) => [primaryKey({ columns: [t.changeReviewId, t.groupKey] })],
 );
 
-// Insert and select only; never updated or deleted (docs/cutline.md section 6).
-export const reviewDecisions = pgTable('review_decisions', {
-  changeReviewId: text('change_review_id').primaryKey(),
-  decision: text('decision').$type<'accept' | 'reject'>().notNull(),
-  note: text('note').notNull(),
-  reviewerName: text('reviewer_name').notNull(),
-  decidedAt: text('decided_at').notNull(),
-  baselineContentHash: text('baseline_content_hash').notNull(),
-  candidateContentHash: text('candidate_content_hash').notNull(),
-  replayInputsHash: text('replay_inputs_hash').notNull(),
-  replayResultHash: text('replay_result_hash').notNull(),
-  classifierVersion: text('classifier_version').notNull(),
-  verdictSnapshot: jsonb('verdict_snapshot').$type<VerdictSnapshotEntry[]>().notNull(),
-});
+// Insert and select only; a trigger rejects UPDATE, DELETE, and TRUNCATE (docs/cutline.md
+// section 6). Each row chains `hash = sha256(prev_hash + canonicalJson(record))` in
+// `sequence` order, so the unique `prev_hash` forbids a fork.
+export const reviewDecisions = pgTable(
+  'review_decisions',
+  {
+    changeReviewId: text('change_review_id').primaryKey(),
+    decision: text('decision').$type<'accept' | 'reject'>().notNull(),
+    note: text('note').notNull(),
+    reviewerName: text('reviewer_name').notNull(),
+    decidedAt: text('decided_at').notNull(),
+    baselineContentHash: text('baseline_content_hash').notNull(),
+    candidateContentHash: text('candidate_content_hash').notNull(),
+    replayInputsHash: text('replay_inputs_hash').notNull(),
+    replayResultHash: text('replay_result_hash').notNull(),
+    classifierVersion: text('classifier_version').notNull(),
+    verdictSnapshot: jsonb('verdict_snapshot').$type<VerdictSnapshotEntry[]>().notNull(),
+    sequence: bigserial('sequence', { mode: 'number' }).notNull(),
+    prevHash: text('prev_hash').notNull(),
+    hash: text('hash').notNull(),
+  },
+  (t) => [
+    uniqueIndex('uq_review_decisions__sequence').on(t.sequence),
+    uniqueIndex('uq_review_decisions__prev_hash').on(t.prevHash),
+  ],
+);

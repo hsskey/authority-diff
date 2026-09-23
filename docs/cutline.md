@@ -197,7 +197,7 @@ flowchart BT
   `decidingRule` 선택은 ruleId 사전순만 씁니다(설계서 13.5의 "Mandate Exception이 없는 rule 우선" 조항 제거).
 - `ChangeReview.status`: `computing`, `ready`, `accepted`, `rejected`, `failed`.
   probe와 stale 관련 field 제거.
-- 신규 `review_decisions`(insert와 select만 제공): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`, `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`.
+- 신규 `review_decisions`(insert와 select만, trigger가 UPDATE, DELETE, TRUNCATE 차단): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`, `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`에 audit hash chain column `sequence`, `prevHash`, `hash`를 더한다(계약은 `docs/acr/0006-review-decision-hash-chain.md`).
 - gate blocker: `replay_incomplete`, `replay_failed`, `widening_unreviewed`, `widening_investigate`, `widening_unexpected` 다섯 개.
 - `kernel` port: `Clock`, `IdGenerator`, `Logger`, `TransactionRunner`만 남깁니다.
 
@@ -407,7 +407,7 @@ agent가 이 목록의 code를 만들기 시작하면 중단시킵니다.
 - [ ] `apps/cli`의 `hook`, `install-hooks`, spool.
 - [ ] `runtime_observations` table, `POST /runtime-observations`, Disposition 도출.
 - [ ] conformance replay, `conformance_findings`, `/conformance` 화면.
-- [ ] `packages/audit`, `audit_events`, hash chain, trigger, `verify-audit` 명령, `/audit` 화면.
+- [ ] `packages/audit`, `audit_events` table, `/audit` 화면. audit hash chain, trigger, `verify-audit` 명령은 `review_decisions` 위에 구현했다(17장).
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event 이름 체계.
 - [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
 - [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`.
