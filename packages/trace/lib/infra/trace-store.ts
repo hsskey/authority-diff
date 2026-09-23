@@ -5,12 +5,14 @@ import {
   ActionForReplaySchema,
   ObservationForReplaySchema,
   StoredAgentActionSchema,
+  TraceSourceSchema,
 } from '../../schema.ts';
 import type {
   ActionForReplay,
   ObservationForReplay,
   RuntimeObservation,
   StoredAgentAction,
+  TraceSourceCounts,
 } from '../../schema.ts';
 import type {
   ClassificationUpdate,
@@ -241,6 +243,31 @@ export function createTraceStore(database: Database): TraceStore {
         )
         .orderBy(asc(agentActions.occurredAt), asc(agentActions.actionKey));
       return rows.map(toStoredAction);
+    },
+
+    async countActionsBySource(query: WindowQuery): Promise<TraceSourceCounts> {
+      // A Session re-imported later keeps the source of the import that first stored it.
+      const firstImport = db
+        .selectDistinctOn([traceImports.sessionExternalId], {
+          sessionExternalId: traceImports.sessionExternalId,
+          source: traceImports.source,
+        })
+        .from(traceImports)
+        .orderBy(traceImports.sessionExternalId, asc(traceImports.createdAt), asc(traceImports.id))
+        .as('first_import');
+      const rows = await db
+        .select({ source: firstImport.source, value: count() })
+        .from(agentActions)
+        .innerJoin(firstImport, eq(agentActions.sessionExternalId, firstImport.sessionExternalId))
+        .where(
+          and(gte(agentActions.occurredAt, query.from), lte(agentActions.occurredAt, query.to)),
+        )
+        .groupBy(firstImport.source);
+      const counts = { transcript: 0, hook: 0, synthetic: 0 };
+      for (const row of rows) {
+        counts[TraceSourceSchema.parse(row.source)] = Number(row.value);
+      }
+      return counts;
     },
 
     async updateClassifications(updates: readonly ClassificationUpdate[]): Promise<number> {

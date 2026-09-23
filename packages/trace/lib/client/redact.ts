@@ -61,6 +61,11 @@ const RULES: readonly RedactionRule[] = [
     replacement: '__REDACTED_NPM_TOKEN__',
   },
   {
+    kind: 'figma_token',
+    pattern: /\bfigd_[A-Za-z0-9_-]{20,}/g,
+    replacement: '__REDACTED_FIGMA_TOKEN__',
+  },
+  {
     kind: 'bearer_header',
     pattern: /([Bb]earer)\s+(?!__REDACTED_)[A-Za-z0-9._~+/=-]{8,}/g,
     replacement: '$1 __REDACTED_BEARER_HEADER__',

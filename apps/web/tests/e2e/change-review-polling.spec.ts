@@ -69,6 +69,7 @@ function buildReview(computing: boolean): unknown {
           },
       resultHash: computing ? null : 'b'.repeat(64),
     },
+    traceSources: { transcript: 1, hook: 0, synthetic: 0 },
     gate: computing
       ? { isOpen: false, blockers: [{ code: 'replay_incomplete', count: 1 }] }
       : { isOpen: false, blockers: [{ code: 'widening_unreviewed', count: 1 }] },
@@ -100,11 +101,15 @@ test('the page polls while computing and enables controls once the review is rea
   await page.goto(`/change-reviews/${REVIEW_ID}`);
 
   await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
-  await expect(page.getByLabel('execute 판정')).toBeDisabled();
+  await expect(
+    page.getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정'),
+  ).toBeDisabled();
   await expect(page.getByRole('button', { name: '정책 변경 수락' })).toBeDisabled();
   await expect(page.getByText('replay가 아직 끝나지 않음').first()).toBeVisible();
 
-  await expect(page.getByLabel('execute 판정')).toBeEnabled({ timeout: 10_000 });
+  await expect(
+    page.getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정'),
+  ).toBeEnabled({ timeout: 10_000 });
   await expect(page.getByText('판정하지 않은 group 1개').first()).toBeVisible();
 });
 
@@ -139,6 +144,8 @@ test('once ready, diff-groups are fetched even though they were empty while comp
   await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
   await expect(page.getByText('넓어진 group이 없습니다.')).toBeVisible();
 
-  await expect(page.getByLabel('execute 판정')).toBeEnabled({ timeout: 10_000 });
+  await expect(
+    page.getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정'),
+  ).toBeEnabled({ timeout: 10_000 });
   await expect(page.getByText('넓어진 group이 없습니다.')).toHaveCount(0);
 });

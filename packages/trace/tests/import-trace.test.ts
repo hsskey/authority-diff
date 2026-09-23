@@ -24,6 +24,7 @@ const CANARY_SECRETS: readonly string[] = [
   'xoxb-SYNTHETIC-CANARY-000',
   'glpat-SYNTHETICCANARY00000',
   'npm_SYNTHETICCANARY000000000000000',
+  'figd_SYNTHETICCANARY0000000000',
   'SYNTHBEARERTOKEN0001',
   'synthuser:synthpass',
   'syntheticvalue0001',
@@ -147,7 +148,7 @@ describe('I8 canary', () => {
   });
 
   test('the canary batch is actually stored redacted', () => {
-    expect(storedActionCount).toBe(12);
+    expect(storedActionCount).toBe(13);
     expect(dump.includes('__REDACTED_')).toBe(true);
   });
 

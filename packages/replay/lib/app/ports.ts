@@ -128,7 +128,7 @@ export interface ReplayStore {
   listAdoptionGroups(query: ListAdoptionGroupsQuery): Promise<AdoptionGroupsPage>;
   getAdoptionGroup(id: ReplayRunId, groupKey: string): Promise<StoredAdoptionGroup | null>;
   failStaleRunningRuns(input: FailStaleRunsInput): Promise<number>;
-  /** Completed `version_diff` runs only; a conformance run never backs the authority map. */
+  /** Completed `version_diff` and `adoption` runs; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;
   findLatestConformanceRun(): Promise<ConformanceRunView | null>;
   listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]>;

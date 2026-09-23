@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, gt, inArray, lt, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import type { IsoTimestamp } from '@authority/kernel';
 import { narrowTransaction } from '@authority/platform';
@@ -59,6 +59,19 @@ function toAdoptionGroup(row: AdoptionGroupRow): StoredAdoptionGroup {
 /** The matrix and analyzability live only in a version_diff or conformance run's stats. */
 function diffStatsOf(stats: StoredRunStats | null): StoredReplayStats | null {
   return stats !== null && 'matrix' in stats ? stats : null;
+}
+
+/** An adoption run stores its authority-map counts as `cells`, a version_diff run as `matrix`. */
+function authorityMapOf(
+  stats: StoredRunStats | null,
+): Pick<AuthorityMapRunView, 'matrix' | 'analyzability'> {
+  if (stats === null) {
+    return { matrix: [], analyzability: { full: 0, partial: 0, none: 0 } };
+  }
+  return {
+    matrix: 'cells' in stats ? stats.cells : stats.matrix,
+    analyzability: stats.analyzability,
+  };
 }
 
 function statsInsertValue(run: ReplayRun): StoredRunStats | null {
@@ -353,18 +366,21 @@ export function createReplayStore(database: Database): ReplayStore {
       const rows = await db
         .select()
         .from(replayRuns)
-        .where(and(eq(replayRuns.status, 'completed'), eq(replayRuns.kind, 'version_diff')))
+        .where(
+          and(
+            eq(replayRuns.status, 'completed'),
+            inArray(replayRuns.kind, ['version_diff', 'adoption']),
+          ),
+        )
         .orderBy(desc(replayRuns.completedAt));
       return rows.map((row) => {
         const run = toRun(row);
-        const stats = diffStatsOf(row.stats);
         return {
           replayRunId: run.id,
           candidateVersionId: run.candidateVersionId,
           windowFrom: run.windowFrom,
           windowTo: run.windowTo,
-          matrix: stats?.matrix ?? [],
-          analyzability: stats?.analyzability ?? { full: 0, partial: 0, none: 0 },
+          ...authorityMapOf(row.stats),
         };
       });
     },

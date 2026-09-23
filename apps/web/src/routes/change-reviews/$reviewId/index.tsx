@@ -12,11 +12,14 @@ import { callRoute, describeApiError } from '../../../shared/api-client.ts';
 import { ErrorState } from '../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../shared/components/LoadingState.tsx';
 import {
+  adoptionGroupLabel,
   blockerLabel,
   bySeverityThenImpact,
+  diffGroupLabel,
   effectLabel,
   formatShare,
   formatZoneTransition,
+  traceSourcesLabel,
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
 
@@ -163,6 +166,7 @@ function ChangeReviewDetail({
 
   return (
     <div className="stack">
+      <TraceSources review={review} />
       <ReviewMeta review={review} />
       <SummaryLines review={review} widening={widening} narrowing={narrowing} />
       <TransitionMatrix review={review} />
@@ -191,6 +195,7 @@ function AdoptionReviewDetail({
 
   return (
     <div className="stack">
+      <TraceSources review={review} />
       <ReviewMeta review={review} />
       <AdoptionSummary review={review} />
       <AdoptionGroups
@@ -212,6 +217,14 @@ function AdoptionReviewDetail({
       <WithdrawPanel reviewId={reviewId} review={review} />
       <ReportDownload reviewId={reviewId} kind={review.kind} />
     </div>
+  );
+}
+
+function TraceSources({ review }: { review: ChangeReviewResponse }) {
+  return (
+    <p className="state-message panel" data-testid="trace-sources">
+      {traceSourcesLabel(review.traceSources)}
+    </p>
   );
 }
 
@@ -462,7 +475,7 @@ function WideningGroups({
                       reviewId={reviewId}
                       kind="change"
                       groupKey={group.groupKey}
-                      capability={group.capability}
+                      groupLabel={diffGroupLabel(group)}
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />
@@ -592,7 +605,7 @@ function AdoptionGroups({
                       reviewId={reviewId}
                       kind="adoption"
                       groupKey={group.groupKey}
-                      capability={group.capability}
+                      groupLabel={adoptionGroupLabel(group)}
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />

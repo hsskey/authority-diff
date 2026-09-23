@@ -100,6 +100,7 @@ export function makeModule(overrides: Partial<TraceModule> = {}): TraceModule {
     reclassifyActions: () =>
       Promise.resolve({ reclassifiedCount: 0, classifierVersion: 'test-classifier' }),
     getActivityOverview: () => Promise.resolve(emptyOverview()),
+    countActionsBySource: () => Promise.resolve({ transcript: 0, hook: 0, synthetic: 0 }),
     reader: {
       getActions: () => Promise.resolve([]),
       streamActions: () => ({

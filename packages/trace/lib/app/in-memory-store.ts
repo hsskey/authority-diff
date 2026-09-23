@@ -4,6 +4,8 @@ import type {
   RuntimeObservation,
   StoredAgentAction,
   TraceImport,
+  TraceSource,
+  TraceSourceCounts,
 } from '../../schema.ts';
 import type {
   ClassificationUpdate,
@@ -200,6 +202,23 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
         }
       }
       return Promise.resolve(updated);
+    },
+
+    countActionsBySource(query: WindowQuery): Promise<TraceSourceCounts> {
+      const sourceOf = new Map<string, TraceSource>();
+      for (const traceImport of imports) {
+        if (!sourceOf.has(traceImport.sessionExternalId)) {
+          sourceOf.set(traceImport.sessionExternalId, traceImport.source);
+        }
+      }
+      const counts = { transcript: 0, hook: 0, synthetic: 0 };
+      for (const action of actions.values()) {
+        const source = sourceOf.get(action.sessionExternalId);
+        if (source !== undefined && inWindow(action, query)) {
+          counts[source] += 1;
+        }
+      }
+      return Promise.resolve(counts);
     },
 
     dump() {

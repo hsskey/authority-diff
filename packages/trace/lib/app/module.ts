@@ -1,6 +1,11 @@
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import type { ClassifyToolCall } from '@authority/action/schema';
-import type { ActionForReplay, ActivityOverview, ParsedSession } from '../../schema.ts';
+import type {
+  ActionForReplay,
+  ActivityOverview,
+  ParsedSession,
+  TraceSourceCounts,
+} from '../../schema.ts';
 import { buildActivityOverview } from '../domain/activity-overview.ts';
 import { importTrace } from './import-trace.ts';
 import type { ImportTraceResult } from './import-trace.ts';
@@ -25,6 +30,8 @@ export interface TraceModule {
   reclassifyActions(window: WindowQuery): Promise<ReclassifyActionsResult>;
   /** The Activity Overview of the window's stored Actions; no Effect or Zone. */
   getActivityOverview(window: WindowQuery): Promise<ActivityOverview>;
+  /** The window's Actions counted by the source of their Session's first Trace Import. */
+  countActionsBySource(window: WindowQuery): Promise<TraceSourceCounts>;
   readonly reader: ActionReader;
   readonly classifierVersion: string;
 }
@@ -53,6 +60,7 @@ export function assembleTraceModule(deps: AssembleTraceModuleDeps): TraceModule 
       }
       return buildActivityOverview(actions);
     },
+    countActionsBySource: (window) => store.countActionsBySource(window),
     reader: {
       getActions: (actionKeys) => store.getActions(actionKeys),
       streamActions: (query) => store.streamActions(query),

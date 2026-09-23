@@ -403,7 +403,8 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
   ).toBe(true);
 
   const map = await replay.getAuthorityMap();
-  expect(map.run?.replayRunId).not.toBe(first.value.run.id);
+  expect(map.run?.replayRunId).toBe(first.value.run.id);
+  expect(map.cells).toEqual(local.stats.cells);
 });
 
 // Above the 16,383 rows a single statement of a four-column table can carry.

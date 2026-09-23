@@ -22,6 +22,7 @@ const ACTION_KEY = 'd'.repeat(64);
 const HASH = 'e'.repeat(64);
 const TS = '2026-01-15T00:00:00.000Z';
 const REDACTED_INPUT = 'cat ~/[REDACTED_PATH]/token';
+const TRACE_SOURCES = { transcript: 340, hook: 0, synthetic: 0 };
 
 type Verdict = 'expected' | 'investigate' | 'unexpected';
 type VersionStatus = 'draft' | 'in_review' | 'accepted' | 'rejected';
@@ -205,6 +206,7 @@ function reviewBody(review: Review): unknown {
       stats,
       resultHash: HASH,
     },
+    traceSources: TRACE_SOURCES,
     gate: gateFor(review, groupKeysOf(review)),
   };
 }
@@ -626,6 +628,9 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await expect(effects).toContainText('250');
   await expect(effects).toContainText('0.3%');
   await expect(page.getByText('없음 (최초 도입)')).toBeVisible();
+  await expect(page.getByTestId('trace-sources')).toHaveText(
+    '기록 출처: 실제 transcript 340건 / synthetic 0건',
+  );
 
   await page.goto('/');
   await expect(page.getByRole('link', { name: '최초 정책 설정 계속하기' })).toBeVisible();
@@ -654,10 +659,10 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await expect(page.getByText('deny_credentials_access')).toBeVisible();
 
   // 6. every group intended, so the gate opens
-  await page.getByLabel('read 판정').selectOption('expected');
+  await page.getByLabel('read · credentials · 차단 판정').selectOption('expected');
   await page.getByRole('link', { name: '최초 도입 검토로 돌아가세요' }).click();
   await expect(page.getByText('판정하지 않은 group 1개').first()).toBeVisible();
-  await page.getByLabel('execute 판정').selectOption('expected');
+  await page.getByLabel('execute · host · 확인 필요 판정').selectOption('expected');
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
   // 7. the first Policy is adopted: version 1 becomes accepted, nothing is enforced
@@ -665,7 +670,7 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await page.getByRole('button', { name: '최초 정책 채택' }).click();
   await expect(page.getByRole('heading', { name: '결정 기록' })).toBeVisible();
   await expect(page.getByText('최초 정책 채택', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('execute 판정')).toBeDisabled();
+  await expect(page.getByLabel('execute · host · 확인 필요 판정')).toBeDisabled();
   await expectNoEnforcementWording(page);
 
   await page.goto('/');
@@ -684,7 +689,9 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Widening group (1)' })).toBeVisible();
   await expect(page.getByText('넓어진 action')).toBeVisible();
-  await page.getByLabel('fetch 판정').selectOption('expected');
+  await page
+    .getByLabel('fetch · unknown_remote → trusted_remote · 확인 필요 → 허용 · git 판정')
+    .selectOption('expected');
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
   // 10. conformance compares runtime observations with the accepted Policy

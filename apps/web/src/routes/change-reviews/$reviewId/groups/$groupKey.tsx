@@ -9,11 +9,17 @@ import type {
   ReviewDiffGroupResponse,
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
+import { foldHomePaths } from '@authority/kernel';
 import { callRoute, describeApiError } from '../../../../shared/api-client.ts';
 import { EmptyState } from '../../../../shared/components/EmptyState.tsx';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
-import { effectLabel, formatZoneTransition } from '../../../../features/change-review/format.ts';
+import {
+  adoptionGroupLabel,
+  diffGroupLabel,
+  effectLabel,
+  formatZoneTransition,
+} from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
@@ -228,7 +234,7 @@ function ChangeGroupSignature({
 }) {
   return (
     <div className="stack">
-      <p className="state-message hint">{group.headline}</p>
+      <p className="state-message hint">{foldHomePaths(group.headline)}</p>
       <dl className="meta-grid panel">
         <div>
           <dt>방향</dt>
@@ -269,7 +275,7 @@ function ChangeGroupSignature({
             reviewId={reviewId}
             kind="change"
             groupKey={group.groupKey}
-            capability={group.capability}
+            groupLabel={diffGroupLabel(group)}
             verdict={group.verdict}
             disabled={review.status !== 'ready'}
           />
@@ -297,7 +303,7 @@ function AdoptionGroupSignature({
 }) {
   return (
     <div className="stack">
-      <p className="state-message hint">{group.headline}</p>
+      <p className="state-message hint">{foldHomePaths(group.headline)}</p>
       <dl className="meta-grid panel">
         <div>
           <dt>Effect</dt>
@@ -339,7 +345,7 @@ function AdoptionGroupSignature({
           reviewId={reviewId}
           kind="adoption"
           groupKey={group.groupKey}
-          capability={group.capability}
+          groupLabel={adoptionGroupLabel(group)}
           verdict={group.verdict}
           disabled={review.status !== 'ready'}
         />
@@ -433,7 +439,7 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
     <div className="panel stack sample-card">
       <div>
         <h3 className="section-title">도구 입력(가림 처리)</h3>
-        <pre className="redacted-input">{action.toolInputRedacted}</pre>
+        <pre className="redacted-input">{foldHomePaths(action.toolInputRedacted)}</pre>
       </div>
       <div>
         <h3 className="section-title">Operations ({action.operations.length})</h3>
@@ -445,7 +451,7 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
                 zoneOf(sample.baselineDecision, operation.index),
                 zoneOf(sample.candidateDecision, operation.index),
               )}{' '}
-              · {sample.targetKeys[position] ?? 'unknown'}
+              · {foldHomePaths(sample.targetKeys[position] ?? 'unknown')}
             </li>
           ))}
         </ul>
@@ -472,7 +478,7 @@ function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
     <div className="panel stack sample-card">
       <div>
         <h3 className="section-title">도구 입력(가림 처리)</h3>
-        <pre className="redacted-input">{action.toolInputRedacted}</pre>
+        <pre className="redacted-input">{foldHomePaths(action.toolInputRedacted)}</pre>
       </div>
       <div>
         <h3 className="section-title">Operations ({action.operations.length})</h3>
@@ -481,7 +487,7 @@ function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
             <li key={operation.index}>
               #{operation.index} {operation.capability} ·{' '}
               {zoneOf(sample.candidateDecision, operation.index)} ·{' '}
-              {sample.targetKeys[position] ?? 'unknown'}
+              {foldHomePaths(sample.targetKeys[position] ?? 'unknown')}
             </li>
           ))}
         </ul>

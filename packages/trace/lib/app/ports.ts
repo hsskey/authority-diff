@@ -6,6 +6,7 @@ import type {
   RuntimeObservation,
   StoredAgentAction,
   TraceImport,
+  TraceSourceCounts,
 } from '../../schema.ts';
 
 export interface WindowQuery {
@@ -58,6 +59,7 @@ export interface TraceStore {
     query: WindowQuery & { classifierVersion: string },
   ): Promise<readonly StoredAgentAction[]>;
   updateClassifications(updates: readonly ClassificationUpdate[]): Promise<number>;
+  countActionsBySource(query: WindowQuery): Promise<TraceSourceCounts>;
 }
 
 /**

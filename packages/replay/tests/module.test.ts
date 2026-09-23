@@ -135,6 +135,8 @@ function makeStore(): FakeStore {
       if ('matrix' in input.stats) {
         matrices.set(input.replayRunId, input.stats.matrix);
         unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
+      } else {
+        matrices.set(input.replayRunId, input.stats.cells);
       }
       analyzabilityCounts.set(input.replayRunId, input.stats.analyzability);
       return Promise.resolve();
@@ -205,7 +207,7 @@ function makeStore(): FakeStore {
     listCompletedRunsNewestFirst: () =>
       Promise.resolve(
         completedNewestFirst()
-          .filter((run) => run.kind === 'version_diff')
+          .filter((run) => run.kind === 'version_diff' || run.kind === 'adoption')
           .map((run) => ({
             replayRunId: run.id,
             candidateVersionId: run.candidateVersionId,
@@ -708,8 +710,18 @@ describe('replay module', () => {
       expect(result.ok ? null : result.error.code).toBe('replay.source_invalid');
     });
 
-    test('authority-map ignores a completed adoption run', async () => {
+    test('authority-map returns the cells of a completed adoption run whose candidate is accepted', async () => {
       const { module } = makeModule();
+      const { run } = await runAdoption(module);
+
+      const map = await module.getAuthorityMap();
+
+      expect(map.run?.replayRunId).toBe(run.id);
+      expect(map.cells.reduce((sum, cell) => sum + cell.count, 0)).toBe(3);
+    });
+
+    test('authority-map ignores a completed adoption run whose candidate is not accepted', async () => {
+      const { module } = makeModule({ policy: makePolicy({ baselineStatus: 'in_review' }) });
       await runAdoption(module);
 
       const map = await module.getAuthorityMap();

@@ -153,6 +153,7 @@ describe('contracts DTO round-trip', () => {
       createdAt: TS,
       replaySummary: { replayRunId: null, status: 'queued', stats: null, resultHash: null },
       gate: { isOpen: false, blockers: [{ code: blockerCode, count: 1 }] },
+      traceSources: { transcript: 12, hook: 0, synthetic: 3 },
     };
     expect(ChangeReviewResponseSchema.parse(value)).toEqual(value);
   });

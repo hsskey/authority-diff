@@ -60,6 +60,7 @@ const RAW_CANARIES: readonly string[] = [
   'xoxb-SYNTHETIC-CANARY-000',
   'glpat-SYNTHETICCANARY00000',
   'npm_SYNTHETICCANARY000000000000000',
+  'figd_SYNTHETICCANARY0000000000',
   'SYNTHBEARERTOKEN0001',
   'synthuser:synthpass',
   'syntheticvalue0001',
@@ -71,6 +72,7 @@ const ALL_KINDS: readonly string[] = [
   'anthropic_key',
   'aws_access_key',
   'bearer_header',
+  'figma_token',
   'github_token',
   'gitlab_token',
   'jwt',
@@ -100,8 +102,8 @@ describe('parseTranscript canary fixture', () => {
   });
 
   test('keeps every non-tool line in the total but produces one call per tool_use', () => {
-    expect(parsed.totalLineCount).toBe(13);
-    expect(parsed.toolCalls.length).toBe(12);
+    expect(parsed.totalLineCount).toBe(14);
+    expect(parsed.toolCalls.length).toBe(13);
     expect(parsed.unparsedLineCount).toBe(0);
   });
 });

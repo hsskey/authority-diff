@@ -7,6 +7,7 @@ import {
   RuntimeObservationSchema,
   StoredAgentActionSchema,
   TraceImportIdSchema,
+  TraceSourceCountsSchema,
 } from '@authority/trace/schema';
 import {
   DecisionSchema,
@@ -373,9 +374,12 @@ export const ReplaySummarySchema = z.object({
 });
 export type ReplaySummary = z.infer<typeof ReplaySummarySchema>;
 
+// traceSources counts the review window's Actions by the source of their Trace
+// Import, so the screen can say whether it rests on real or synthetic records.
 export const ChangeReviewResponseSchema = ChangeReviewSchema.extend({
   replaySummary: ReplaySummarySchema,
   gate: GateSchema,
+  traceSources: TraceSourceCountsSchema,
 });
 export type ChangeReviewResponse = z.infer<typeof ChangeReviewResponseSchema>;
 

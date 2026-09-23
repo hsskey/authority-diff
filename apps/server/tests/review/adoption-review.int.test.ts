@@ -14,7 +14,7 @@ import { createMemoryLogger } from '@authority/platform/testing';
 import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
-import type { ActionReader } from '@authority/trace';
+import type { ActionReader, TraceModule } from '@authority/trace';
 import { ActionForReplaySchema, ParsedSessionSchema } from '@authority/trace/schema';
 import { createReviewModule, verifyAuditChain } from '@authority/review';
 import type { ChangeReviewView, PolicyReviewRepository, ReviewModule } from '@authority/review';
@@ -86,6 +86,7 @@ const idGenerator = createUlidGenerator();
 let database: Database;
 let review: ReviewModule;
 let repository: ReturnType<typeof createPolicyRepository>;
+let trace: TraceModule;
 
 function makePolicyReader(repo: ReturnType<typeof createPolicyRepository>): PolicyReader {
   return {
@@ -146,7 +147,7 @@ beforeAll(async () => {
   database = createDatabase(config.value);
 
   repository = createPolicyRepository({ db: database.db, clock, idGenerator });
-  const trace = createTraceModule({ database, clock, idGenerator });
+  trace = createTraceModule({ database, clock, idGenerator });
   for (const session of [ParsedSessionSchema.parse(sessionFixture), CREDENTIALS_SESSION]) {
     const imported = await trace.importTrace(session);
     if (!imported.ok) {
@@ -166,6 +167,7 @@ beforeAll(async () => {
     database,
     replay,
     policy: makePolicyReviewRepository(repository),
+    traceSources: trace,
     clock,
     idGenerator,
   });
@@ -281,6 +283,7 @@ test('a Policy with no accepted version gets an adoption review over an adoption
   expect(candidate.ok && candidate.value.status).toBe('in_review');
   const ready = await waitReady(created.review.id);
   expect(ready.replaySummary.status).toBe('completed');
+  expect(ready.traceSources).toEqual({ transcript: 4, hook: 0, synthetic: 0 });
   // The diff-group listing is empty for an adoption review; its groups are Adoption Groups.
   const diffGroups = await review.listDiffGroups(created.review.id, { limit: 200 });
   expect(diffGroups.ok && diffGroups.value.items).toEqual([]);
@@ -405,6 +408,7 @@ test('the adoption report carries the counts, both group tables, the decision, a
   }
   const report = result.value;
 
+  expect(report).toContain('기록 출처: 실제 transcript 4건 / synthetic 0건');
   expect(report).toContain(
     '이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.',
   );
@@ -553,6 +557,7 @@ test('a failed replay fails the review, returns the candidate to draft, and free
       classifierVersion: 'synthetic-classifier',
     }),
     policy: makePolicyReviewRepository(repository),
+    traceSources: trace,
     clock,
     idGenerator,
   });
@@ -631,6 +636,7 @@ test('a stale repeated sync does not withdraw a candidate a new review has claim
     database,
     replay: gatedReplay,
     policy: makePolicyReviewRepository(repository),
+    traceSources: trace,
     clock,
     idGenerator,
   });
