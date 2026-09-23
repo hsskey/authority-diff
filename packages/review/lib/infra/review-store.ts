@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { err, invariant, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import type { PolicyId } from '@authority/policy/schema';
@@ -20,6 +20,7 @@ import type {
   StoredVerdict,
   UpsertVerdictInput,
 } from '../app/ports.ts';
+import type { AuditTail } from '../domain/report.ts';
 import { appendReviewDecision, type ReviewDecisionRecord } from './audit-chain.ts';
 import { changeReviews, reviewDecisions, reviewVerdicts } from './tables.ts';
 
@@ -180,6 +181,15 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
       return row === undefined
         ? null
         : { decision: ReviewDecisionSchema.parse(row), sequence: row.sequence, hash: row.hash };
+    },
+
+    async getAuditTail(): Promise<AuditTail | null> {
+      const [row] = await db
+        .select({ sequence: reviewDecisions.sequence, hash: reviewDecisions.hash })
+        .from(reviewDecisions)
+        .orderBy(desc(reviewDecisions.sequence))
+        .limit(1);
+      return row ?? null;
     },
 
     // Inserts the decision and transitions the candidate version in one

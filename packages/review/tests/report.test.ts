@@ -8,6 +8,8 @@ const CANDIDATE_HASH = 'b'.repeat(64);
 const DECISION_HASH = 'c'.repeat(64);
 const REPLAY_INPUTS_HASH = 'd'.repeat(64);
 const REPLAY_RESULT_HASH = 'e'.repeat(64);
+const TAIL_HASH = 'f'.repeat(64);
+const AUDIT_TAIL = { sequence: 9, hash: TAIL_HASH };
 
 function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
   return {
@@ -43,6 +45,7 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
       replayInputsHash: REPLAY_INPUTS_HASH,
       replayResultHash: REPLAY_RESULT_HASH,
     },
+    auditTail: AUDIT_TAIL,
     ...overrides,
   };
 }
@@ -83,6 +86,23 @@ test('the Policy Version section lists the decision record replay hashes', () =>
   expect(report).toContain(
     `- Replay inputsHash: \`${REPLAY_INPUTS_HASH}\`\n- Replay resultHash: \`${REPLAY_RESULT_HASH}\``,
   );
+});
+
+test('the report shows the audit chain tail sequence and hash apart from the Decision Record', () => {
+  const report = renderReport(makeInput());
+  expect(report).toContain(
+    `## Audit chain\n\n- 보고서 생성 시점의 audit chain sequence: 9\n- 보고서 생성 시점의 audit chain hash: \`${TAIL_HASH}\``,
+  );
+});
+
+test('an undecided review still shows the audit chain tail', () => {
+  const report = renderReport(makeInput({ decision: null }));
+  expect(report).toContain(`audit chain hash: \`${TAIL_HASH}\``);
+});
+
+test('an empty audit chain renders a placeholder instead of a tail', () => {
+  const report = renderReport(makeInput({ auditTail: null }));
+  expect(report).toContain('## Audit chain\n\n기록된 결정이 아직 없습니다.');
 });
 
 test('an undecided review still renders without a reviewer line', () => {
@@ -173,6 +193,7 @@ function makeAdoptionInput(overrides: Partial<AdoptionReportInput> = {}): Adopti
       replayInputsHash: REPLAY_INPUTS_HASH,
       replayResultHash: REPLAY_RESULT_HASH,
     },
+    auditTail: AUDIT_TAIL,
     ...overrides,
   };
 }
@@ -241,4 +262,11 @@ test('an adoption report before the run completes has no numbers and no group ta
   expect(report).toContain("'확인 필요' 대상 Adoption Group이 없습니다.");
   expect(report).toContain("'차단' 대상 Adoption Group이 없습니다.");
   expect(report).toContain('아직 결정되지 않았습니다.');
+});
+
+test('the adoption report shows the audit chain tail sequence and hash', () => {
+  const report = renderAdoptionReport(makeAdoptionInput());
+  expect(report).toContain(
+    `## Audit chain\n\n- 보고서 생성 시점의 audit chain sequence: 9\n- 보고서 생성 시점의 audit chain hash: \`${TAIL_HASH}\``,
+  );
 });

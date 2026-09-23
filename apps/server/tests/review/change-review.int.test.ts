@@ -402,3 +402,37 @@ test("a decided review's report carries its Decision Record sequence and hash", 
     `- Decision Record sequence: ${row.sequence}\n- Decision Record hash: \`${row.hash}\``,
   );
 });
+
+test("a decided review's report carries the audit chain tail as of generation", async () => {
+  const candidateId = await seedCandidate();
+  const created = await review.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  const reviewId = created.value.review.id;
+  await waitReady(reviewId);
+  const rejected = await review.decide({
+    changeReviewId: reviewId,
+    decision: 'reject',
+    note: '',
+    reviewerName: 'tester',
+  });
+  if (!rejected.ok) {
+    throw new Error(rejected.error.code);
+  }
+  const [tail] = await database.db.execute<{ sequence: string; hash: string }>(
+    'select sequence, hash from review_decisions order by sequence desc limit 1',
+  );
+  if (tail === undefined) {
+    throw new Error('audit chain is empty');
+  }
+
+  const report = await review.getReport(reviewId);
+
+  expect(report.ok && report.value).toContain(
+    `- 보고서 생성 시점의 audit chain sequence: ${tail.sequence}\n- 보고서 생성 시점의 audit chain hash: \`${tail.hash}\``,
+  );
+});
