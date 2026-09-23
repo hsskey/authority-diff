@@ -20,6 +20,7 @@ type Verdict = 'expected' | 'investigate' | 'unexpected';
 interface Store {
   verdict: Verdict | null;
   decision: 'accept' | 'reject' | null;
+  withdrawn: boolean;
 }
 
 function getString(raw: unknown, key: string): string | null {
@@ -58,8 +59,13 @@ function transitions(): { from: string; to: string; count: number }[] {
 }
 
 function buildReview(store: Store): unknown {
-  const status =
-    store.decision === 'accept' ? 'accepted' : store.decision === 'reject' ? 'rejected' : 'ready';
+  const status = store.withdrawn
+    ? 'withdrawn'
+    : store.decision === 'accept'
+      ? 'accepted'
+      : store.decision === 'reject'
+        ? 'rejected'
+        : 'ready';
   return {
     id: REVIEW_ID,
     policyId: POLICY_ID,
@@ -292,6 +298,11 @@ async function installApi(route: Route, store: Store): Promise<void> {
     await respond(buildReview(store));
     return;
   }
+  if (method === 'POST' && pathname.endsWith('/withdrawals')) {
+    store.withdrawn = true;
+    await respond(buildReview(store));
+    return;
+  }
   if (method === 'POST' && pathname.endsWith('/change-reviews')) {
     await respond(buildReview(store));
     return;
@@ -305,7 +316,7 @@ async function installApi(route: Route, store: Store): Promise<void> {
     return;
   }
   if (method === 'GET' && pathname.endsWith('/change-reviews')) {
-    await respond({ items: [], nextCursor: null });
+    await respond({ items: store.withdrawn ? [buildReview(store)] : [], nextCursor: null });
     return;
   }
   if (method === 'GET' && pathname.includes('/change-reviews/')) {
@@ -326,7 +337,7 @@ async function installApi(route: Route, store: Store): Promise<void> {
 test('draft policy is reviewed, a verdict opens the gate, accepted, and a report downloads', async ({
   page,
 }) => {
-  const store: Store = { verdict: null, decision: null };
+  const store: Store = { verdict: null, decision: null, withdrawn: false };
 
   await page.addInitScript(() => {
     window.localStorage.setItem('authority.authToken', 'e2e-token');
@@ -380,4 +391,26 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   expect(download.suggestedFilename()).toBe(`change-review-${REVIEW_ID}.md`);
   const path = await download.path();
   expect(readFileSync(path, 'utf8')).toBe(reportFor(store));
+});
+
+test('a ready review is withdrawn and its draft can start a new review', async ({ page }) => {
+  const store: Store = { verdict: null, decision: null, withdrawn: false };
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem('authority.authToken', 'e2e-token');
+  });
+  await page.route('**/api/v1/**', (route) => installApi(route, store));
+
+  await page.goto(`/change-reviews/${REVIEW_ID}`);
+  await expect(page.getByText('판정 대기')).toBeVisible();
+
+  await page.getByRole('button', { name: '검토 철회' }).click();
+
+  await expect(page.getByRole('heading', { name: '검토 철회됨' })).toBeVisible();
+  await expect(page.getByText('철회됨', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '정책 변경 수락' })).toHaveCount(0);
+  await expect(page.getByLabel('execute 판정')).toBeDisabled();
+
+  await page.getByRole('link', { name: 'draft version 열기' }).click();
+  await expect(page.getByRole('button', { name: '변경 검토 만들기' })).toBeEnabled();
 });

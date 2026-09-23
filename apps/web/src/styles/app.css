@@ -479,6 +479,16 @@ input {
   color: #b91c1c;
 }
 
+.status-withdrawn {
+  color: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status-withdrawn {
+    color: #9ca3af;
+  }
+}
+
 .summary-lines {
   margin: 0;
   padding: 1rem 1.25rem 1rem 2.5rem;

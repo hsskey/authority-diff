@@ -32,6 +32,7 @@ const idGenerator = createUlidGenerator();
 
 let database: Database;
 let review: ReviewModule;
+let replay: ReplayModule;
 let repository: ReturnType<typeof createPolicyRepository>;
 
 const WIDE_OPEN: PolicyDocument = {
@@ -110,7 +111,7 @@ beforeAll(async () => {
   if (!imported.ok) {
     throw new Error('importTrace failed');
   }
-  const replay: ReplayModule = createReplayModule({
+  replay = createReplayModule({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),
@@ -438,3 +439,106 @@ test("a decided review's report carries the audit chain tail as of generation", 
     `- 보고서 생성 시점의 audit chain sequence: ${tail.sequence}\n- 보고서 생성 시점의 audit chain hash: \`${tail.hash}\``,
   );
 });
+
+async function readyReviewOf(candidateId: PolicyVersionId): Promise<ChangeReviewView> {
+  const created = await review.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  return waitReady(created.value.review.id);
+}
+
+test('withdrawing a ready review marks it withdrawn and returns its candidate to draft', async () => {
+  const candidateId = await seedCandidate();
+  const ready = await readyReviewOf(candidateId);
+
+  const withdrawn = await review.withdraw(ready.review.id);
+
+  expect(withdrawn.ok && withdrawn.value.review.status).toBe('withdrawn');
+  const candidate = await repository.getVersion(candidateId);
+  expect(candidate.ok && candidate.value.status).toBe('draft');
+});
+
+test('a withdrawn review is not open, so the draft can start a new review', async () => {
+  const candidateId = await seedCandidate();
+  const ready = await readyReviewOf(candidateId);
+  await review.withdraw(ready.review.id);
+
+  const next = await review.createChangeReview({
+    candidateVersionId: candidateId,
+    ...freshWindow(),
+  });
+
+  expect(next.ok && next.value.review.candidateVersionId).toBe(candidateId);
+});
+
+test('a review withdrawn while computing stays withdrawn after its replay completes', async () => {
+  // The review reads its run as running until released, so it is withdrawn while computing.
+  let isHeld = true;
+  const heldReview = createReviewModule({
+    database,
+    replay: {
+      ...replay,
+      async getRun(id) {
+        const run = await replay.getRun(id);
+        return isHeld && run !== null ? { ...run, status: 'running' } : run;
+      },
+    },
+    policy: makePolicyReviewRepository(repository),
+    clock,
+    idGenerator,
+  });
+  const created = await heldReview.createChangeReview({
+    candidateVersionId: await seedCandidate(),
+    ...freshWindow(),
+  });
+  if (!created.ok) {
+    throw new Error(created.error.code);
+  }
+  const reviewId = created.value.review.id;
+  const withdrawn = await heldReview.withdraw(reviewId);
+  if (!withdrawn.ok) {
+    throw new Error(withdrawn.error.code);
+  }
+  isHeld = false;
+
+  const afterReplay = await waitReplayCompleted(reviewId);
+
+  expect(afterReplay.review.status).toBe('withdrawn');
+});
+
+test('a decided review cannot be withdrawn and its candidate keeps its decision', async () => {
+  const candidateId = await seedCandidate();
+  const ready = await readyReviewOf(candidateId);
+  await review.decide({
+    changeReviewId: ready.review.id,
+    decision: 'reject',
+    note: 'not this time',
+    reviewerName: 'tester',
+  });
+
+  const withdrawn = await review.withdraw(ready.review.id);
+
+  expect(!withdrawn.ok && withdrawn.error.code).toBe('review.not_open');
+  const candidate = await repository.getVersion(candidateId);
+  expect(candidate.ok && candidate.value.status).toBe('rejected');
+});
+
+async function waitReplayCompleted(
+  id: ReturnType<typeof ChangeReviewIdSchema.parse>,
+): Promise<ChangeReviewView> {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const view = await review.getChangeReview(id);
+    if (!view.ok) {
+      throw new Error(view.error.code);
+    }
+    if (view.value.replaySummary.status === 'completed') {
+      return view.value;
+    }
+    await sleep(25);
+  }
+  throw new Error('timed out waiting for the replay to complete');
+}

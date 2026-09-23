@@ -139,6 +139,11 @@ export interface ReviewModule {
   listChangeReviews(input: ListChangeReviewsInput): Promise<Result<ChangeReviewsResult, AppError>>;
   recordVerdict(input: RecordVerdictInput): Promise<Result<RecordedVerdict, AppError>>;
   decide(input: DecideInput): Promise<Result<ChangeReviewView, AppError>>;
+  /**
+   * Withdraws a `computing` or `ready` review and returns its candidate to
+   * `draft`, so the Policy has no open review and the draft can be edited.
+   */
+  withdraw(id: ChangeReviewId): Promise<Result<ChangeReviewView, AppError>>;
   getDecision(id: ChangeReviewId): Promise<Result<ReviewDecision | null, AppError>>;
   getReport(id: ChangeReviewId): Promise<Result<string, AppError>>;
   listDiffGroups(
@@ -639,6 +644,25 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         decisionNote: input.note,
       };
       return viewOf(updated);
+    },
+
+    async withdraw(id) {
+      const stored = await store.getChangeReview(id);
+      if (stored === null) {
+        return err(notFound(id));
+      }
+      const review = await syncStatus(stored);
+      if (review.status !== 'computing' && review.status !== 'ready') {
+        return err(notOpen(id));
+      }
+      const withdrawn = await store.withdrawReview({
+        changeReviewId: review.id,
+        candidateVersionId: review.candidateVersionId,
+      });
+      if (!withdrawn) {
+        return err(notOpen(id));
+      }
+      return viewOf({ ...review, status: 'withdrawn' });
     },
 
     async getDecision(id) {

@@ -228,7 +228,8 @@ flowchart BT
   자연어 Mandate 조건이 필요해지면 명시적인 schemaVersion 2 migration으로 추가합니다.
 - `OperationDecision.isMandateDependent`, `Decision.isMandateDependent` 제거(설계서 24.4).
   `decidingRule` 선택은 ruleId 사전순만 씁니다(설계서 13.5의 "Mandate Exception이 없는 rule 우선" 조항 제거).
-- `ChangeReview.status`: `computing`, `ready`, `accepted`, `rejected`, `failed`.
+- `ChangeReview.status`: `computing`, `ready`, `accepted`, `rejected`, `failed`, `withdrawn`.
+  `withdrawn`은 사람이 `computing`이나 `ready` review를 철회한 상태이고(`POST /change-reviews/{id}/withdrawals`) candidate는 같은 transaction에서 철회 전이로 `draft`가 된다.
   probe와 stale 관련 field 제거.
 - `ChangeReview.kind`: `change` | `adoption`. 요청은 kind를 받지 않고 server가 accepted version 유무로 정한다. `baselineVersionId`는 `adoption`일 때만 null(migration 0009의 CHECK). 한 Policy에 열린 review는 kind와 무관하게 1개.
 - 신규 `review_decisions`(insert와 select만, trigger가 UPDATE, DELETE, TRUNCATE 차단): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`(kind `adoption`이면 null), `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`에 audit hash chain column `sequence`, `prevHash`, `hash`를 더한다(계약은 `docs/acr/0006-review-decision-hash-chain.md`).

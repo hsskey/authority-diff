@@ -20,6 +20,7 @@ import type {
   ReviewStore,
   StoredVerdict,
   UpsertVerdictInput,
+  WithdrawReviewInput,
 } from '../app/ports.ts';
 import type { AuditTail } from '../domain/report.ts';
 import { appendReviewDecision, type ReviewDecisionRecord } from './audit-chain.ts';
@@ -151,6 +152,32 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
           withdrawn.ok || withdrawn.error.code === 'policy.transition_not_allowed',
           `failReview: candidate ${input.candidateVersionId} could not be withdrawn`,
         );
+      });
+    },
+
+    async withdrawReview(input: WithdrawReviewInput): Promise<boolean> {
+      return database.transactionRunner.run(async (transaction) => {
+        const tx = narrowTransaction(transaction);
+        const [withdrawn] = await tx
+          .update(changeReviews)
+          .set({ status: 'withdrawn' })
+          .where(
+            and(
+              eq(changeReviews.id, input.changeReviewId),
+              inArray(changeReviews.status, ['computing', 'ready']),
+            ),
+          )
+          .returning();
+        if (withdrawn === undefined) {
+          return false;
+        }
+        const policy = createPolicyRepository({ db: tx, clock, idGenerator });
+        const candidate = await policy.transitionVersion(input.candidateVersionId, 'withdraw');
+        invariant(
+          candidate.ok,
+          `withdrawReview: candidate ${input.candidateVersionId} could not be withdrawn`,
+        );
+        return true;
       });
     },
 
