@@ -91,8 +91,9 @@ Effect와 근거 Rule을 포함합니다.
 _Avoid_: result, outcome
 
 **Replay Run**:
-두 Decision Source를 같은 Action 집합에 대입해 비교한 실행 1회.
+Decision Source를 같은 Action 집합에 대입한 실행 1회.
 `version_diff`는 두 Policy Version을, `conformance`는 `observed_runtime`과 Policy Version을 비교합니다.
+`adoption`은 candidate Policy Version 하나를 baseline 없이 대입합니다.
 
 **Decision Source**:
 Replay에서 Effect를 내는 쪽.
@@ -114,7 +115,16 @@ Effect가 달라진 Action을 같은 signature로 묶은 단위.
 _Avoid_: cluster, bucket
 
 **Group Key**:
-Diff Group signature에서 결정적으로 유도한 식별자.
+Diff Group 또는 Adoption Group signature에서 결정적으로 유도한 식별자.
+
+**Adoption Group**:
+`adoption` Replay Run에서 candidate Policy Version이 같은 Capability와 Zone에 같은 Effect(`ask` 또는 `deny`)를 준 Action 묶음.
+최초 도입 검토에서 사람이 판정하는 단위이며 signature에 program이 없습니다.
+_Avoid_: adoption cluster, ask bucket
+
+**Program Summary**:
+Adoption Group에서 signature Operation의 program 상위 10개와 건수.
+_Avoid_: top programs
 
 **Widening / Narrowing**:
 candidate의 Effect가 baseline보다 덜 제한적이면 Widening, 더 제한적이면 Narrowing.

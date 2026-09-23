@@ -28,16 +28,20 @@ export function createReplayModule(deps: CreateReplayModuleDeps) {
 
 export { assembleReplayModule } from './lib/app/module.ts';
 export type {
+  AdoptionGroupSample,
+  AdoptionGroupsResult,
   AssembleReplayModuleDeps,
   AuthorityMapView,
   ConformanceFindingsView,
   DiffGroupSample,
   DiffGroupsResult,
+  ListAdoptionGroupsInput,
   ListDiffGroupsInput,
   ReplayModule,
+  RequestAdoptionReplayInput,
   RequestConformanceReplayInput,
   RequestReplayInput,
   RequestReplayOutput,
 } from './lib/app/module.ts';
 export type { PolicyReader, PolicyVersionView, ReplayStore } from './lib/app/ports.ts';
-export type { AnalyzabilityCounts, AuthorityMapCell } from './lib/domain/build-matrix.ts';
+export type { AnalyzabilityCounts, AuthorityMapCell } from './schema.ts';

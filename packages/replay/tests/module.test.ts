@@ -13,9 +13,14 @@ import type {
 } from '@authority/trace/schema';
 import { assembleReplayModule } from '../index.ts';
 import type { AnalyzabilityCounts, AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
-import { computeDiff } from '../diff.ts';
-import { ReplayRunIdSchema } from '../schema.ts';
-import type { ConformanceFinding, ReplayRun, StoredDiffGroup } from '../schema.ts';
+import { computeAdoption, computeDiff } from '../diff.ts';
+import { ReplayRunIdSchema, ReplayRunSchema } from '../schema.ts';
+import type {
+  ConformanceFinding,
+  ReplayRun,
+  StoredAdoptionGroup,
+  StoredDiffGroup,
+} from '../schema.ts';
 import actionFixture from '../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import baselineFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
 import candidateFixture from '../../../tests/fixtures/candidate-policy.json' with { type: 'json' };
@@ -74,6 +79,7 @@ interface FakeStore extends ReplayStore {
 function makeStore(): FakeStore {
   const runs = new Map<string, ReplayRun>();
   const groups = new Map<string, StoredDiffGroup[]>();
+  const adoptionGroups = new Map<string, StoredAdoptionGroup[]>();
   const matrices = new Map<string, readonly AuthorityMapCell[]>();
   const analyzabilityCounts = new Map<string, AnalyzabilityCounts>();
   const findings = new Map<string, readonly ConformanceFinding[]>();
@@ -104,22 +110,29 @@ function makeStore(): FakeStore {
     recordCompletion: (input) => {
       const run = runs.get(input.replayRunId);
       if (run !== undefined) {
-        runs.set(input.replayRunId, {
-          ...run,
-          status: 'completed',
-          resultHash: input.resultHash,
-          stats: input.stats,
-          completedAt: input.completedAt,
-        });
+        // The stored stats jsonb is parsed back by kind, as the drizzle store does.
+        runs.set(
+          input.replayRunId,
+          ReplayRunSchema.parse({
+            ...run,
+            status: 'completed',
+            resultHash: input.resultHash,
+            stats: input.stats,
+            completedAt: input.completedAt,
+          }),
+        );
       }
       groups.set(input.replayRunId, [...input.groups]);
+      adoptionGroups.set(input.replayRunId, [...input.adoptionGroups]);
       findings.set(
         input.replayRunId,
         input.findings.map(({ replayRunId: _replayRunId, ...finding }) => finding),
       );
-      matrices.set(input.replayRunId, input.stats.matrix);
+      if ('matrix' in input.stats) {
+        matrices.set(input.replayRunId, input.stats.matrix);
+        unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
+      }
       analyzabilityCounts.set(input.replayRunId, input.stats.analyzability);
-      unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
       return Promise.resolve();
     },
     markFailed: (id, errorCode, completedAt) => {
@@ -139,6 +152,21 @@ function makeStore(): FakeStore {
     },
     getDiffGroup: (id, groupKey) =>
       Promise.resolve((groups.get(id) ?? []).find((group) => group.groupKey === groupKey) ?? null),
+    listAdoptionGroups: (query) => {
+      const ordered = (adoptionGroups.get(query.replayRunId) ?? [])
+        .filter((group) => query.effect === undefined || group.effect === query.effect)
+        .sort((a, b) => a.position - b.position);
+      const after =
+        query.cursor === undefined
+          ? -1
+          : (ordered.find((group) => group.groupKey === query.cursor)?.position ?? Infinity);
+      const items = ordered.filter((group) => group.position > after).slice(0, query.limit);
+      return Promise.resolve({ items, nextCursor: null });
+    },
+    getAdoptionGroup: (id, groupKey) =>
+      Promise.resolve(
+        (adoptionGroups.get(id) ?? []).find((group) => group.groupKey === groupKey) ?? null,
+      ),
     failStaleRunningRuns: (input) => {
       const olderThan = new Date(Date.parse(input.now) - input.staleMs).toISOString();
       let failed = 0;
@@ -549,5 +577,116 @@ describe('replay module', () => {
     const map = await module.getAuthorityMap();
 
     expect(map.run).toBeNull();
+  });
+
+  describe('adoption run', () => {
+    // The baseline fixture asks on the push Action, so the adoption preview has groups.
+    const adoptionInput = () => ({ candidateVersionId: baselineVersionId, ...WINDOW });
+
+    async function runAdoption(module: ReturnType<typeof makeModule>['module']) {
+      const result = await module.requestAdoptionReplay(adoptionInput());
+      if (!result.ok) {
+        throw new Error(`requestAdoptionReplay failed: ${result.error.code}`);
+      }
+      await result.value.execution;
+      return result.value;
+    }
+
+    test('stores kind adoption, no baseline, and the local adoption pipeline resultHash and stats', async () => {
+      const { module } = makeModule();
+      const local = computeAdoption({ actions, candidate: baselineDocument });
+
+      const { run } = await runAdoption(module);
+      const stored = await module.getRun(run.id);
+
+      expect([run.kind, run.baselineVersionId, run.candidateVersionId]).toEqual([
+        'adoption',
+        null,
+        baselineVersionId,
+      ]);
+      expect(stored?.status).toBe('completed');
+      expect(stored?.resultHash).toBe(local.resultHash);
+      expect(stored?.stats).toEqual(local.stats);
+    });
+
+    test('I6: the same adoption request twice yields the same run id and resultHash', async () => {
+      const { module } = makeModule();
+
+      const first = await runAdoption(module);
+      const completed = await module.getRun(first.run.id);
+      const second = await module.requestAdoptionReplay(adoptionInput());
+      if (!second.ok) {
+        throw new Error(second.error.code);
+      }
+
+      expect([first.reused, second.value.reused]).toEqual([false, true]);
+      expect(second.value.run.id).toBe(first.run.id);
+      expect(completed?.resultHash).not.toBeNull();
+      expect(second.value.run.resultHash).toBe(completed?.resultHash);
+    });
+
+    test('lists the Adoption Groups in review order and filters by effect', async () => {
+      const { module } = makeModule();
+      const local = computeAdoption({ actions, candidate: baselineDocument });
+      const { run } = await runAdoption(module);
+
+      const all = await module.listAdoptionGroups(run.id, { limit: 50 });
+      const denies = await module.listAdoptionGroups(run.id, { effect: 'deny', limit: 50 });
+
+      expect(all.ok ? all.value.items : null).toEqual(local.groups);
+      expect(local.groups.length).toBeGreaterThan(0);
+      expect(denies.ok ? denies.value.items : null).toEqual([]);
+    });
+
+    test('adoption samples carry the candidate Decision, Target keys, and the deciding rule rationale', async () => {
+      const { module } = makeModule();
+      const { run } = await runAdoption(module);
+      const listed = await module.listAdoptionGroups(run.id, { limit: 50 });
+      const pushGroup = listed.ok
+        ? listed.value.items.find((group) => group.capability === 'push')
+        : undefined;
+      if (pushGroup === undefined) {
+        throw new Error('expected the push adoption group');
+      }
+
+      const samples = await module.getAdoptionSamples(run.id, pushGroup.groupKey);
+
+      expect(samples.ok ? samples.value : null).toMatchObject([
+        {
+          targetKeys: ['example.invalid/synthetic/project'],
+          candidateDecision: { effect: 'ask' },
+          candidateRuleRationales: { push_policy: 'Synthetic rule controls remote publication.' },
+        },
+      ]);
+    });
+
+    test('adoption samples of an unknown group return replay.group_not_found', async () => {
+      const { module } = makeModule();
+      const { run } = await runAdoption(module);
+
+      const result = await module.getAdoptionSamples(run.id, 'f'.repeat(64));
+
+      expect(result.ok ? null : result.error.code).toBe('replay.group_not_found');
+    });
+
+    test('an unknown candidate version returns replay.source_invalid', async () => {
+      const { module } = makeModule();
+
+      const result = await module.requestAdoptionReplay({
+        candidateVersionId: PolicyVersionIdSchema.parse('pver_0000000000000000000000000Z'),
+        ...WINDOW,
+      });
+
+      expect(result.ok ? null : result.error.code).toBe('replay.source_invalid');
+    });
+
+    test('authority-map ignores a completed adoption run', async () => {
+      const { module } = makeModule();
+      await runAdoption(module);
+
+      const map = await module.getAuthorityMap();
+
+      expect(map.run).toBeNull();
+    });
   });
 });

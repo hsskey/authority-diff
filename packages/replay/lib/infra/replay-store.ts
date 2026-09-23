@@ -1,28 +1,37 @@
-import { and, asc, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
 import type { IsoTimestamp } from '@authority/kernel';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import {
   ConformanceFindingSchema,
   ReplayRunSchema,
+  StoredAdoptionGroupSchema,
   StoredDiffGroupSchema,
   type ConformanceFinding,
   type ReplayRun,
   type ReplayRunId,
+  type StoredAdoptionAssignment,
+  type StoredAdoptionGroup,
   type StoredConformanceFinding,
   type StoredDiffGroup,
 } from '../../schema.ts';
 import type {
+  AdoptionGroupsPage,
   AuthorityMapRunView,
   ConformanceRunView,
   DiffGroupsPage,
   FailStaleRunsInput,
+  ListAdoptionGroupsQuery,
   ListDiffGroupsQuery,
   RecordCompletionInput,
   ReplayStore,
+  StoredReplayStats,
+  StoredRunStats,
 } from '../app/ports.ts';
 import {
   conformanceFindings,
+  replayAdoptionAssignments,
+  replayAdoptionGroups,
   replayChangedActions,
   replayDiffGroups,
   replayRuns,
@@ -31,6 +40,8 @@ import {
 type RunRow = typeof replayRuns.$inferSelect;
 type GroupRow = typeof replayDiffGroups.$inferSelect;
 type FindingRow = typeof conformanceFindings.$inferSelect;
+type AdoptionGroupRow = typeof replayAdoptionGroups.$inferSelect;
+type AdoptionAssignmentRow = typeof replayAdoptionAssignments.$inferSelect;
 
 function toRun(row: RunRow): ReplayRun {
   return ReplayRunSchema.parse(row);
@@ -38,6 +49,24 @@ function toRun(row: RunRow): ReplayRun {
 
 function toGroup(row: GroupRow): StoredDiffGroup {
   return StoredDiffGroupSchema.parse(row);
+}
+
+function toAdoptionGroup(row: AdoptionGroupRow): StoredAdoptionGroup {
+  return StoredAdoptionGroupSchema.parse(row);
+}
+
+/** The matrix and analyzability live only in a version_diff or conformance run's stats. */
+function diffStatsOf(stats: StoredRunStats | null): StoredReplayStats | null {
+  return stats !== null && 'matrix' in stats ? stats : null;
+}
+
+function statsInsertValue(run: ReplayRun): StoredRunStats | null {
+  if (run.kind === 'adoption') {
+    return run.stats;
+  }
+  return run.stats === null
+    ? null
+    : { ...run.stats, matrix: [], analyzability: { full: 0, partial: 0, none: 0 } };
 }
 
 function runInsertValues(run: ReplayRun): RunRow {
@@ -52,10 +81,7 @@ function runInsertValues(run: ReplayRun): RunRow {
     classifierVersion: run.classifierVersion,
     inputsHash: run.inputsHash,
     resultHash: run.resultHash,
-    stats:
-      run.stats === null
-        ? null
-        : { ...run.stats, matrix: [], analyzability: { full: 0, partial: 0, none: 0 } },
+    stats: statsInsertValue(run),
     errorCode: run.errorCode,
     createdAt: run.createdAt,
     startedAt: run.startedAt,
@@ -85,6 +111,43 @@ function groupInsertValues(group: StoredDiffGroup): GroupRow {
     targetSummary: group.targetSummary.map((entry) => ({ key: entry.key, count: entry.count })),
     headline: group.headline,
     sampleActionKeys: [...group.sampleActionKeys],
+  };
+}
+
+function adoptionGroupInsertValues(group: StoredAdoptionGroup): AdoptionGroupRow {
+  return {
+    replayRunId: group.replayRunId,
+    groupKey: group.groupKey,
+    position: group.position,
+    effect: group.effect,
+    capability: group.capability,
+    zone: group.zone,
+    program: group.program,
+    programSummary: group.programSummary.map((entry) => ({
+      program: entry.program,
+      count: entry.count,
+    })),
+    distinctProgramCount: group.distinctProgramCount,
+    actionCount: group.actionCount,
+    sessionCount: group.sessionCount,
+    analyzabilityNoneCount: group.analyzabilityNoneCount,
+    firstOccurredAt: group.firstOccurredAt,
+    lastOccurredAt: group.lastOccurredAt,
+    decidingRuleIds: [...group.decidingRuleIds],
+    targetSummary: group.targetSummary.map((entry) => ({ key: entry.key, count: entry.count })),
+    headline: group.headline,
+    sampleActionKeys: [...group.sampleActionKeys],
+  };
+}
+
+function adoptionAssignmentInsertValues(
+  assignment: StoredAdoptionAssignment,
+): AdoptionAssignmentRow {
+  return {
+    replayRunId: assignment.replayRunId,
+    actionKey: assignment.actionKey,
+    groupKey: assignment.groupKey,
+    effect: assignment.effect,
   };
 }
 
@@ -154,6 +217,16 @@ export function createReplayStore(database: Database): ReplayStore {
         if (input.findings.length > 0) {
           await tx.insert(conformanceFindings).values(input.findings.map(findingInsertValues));
         }
+        if (input.adoptionGroups.length > 0) {
+          await tx
+            .insert(replayAdoptionGroups)
+            .values(input.adoptionGroups.map(adoptionGroupInsertValues));
+        }
+        if (input.adoptionAssignments.length > 0) {
+          await tx
+            .insert(replayAdoptionAssignments)
+            .values(input.adoptionAssignments.map(adoptionAssignmentInsertValues));
+        }
         await tx
           .update(replayRuns)
           .set({
@@ -207,6 +280,46 @@ export function createReplayStore(database: Database): ReplayStore {
       return row === undefined ? null : toGroup(row);
     },
 
+    async listAdoptionGroups(query: ListAdoptionGroupsQuery): Promise<AdoptionGroupsPage> {
+      const conditions = [eq(replayAdoptionGroups.replayRunId, query.replayRunId)];
+      if (query.effect !== undefined) {
+        conditions.push(eq(replayAdoptionGroups.effect, query.effect));
+      }
+      if (query.cursor !== undefined) {
+        // A cursor that names no group of this run compares against NULL and yields no rows.
+        conditions.push(
+          gt(
+            replayAdoptionGroups.position,
+            sql`(select ${replayAdoptionGroups.position} from ${replayAdoptionGroups} where ${replayAdoptionGroups.replayRunId} = ${query.replayRunId} and ${replayAdoptionGroups.groupKey} = ${query.cursor})`,
+          ),
+        );
+      }
+      const rows = await db
+        .select()
+        .from(replayAdoptionGroups)
+        .where(and(...conditions))
+        .orderBy(asc(replayAdoptionGroups.position))
+        .limit(query.limit + 1);
+      const page = rows.slice(0, query.limit).map(toAdoptionGroup);
+      const nextCursor =
+        rows.length > query.limit ? (page[page.length - 1]?.groupKey ?? null) : null;
+      return { items: page, nextCursor };
+    },
+
+    async getAdoptionGroup(id: ReplayRunId, groupKey: string): Promise<StoredAdoptionGroup | null> {
+      const [row] = await db
+        .select()
+        .from(replayAdoptionGroups)
+        .where(
+          and(
+            eq(replayAdoptionGroups.replayRunId, id),
+            eq(replayAdoptionGroups.groupKey, groupKey),
+          ),
+        )
+        .limit(1);
+      return row === undefined ? null : toAdoptionGroup(row);
+    },
+
     async failStaleRunningRuns(input: FailStaleRunsInput): Promise<number> {
       const olderThan = new Date(Date.parse(input.now) - input.staleMs).toISOString();
       const returned = await db
@@ -225,13 +338,14 @@ export function createReplayStore(database: Database): ReplayStore {
         .orderBy(desc(replayRuns.completedAt));
       return rows.map((row) => {
         const run = toRun(row);
+        const stats = diffStatsOf(row.stats);
         return {
           replayRunId: run.id,
           candidateVersionId: run.candidateVersionId,
           windowFrom: run.windowFrom,
           windowTo: run.windowTo,
-          matrix: row.stats?.matrix ?? [],
-          analyzability: row.stats?.analyzability ?? { full: 0, partial: 0, none: 0 },
+          matrix: stats?.matrix ?? [],
+          analyzability: stats?.analyzability ?? { full: 0, partial: 0, none: 0 },
         };
       });
     },
@@ -252,7 +366,7 @@ export function createReplayStore(database: Database): ReplayStore {
         candidateVersionId: run.candidateVersionId,
         windowFrom: run.windowFrom,
         windowTo: run.windowTo,
-        unpairedPermissionRequests: row.stats?.unpairedPermissionRequests ?? 0,
+        unpairedPermissionRequests: diffStatsOf(row.stats)?.unpairedPermissionRequests ?? 0,
       };
     },
 

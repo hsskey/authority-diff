@@ -15,7 +15,7 @@ import type { ActionForReplay } from '@authority/trace/schema';
 import { createReplayModule } from '../index.ts';
 import type { PolicyReader } from '../index.ts';
 import { createEvaluator } from '@authority/policy/evaluate';
-import { computeConformanceWith, computeDiff } from '../diff.ts';
+import { computeAdoption, computeConformanceWith, computeDiff } from '../diff.ts';
 import sessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
@@ -291,4 +291,105 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   expect(listed.items).toEqual(local.findings);
   expect(local.findings.map((finding) => finding.kind)).not.toContain('under_asked');
   expect(listed.run?.unpairedPermissionRequests).toBe(1);
+});
+
+test('an adoption run persists its groups and assignments, is idempotent, and pages in review order', async () => {
+  const clock = createSystemClock();
+  const idGenerator = createUlidGenerator();
+  const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
+  const created = await repository.createPolicy({
+    name: idGenerator.next('policy'),
+    template: 'default',
+  });
+  if (!created.ok) {
+    throw new Error('createPolicy failed');
+  }
+  const candidate = created.value.initialVersion;
+  const trace = createTraceModule({ database, clock, idGenerator });
+  const imported = await trace.importTrace(ParsedSessionSchema.parse(sessionFixture));
+  if (!imported.ok) {
+    throw new Error('importTrace failed');
+  }
+  const window = freshWindow();
+  const streamed: ActionForReplay[] = [];
+  for await (const batch of trace.reader.streamActions({
+    from: window.windowFrom,
+    to: window.windowTo,
+    batchSize: 5000,
+  })) {
+    streamed.push(...batch);
+  }
+  const local = computeAdoption({ actions: streamed, candidate: candidate.document });
+  expect(local.groups.length).toBeGreaterThan(0);
+  const replay = createReplayModule({
+    database,
+    reader: trace.reader,
+    policy: makePolicyReader(repository),
+    clock,
+    idGenerator,
+    classifierVersion: trace.classifierVersion,
+  });
+
+  const first = await replay.requestAdoptionReplay({ candidateVersionId: candidate.id, ...window });
+  if (!first.ok) {
+    throw new Error(`requestAdoptionReplay failed: ${first.error.code}`);
+  }
+  await first.value.execution;
+  const stored = await replay.getRun(first.value.run.id);
+  const second = await replay.requestAdoptionReplay({
+    candidateVersionId: candidate.id,
+    ...window,
+  });
+  if (!second.ok) {
+    throw new Error(second.error.code);
+  }
+
+  expect([stored?.kind, stored?.baselineVersionId, stored?.status]).toEqual([
+    'adoption',
+    null,
+    'completed',
+  ]);
+  expect(stored?.resultHash).toBe(local.resultHash);
+  expect(stored?.stats).toEqual(local.stats);
+  expect([second.value.reused, second.value.run.id]).toEqual([true, first.value.run.id]);
+
+  const all = await replay.listAdoptionGroups(first.value.run.id, { limit: 200 });
+  expect(all.ok ? all.value.items : null).toEqual(local.groups);
+
+  const paged: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await replay.listAdoptionGroups(first.value.run.id, { cursor, limit: 1 });
+    if (!page.ok) {
+      throw new Error(page.error.code);
+    }
+    paged.push(...page.value.items.map((group) => group.groupKey));
+    cursor = page.value.nextCursor ?? undefined;
+  } while (cursor !== undefined);
+  expect(paged).toEqual(local.groups.map((group) => group.groupKey));
+
+  const asks = await replay.listAdoptionGroups(first.value.run.id, { effect: 'ask', limit: 200 });
+  expect(asks.ok ? asks.value.items : null).toEqual(
+    local.groups.filter((group) => group.effect === 'ask'),
+  );
+
+  const [group] = local.groups;
+  if (group === undefined) {
+    throw new Error('expected an adoption group');
+  }
+  const samples = await replay.getAdoptionSamples(first.value.run.id, group.groupKey);
+  if (!samples.ok) {
+    throw new Error(samples.error.code);
+  }
+  expect(samples.value.length).toBe(group.sampleActionKeys.length);
+  expect(
+    samples.value.every(
+      (sample) =>
+        sample.candidateDecision.effect === group.effect &&
+        sample.targetKeys.length === sample.action.operations.length,
+    ),
+  ).toBe(true);
+
+  const map = await replay.getAuthorityMap();
+  expect(map.run?.replayRunId).not.toBe(first.value.run.id);
 });

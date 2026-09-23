@@ -8,6 +8,7 @@ import {
   ImportTraceRequestSchema,
   ImportTraceResponseSchema,
   ListActionsQuerySchema,
+  ListAdoptionGroupsQuerySchema,
 } from '../schema.ts';
 import parsedSessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
@@ -84,6 +85,7 @@ describe('contracts DTO round-trip', () => {
   test.each([
     ['no kind as a version diff', { baselineVersionId: `pver_${ULID}` }, 'version_diff'],
     ['a conformance run without a baseline', { kind: 'conformance' }, 'conformance'],
+    ['an adoption run without a baseline', { kind: 'adoption' }, 'adoption'],
   ])('parses a replay run request with %s', (_name, extra, expected) => {
     const parsed = CreateReplayRunRequestSchema.parse({
       candidateVersionId: `pver_${ULID}`,
@@ -102,6 +104,14 @@ describe('contracts DTO round-trip', () => {
       windowTo: TS,
     });
     expect(result.success).toBe(false);
+  });
+
+  test('parses the adoption groups query with an effect filter and a default limit', () => {
+    expect(ListAdoptionGroupsQuerySchema.parse({ effect: 'deny' })).toEqual({
+      effect: 'deny',
+      limit: 50,
+    });
+    expect(ListAdoptionGroupsQuerySchema.safeParse({ effect: 'allow' }).success).toBe(false);
   });
 
   test('carries replay summary and gate on a change review response', () => {
