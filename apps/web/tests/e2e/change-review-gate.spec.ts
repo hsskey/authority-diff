@@ -71,6 +71,25 @@ for (const { code, text } of WIDENING_BLOCKER_CASES) {
     await page.goto(`/change-reviews/${REVIEW_ID}`);
 
     await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
-    await expect(page.getByText(text)).toBeVisible();
+    await expect(page.getByText(text).first()).toBeVisible();
   });
 }
+
+test('decision panel repeats the exact Gate section wording for an unexpected blocker', async ({
+  page,
+}) => {
+  const text = '예상 밖으로 판정된 group 1개. 정책을 고쳐 새 review를 만드세요';
+  await page.route(
+    `**/api/v1/change-reviews/${REVIEW_ID}`,
+    fulfillWith(reviewWithGate({ code: 'widening_unexpected', count: 1 })),
+  );
+  await page.route(
+    `**/api/v1/change-reviews/${REVIEW_ID}/diff-groups*`,
+    fulfillWith({ items: [], nextCursor: null }),
+  );
+
+  await page.goto(`/change-reviews/${REVIEW_ID}`);
+
+  await expect(page.getByRole('heading', { name: '정책 변경 결정' })).toBeVisible();
+  await expect(page.getByText(text)).toHaveCount(2);
+});
