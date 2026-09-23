@@ -406,7 +406,7 @@ agent가 이 목록의 code를 만들기 시작하면 중단시킵니다.
 
 - [ ] `apps/cli`의 `hook`, `install-hooks`, spool.
 - [ ] `runtime_observations` table, `POST /runtime-observations`, Disposition 도출.
-- [ ] conformance replay, `conformance_findings`, `/conformance` 화면.
+- [ ] conformance replay, `conformance_findings`, `/conformance` 화면. 축소 conformance(`observed_runtime` Decision Source, Disposition 도출, finding 3종, 목록 전용 화면)는 ACR-0007로 구현했다(17장).
 - [ ] `packages/audit`, `audit_events` table, `/audit` 화면. audit hash chain, trigger, `verify-audit` 명령은 `review_decisions` 위에 구현했다(17장).
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event 이름 체계.
 - [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
@@ -417,7 +417,7 @@ agent가 이 목록의 code를 만들기 시작하면 중단시킵니다.
 - [ ] Testcontainers.
 - [ ] `scenarios`, `probe_runs`, `probe_results`, `provider_calibrations` table과 API, `/scenarios` 화면.
 - [ ] calibration 계산(Wilson threshold 산출, ECE, Brier, bin), provider 상태 기계, `decision-provider.llm-baseline.ts`.
-- [ ] `DecisionSource` union, `replay_runs.kind`.
+- [ ] `DecisionSource` union, `replay_runs.kind`. `replay_runs.kind`(기본값 `version_diff`)는 축소 형태로 구현하고 `DecisionSource` union은 만들지 않았다(ACR-0007, 17장).
 - [ ] 합성 조직 trace 생성기(S1), workload 3종, RAR과 fidelity 계산.
 - [ ] rule 표 form editor(Tier 2 전까지), `/trace-imports` 화면, Overview의 기간 선택과 cell drill-down.
 - [ ] Codex parser, `TraceSource` port.
