@@ -89,7 +89,9 @@ function DiffGroupPage() {
       {group !== null && reviewQuery.data ? (
         <GroupSignature reviewId={reviewId} review={reviewQuery.data} group={group} />
       ) : null}
-      {group !== null ? <SampleSection query={samplesQuery} replayRunId={replayRunId} /> : null}
+      {group !== null && reviewQuery.isSuccess ? (
+        <SampleSection query={samplesQuery} replayRunId={replayRunId} />
+      ) : null}
     </section>
   );
 }

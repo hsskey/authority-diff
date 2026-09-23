@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
-import { callRoute, describeApiError, type ApiClientError } from '../../../shared/api-client.ts';
+import { callRoute, describeApiError } from '../../../shared/api-client.ts';
 import { ErrorState } from '../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../shared/components/LoadingState.tsx';
 import {
@@ -365,7 +365,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
         body: { decision, note, reviewerName },
       });
       if (!result.ok) {
-        throw new ApiError(result.error);
+        throw new Error(describeApiError(result.error));
       }
       return result.value;
     },
@@ -488,11 +488,4 @@ function downloadReport(
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
-}
-
-class ApiError extends Error {
-  constructor(error: ApiClientError) {
-    super(describeApiError(error));
-    this.name = 'ApiError';
-  }
 }
