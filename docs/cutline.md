@@ -130,6 +130,7 @@ journey는 "import → 활동 파악 → 첫 정책(draft) → 도입 preview �
 12. critical group을 엽니다.
     `trustedRemotes = github.com/**`라는 실수로 조직 밖 저장소로의 실제 과거 fetch가 `ask`에서 `allow`로 바뀐 것을 저장소 이름과 함께 확인합니다.
     이 장면의 Action이 실제 기록인지 `synthetic` fixture인지를 화면과 Evidence report가 표시합니다.
+    결과 등급은 제품 field가 아니고 evidence 문서와 README에 적습니다.
 13. Widening group마다 `expected`, `investigate`, `unexpected`를 기록합니다.
     판정이 없거나 `investigate`, `unexpected`인 Widening group이 남아 있으면 수락 버튼이 잠깁니다.
 14. `unexpected`가 나왔으므로 반려하고 draft를 고쳐 새 review를 만들고 전부 `expected`가 된 뒤 "정책 변경 수락"을 누릅니다.
@@ -389,7 +390,7 @@ push 기록이 없으면 같은 B′로 `git clone`, `pnpm add github:...` 같�
 | 중 | 실제 기록의 Widening을 검토할 수 있었으나 전부 예상 범위 |
 | 약 | critical Widening 장면을 synthetic fixture로만 시연 |
 
-화면, Evidence report, README는 위 등급 중 해당하는 것만 적고, 등급보다 강한 표현을 쓰지 않습니다.
+evidence 문서와 README는 위 등급 중 해당하는 것만 적고, 등급보다 강한 표현을 쓰지 않습니다.
 측정 전에는 등급을 단정하지 않고 이 표만 적습니다.
 
 실패하면 기능을 더하지 않습니다.
@@ -476,7 +477,7 @@ Target Architecture의 완성이 아닙니다.
 5. Widening group마다 `headline`, target 요약, sample이 나오고 Verdict를 기록할 수 있습니다.
 6. 판정이 끝나지 않은 Widening group이 있으면 수락되지 않습니다(I7).
 7. 수락 또는 반려가 `review_decisions`에 hash와 함께 남고 Evidence report에 5장의 고정 문구가 들어갑니다.
-8. demo에서 `github.com/**` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)을 적고, 등급보다 강한 표현을 쓰지 않습니다.
+8. demo에서 `github.com/**` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면과 Evidence report는 이 장면의 provenance(실제 기록 또는 `synthetic`)를 표시합니다. 실제 기록의 예상 밖 widening 유무와 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)은 제품 field가 아니라 evidence 문서(`docs/evidence/v1-metrics.md`)와 README에 적고, 등급보다 강한 표현을 쓰지 않습니다.
 9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm test:e2e`가 CI에서 통과합니다.
 10. `docs/evidence`에 실제 기록 측정, diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
 11. README에 한계가 적혀 있습니다.
