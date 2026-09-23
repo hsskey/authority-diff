@@ -46,6 +46,8 @@ export interface ReviewStore {
   getChangeReview(id: ChangeReviewId): Promise<ChangeReview | null>;
   /** The Policy's review in `computing` or `ready`, of either kind; there is at most one. */
   findOpenChangeReview(policyId: PolicyId): Promise<ChangeReview | null>;
+  /** Every review of the Policy, newest first. */
+  listChangeReviews(policyId: PolicyId): Promise<readonly ChangeReview[]>;
   updateStatus(id: ChangeReviewId, status: ChangeReviewStatus): Promise<void>;
   upsertVerdict(input: UpsertVerdictInput): Promise<void>;
   getVerdict(changeReviewId: ChangeReviewId, groupKey: string): Promise<StoredVerdict | null>;

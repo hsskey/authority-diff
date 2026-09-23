@@ -6,6 +6,8 @@ import {
   ChangeReviewResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
+  ListChangeReviewsQuerySchema,
+  ListChangeReviewsResponseSchema,
   ListReviewAdoptionGroupsQuerySchema,
   ListReviewAdoptionGroupsResponseSchema,
   ListReviewDiffGroupsQuerySchema,
@@ -62,6 +64,10 @@ function toResponse(view: ChangeReviewView): unknown {
   });
 }
 
+function toPage(views: readonly ChangeReviewView[], nextCursor: string | null): unknown {
+  return ListChangeReviewsResponseSchema.parse({ items: views.map(toResponse), nextCursor });
+}
+
 export function registerChangeReviewsRoutes(app: Hono<AppEnv>, review: ReviewModule): void {
   app.post('/api/v1/change-reviews', async (c) => {
     const body: unknown = await c.req.json().catch(() => null);
@@ -74,6 +80,22 @@ export function registerChangeReviewsRoutes(app: Hono<AppEnv>, review: ReviewMod
       return respondReviewError(c, result.error);
     }
     return c.json(toResponse(result.value), 202);
+  });
+
+  app.get('/api/v1/change-reviews', async (c) => {
+    const query = ListChangeReviewsQuerySchema.safeParse(c.req.query());
+    if (!query.success) {
+      return respondError(c, validationInvalidRequest({ issues: query.error.issues }));
+    }
+    const result = await review.listChangeReviews({
+      policyId: query.data.policyId,
+      cursor: query.data.cursor,
+      limit: query.data.limit,
+    });
+    if (!result.ok) {
+      return respondReviewError(c, result.error);
+    }
+    return c.json(toPage(result.value.items, result.value.nextCursor));
   });
 
   app.get('/api/v1/change-reviews/:id', async (c) => {

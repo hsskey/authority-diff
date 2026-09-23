@@ -120,9 +120,23 @@ export interface ReviewAdoptionGroupsResult {
   readonly nextCursor: string | null;
 }
 
+/** `cursor` is the id of the last review returned, in newest-first order. */
+export interface ListChangeReviewsInput {
+  readonly policyId: PolicyId;
+  readonly cursor?: string | undefined;
+  readonly limit: number;
+}
+
+export interface ChangeReviewsResult {
+  readonly items: readonly ChangeReviewView[];
+  readonly nextCursor: string | null;
+}
+
 export interface ReviewModule {
   createChangeReview(input: CreateChangeReviewInput): Promise<Result<ChangeReviewView, AppError>>;
   getChangeReview(id: ChangeReviewId): Promise<Result<ChangeReviewView, AppError>>;
+  /** The Policy's reviews of either kind, newest first, each with its replay summary and gate. */
+  listChangeReviews(input: ListChangeReviewsInput): Promise<Result<ChangeReviewsResult, AppError>>;
   recordVerdict(input: RecordVerdictInput): Promise<Result<RecordedVerdict, AppError>>;
   decide(input: DecideInput): Promise<Result<ChangeReviewView, AppError>>;
   getDecision(id: ChangeReviewId): Promise<Result<ReviewDecision | null, AppError>>;
@@ -509,6 +523,23 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       }
       const review = await syncStatus(stored);
       return viewOf(review);
+    },
+
+    async listChangeReviews(input) {
+      const { policyId, cursor, limit } = input;
+      const all = await store.listChangeReviews(policyId);
+      const start = cursor === undefined ? 0 : all.findIndex((review) => review.id === cursor) + 1;
+      const page = all.slice(start, start + limit);
+      const items: ChangeReviewView[] = [];
+      for (const stored of page) {
+        const view = await viewOf(await syncStatus(stored));
+        if (!view.ok) {
+          return view;
+        }
+        items.push(view.value);
+      }
+      const nextCursor = start + limit < all.length ? (page[page.length - 1]?.id ?? null) : null;
+      return ok({ items, nextCursor });
     },
 
     async recordVerdict(input) {

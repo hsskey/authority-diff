@@ -4,6 +4,7 @@ import {
   CreatePolicyResponseSchema,
   ErrorEnvelopeSchema,
   ListPoliciesResponseSchema,
+  ListPolicyVersionsResponseSchema,
   PolicyVersionResponseSchema,
   ValidatePolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
@@ -64,6 +65,33 @@ describe('POST /api/v1/policies', () => {
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(
       'validation.invalid_request',
     );
+  });
+});
+
+describe('GET /api/v1/policies/:policyId/versions', () => {
+  test('returns the versions page of the policy', async () => {
+    const app = buildPolicyApp(
+      makeModule({
+        listVersions: (policyId, cursor, limit) =>
+          Promise.resolve(
+            ok({
+              items: [sampleVersion({ policyId })],
+              nextCursor: `${cursor ?? 'none'}:${limit}`,
+            }),
+          ),
+      }),
+    );
+    const res = await app.request(`/api/v1/policies/${POLICY_ID}/versions?limit=5`, authed());
+    expect(res.status).toBe(200);
+    const body = ListPolicyVersionsResponseSchema.parse(await res.json());
+    expect(body.items.map((version) => version.policyId)).toEqual([POLICY_ID]);
+    expect(body.nextCursor).toBe('none:5');
+  });
+
+  test('rejects an invalid policy id with 422', async () => {
+    const app = buildPolicyApp(makeModule());
+    const res = await app.request('/api/v1/policies/nope/versions', authed());
+    expect(res.status).toBe(422);
   });
 });
 

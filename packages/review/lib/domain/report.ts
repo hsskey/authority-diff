@@ -89,10 +89,19 @@ const EFFECT_LABEL: Record<Effect, string> = {
   deny: '차단',
 };
 
-const VERDICT_LABEL: Record<Verdict, string> = {
-  expected: '예상함',
+type VerdictLabel = Record<Verdict, string>;
+
+/** The same words the review screens use for each kind's Verdict. */
+const CHANGE_VERDICT_LABEL: VerdictLabel = {
+  expected: '예상된 변화',
   investigate: '조사 필요',
   unexpected: '예상 밖',
+};
+
+const ADOPTION_VERDICT_LABEL: VerdictLabel = {
+  expected: '의도한 제한',
+  investigate: '보류',
+  unexpected: '정책 수정 필요',
 };
 
 const DIRECTION_LABEL: Record<'widening' | 'narrowing', string> = {
@@ -127,8 +136,8 @@ function ratio(part: number, whole: number): string {
   return `${((part / whole) * 100).toFixed(1)}%`;
 }
 
-function verdictLabel(verdict: Verdict | null): string {
-  return verdict === null ? '미판정' : VERDICT_LABEL[verdict];
+function verdictLabel(verdict: Verdict | null, label: VerdictLabel): string {
+  return verdict === null ? '미판정' : label[verdict];
 }
 
 function renderNoneRatio(input: ReportInput): string {
@@ -146,10 +155,10 @@ function renderNoneRatio(input: ReportInput): string {
 
 function renderOperationWidening(rows: ReplayStats['operationWidening'] | null): string {
   if (rows === null) {
-    return '아직 replay가 완료되지 않아 operation-level widening 표가 없습니다.';
+    return '아직 replay가 완료되지 않아 Operation 단위 widening 표가 없습니다.';
   }
   const table = [
-    '| capability | fromZone | toZone | count |',
+    '| Capability | 기준 Zone | 변경안 Zone | 건수 |',
     '| --- | --- | --- | --- |',
     ...rows.map((row) => `| ${row.capability} | ${row.fromZone} | ${row.toZone} | ${row.count} |`),
   ];
@@ -179,7 +188,7 @@ function renderGroup(group: ReportGroup): string {
     `- 방향: ${DIRECTION_LABEL[group.direction]}`,
     `- Effect: ${EFFECT_LABEL[group.fromEffect]} → ${EFFECT_LABEL[group.toEffect]}`,
     `- Action ${group.actionCount}건`,
-    `- Verdict: ${verdictLabel(group.verdict)}`,
+    `- Verdict: ${verdictLabel(group.verdict, CHANGE_VERDICT_LABEL)}`,
   ];
   if (group.targetSummary.length > 0) {
     lines.push('- 주요 Target:');
@@ -251,11 +260,11 @@ export function renderReport(input: ReportInput): string {
     '',
     renderNoneRatio(input),
     '',
-    '## Effect transition',
+    '## Effect 전이',
     '',
     renderTransitions(input.transitions),
     '',
-    '## Action effect unchanged, operation-level widening',
+    '## Action Effect가 그대로인 Operation 단위 widening',
     '',
     renderOperationWidening(input.operationWidening),
     '',
@@ -311,7 +320,7 @@ function renderAdoptionGroupTable(
       const targets = group.targetSummary
         .map((target) => `${target.key} (${target.count}건)`)
         .join(', ');
-      return `| ${group.headline} | ${group.actionCount} | ${group.sessionCount} | ${targets} | ${verdictLabel(group.verdict)} |`;
+      return `| ${group.headline} | ${group.actionCount} | ${group.sessionCount} | ${targets} | ${verdictLabel(group.verdict, ADOPTION_VERDICT_LABEL)} |`;
     }),
   ].join('\n');
 }

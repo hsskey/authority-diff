@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { err, invariant, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import type { PolicyId } from '@authority/policy/schema';
@@ -115,6 +115,15 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
         )
         .limit(1);
       return row === undefined ? null : toReview(row);
+    },
+
+    async listChangeReviews(policyId: PolicyId): Promise<readonly ChangeReview[]> {
+      const rows = await db
+        .select()
+        .from(changeReviews)
+        .where(eq(changeReviews.policyId, policyId))
+        .orderBy(desc(changeReviews.createdAt), desc(changeReviews.id));
+      return rows.map(toReview);
     },
 
     async updateStatus(id: ChangeReviewId, status: ChangeReviewStatus): Promise<void> {

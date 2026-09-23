@@ -282,6 +282,24 @@ test('a Policy with no accepted version gets an adoption review over an adoption
   expect(diffGroups.ok && diffGroups.value.items).toEqual([]);
 });
 
+test("listChangeReviews finds the Policy's adoption review with its gate, newest first", async () => {
+  const candidateId = await createDraftVersionOne();
+  const created = await createReview(candidateId);
+  await waitReady(created.review.id);
+
+  const listed = await review.listChangeReviews({
+    policyId: created.review.policyId,
+    limit: 50,
+  });
+
+  expect(listed.ok && listed.value.nextCursor).toBeNull();
+  expect(listed.ok && listed.value.items.map((view) => view.review.id)).toEqual([
+    created.review.id,
+  ]);
+  expect(listed.ok && listed.value.items[0]?.review.status).toBe('ready');
+  expect(listed.ok && listed.value.items[0]?.gate.blockers[0]?.code).toBe('adoption_unreviewed');
+});
+
 test('the adoption gate stays closed until every ask and deny group is expected, then accept makes the candidate accepted', async () => {
   const { candidateId, reviewId, groups } = await readyAdoptionReview();
   expect(groups.map((group) => group.effect)).toEqual(['deny', 'ask']);

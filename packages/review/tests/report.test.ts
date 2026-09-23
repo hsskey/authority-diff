@@ -71,6 +71,12 @@ test('the report names the reviewer and decision when decided', () => {
   expect(report).toContain('정책 변경 수락');
 });
 
+test('the report labels a change Verdict with the review screen words', () => {
+  const report = renderReport(makeInput());
+  expect(report).toContain('## Effect 전이');
+  expect(report).toContain('- Verdict: 예상된 변화');
+});
+
 test('the report records the Decision Record sequence and hash when decided', () => {
   const report = renderReport(makeInput());
   expect(report).toContain(
@@ -122,7 +128,8 @@ test('the report lists operation-level widening when Action effect is unchanged'
       groups: [],
     }),
   );
-  expect(report).toContain('Action effect unchanged, operation-level widening');
+  expect(report).toContain('## Action Effect가 그대로인 Operation 단위 widening');
+  expect(report).toContain('| Capability | 기준 Zone | 변경안 Zone | 건수 |');
   expect(report).toContain('| push | unknown_remote | trusted_remote | 2 |');
   expect(report).toContain('| push | public_remote | trusted_remote | 1 |');
 });
@@ -216,7 +223,7 @@ test('the adoption report puts ask and deny groups in separate tables with each 
   expect(askSection).toContain(`| ${ADOPTION_HEADLINE_ASK} | 3 | 2 | unknown (3건) | 미판정 |`);
   expect(askSection).not.toContain(ADOPTION_HEADLINE_DENY);
   expect(denySection).toContain(
-    `| ${ADOPTION_HEADLINE_DENY} | 1 | 1 | ~/.synthetic-credentials (1건) | 예상함 |`,
+    `| ${ADOPTION_HEADLINE_DENY} | 1 | 1 | ~/.synthetic-credentials (1건) | 의도한 제한 |`,
   );
   expect(denySection).not.toContain(ADOPTION_HEADLINE_ASK);
 });

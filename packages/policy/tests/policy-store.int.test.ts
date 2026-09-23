@@ -155,6 +155,20 @@ describe('policy store', () => {
     expect(draft.contentHash).toBe(initialVersion.contentHash);
   });
 
+  test('listVersions returns the versions in version order and pages by id', async () => {
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
+    const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
+
+    const firstPage = expectOk(await repository.listVersions(policy.id, null, 1));
+    const secondPage = expectOk(await repository.listVersions(policy.id, firstPage.nextCursor, 1));
+
+    expect(firstPage.items.map((version) => version.id)).toEqual([initialVersion.id]);
+    expect(firstPage.nextCursor).toBe(initialVersion.id);
+    expect(secondPage.items.map((version) => version.versionNumber)).toEqual([2]);
+    expect(secondPage.items[0]?.id).toBe(draft.id);
+    expect(secondPage.nextCursor).toBeNull();
+  });
+
   test('createDraftVersion rejects a second open draft', async () => {
     const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
