@@ -22,25 +22,25 @@ import → activity overview → first Policy (draft) → adoption preview → r
 
 ## Result of the recorded journey
 
-Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier TBD022_CLASSIFIER and the corrected environment profile (policy A).
+Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.2 and the corrected environment profile (policy A).
 Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
 
 ### Adoption preview (first Policy)
 
 | evaluated Actions | allow | ask | deny | Adoption Groups |
 | ---: | ---: | ---: | ---: | --- |
-| TBD022_EVAL | TBD022_ALLOW | TBD022_ASK | TBD022_DENY | TBD022_GROUPS |
+| 34,490 | 8,217 (23.8%) | 26,253 (76.1%) | 20 (0.06%) | 23 (21 ask, 2 deny) |
 
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 That is what the Policy says about this corpus, reported as-is.
-Reviewing the whole preview took TBD022_GROUPS_N Verdicts, one per Adoption Group.
+Reviewing the whole preview took 23 Verdicts, one per Adoption Group.
 The fresh-volume re-run of the journey showed the same figures on screen.
 
 ### Change Review (github.com/** scene)
 
 The core scene is a fetch to another owner's repository after `trustedRemotes` is widened with a host-wide GitHub pattern.
 
-That scene is **TBD022_SCENE_N Actions** (TBD022_SCENE_GIT `git` fetch, TBD022_SCENE_GH `gh` fetch).
+That scene is **6 Actions** (2 `git` fetch, 4 `gh` fetch).
 Zone moves `unknown_remote` → `trusted_remote`. Effect moves ask → allow. Severity is critical.
 Named remotes used outside the Action workspace do not resolve a Remote Key, so they stay `unknown_remote` even under that pattern.
 
