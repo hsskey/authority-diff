@@ -40,4 +40,4 @@ export type {
   RequestReplayOutput,
 } from './lib/app/module.ts';
 export type { PolicyReader, PolicyVersionView, ReplayStore } from './lib/app/ports.ts';
-export type { AuthorityMapCell } from './lib/domain/build-matrix.ts';
+export type { AnalyzabilityCounts, AuthorityMapCell } from './lib/domain/build-matrix.ts';

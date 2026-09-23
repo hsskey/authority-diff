@@ -13,8 +13,15 @@ export const Route = createFileRoute('/')({
 
 type AuthorityMapCell = AuthorityMapResponse['cells'][number];
 type Effect = AuthorityMapCell['effect'];
+type AnalyzabilityLevel = keyof AuthorityMapResponse['analyzability'];
 
 const EFFECT_ORDER: readonly Effect[] = ['allow', 'ask', 'deny'];
+const ANALYZABILITY_ORDER: readonly AnalyzabilityLevel[] = ['full', 'partial', 'none'];
+const ANALYZABILITY_EFFECT_CLASS: Record<AnalyzabilityLevel, Effect> = {
+  full: 'allow',
+  partial: 'ask',
+  none: 'deny',
+};
 
 function ActivityShapePage() {
   const mapQuery = useQuery({
@@ -90,6 +97,22 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
           return (
             <div key={effect} className={`panel effect-tile effect-${effect}`}>
               <span className="effect-label">{effect}</span>
+              <span className="effect-count">{count}</span>
+              <span className="effect-percent">{percent}%</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <h2 className="section-title">Analyzability</h2>
+      <div className="effect-summary">
+        {ANALYZABILITY_ORDER.map((level) => {
+          const count = map.analyzability[level];
+          const percent = total === 0 ? 0 : Math.round((count / total) * 100);
+          const effectClass = ANALYZABILITY_EFFECT_CLASS[level];
+          return (
+            <div key={level} className={`panel effect-tile effect-${effectClass}`}>
+              <span className="effect-label">{level}</span>
               <span className="effect-count">{count}</span>
               <span className="effect-percent">{percent}%</span>
             </div>

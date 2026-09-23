@@ -243,6 +243,15 @@ export const AuthorityMapCellSchema = z.object({
 });
 export type AuthorityMapCell = z.infer<typeof AuthorityMapCellSchema>;
 
+// Evaluated Action counts by analyzability (cutline.md 11: full / partial / none,
+// an Action's analyzability is the worst of its Operations').
+export const AnalyzabilityCountsSchema = z.object({
+  full: z.number().int().nonnegative(),
+  partial: z.number().int().nonnegative(),
+  none: z.number().int().nonnegative(),
+});
+export type AnalyzabilityCounts = z.infer<typeof AnalyzabilityCountsSchema>;
+
 export const AuthorityMapResponseSchema = z.object({
   run: z
     .object({
@@ -253,6 +262,7 @@ export const AuthorityMapResponseSchema = z.object({
     })
     .nullable(),
   cells: z.array(AuthorityMapCellSchema),
+  analyzability: AnalyzabilityCountsSchema,
 });
 export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 
