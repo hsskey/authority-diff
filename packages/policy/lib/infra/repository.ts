@@ -15,11 +15,23 @@ import {
 import { DEFAULT_POLICY_DOCUMENT } from '../domain/default-policy-document.ts';
 import { EMPTY_POLICY_DOCUMENT } from '../domain/empty-policy-document.ts';
 import { nextStatus, type PolicyTransition } from '../domain/transition.ts';
+import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
 import { policies, policyVersions } from './tables.ts';
 
 export interface CreatePolicyInput {
   readonly name: string;
   readonly template: 'default' | 'empty';
+}
+
+export interface SeedAcceptedPolicyInput {
+  readonly name: string;
+  readonly document: PolicyDocument;
+}
+
+export interface SeedAcceptedPolicyResult {
+  readonly policy: Policy;
+  readonly version: PolicyVersion;
+  readonly created: boolean;
 }
 
 export interface PolicyPage {
@@ -47,6 +59,9 @@ export interface PolicyRepository {
     transition: PolicyTransition,
   ): Promise<Result<PolicyVersion, AppError>>;
   getBaseline(policyId: PolicyId): Promise<Result<PolicyVersion, AppError>>;
+  seedAcceptedPolicy(
+    input: SeedAcceptedPolicyInput,
+  ): Promise<Result<SeedAcceptedPolicyResult, AppError>>;
 }
 
 export interface PolicyRepositoryDeps {
@@ -348,6 +363,100 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           cause: null,
         });
       } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    // Seed-only path: inserts an accepted version 1 without Change Review.
+    async seedAcceptedPolicy(input) {
+      const issues = validatePolicyDocument(input.document);
+      if (issues.length > 0) {
+        return err({
+          code: 'policy.document_invalid',
+          message: 'the policy document is invalid',
+          isRetryable: false,
+          details: { issues },
+          cause: null,
+        });
+      }
+      const expectedHash = contentHash(input.document);
+      try {
+        const [existingPolicy] = await db
+          .select()
+          .from(policies)
+          .where(eq(policies.name, input.name))
+          .limit(1);
+        if (existingPolicy !== undefined) {
+          const [versionRow] = await db
+            .select()
+            .from(policyVersions)
+            .where(
+              and(
+                eq(policyVersions.policyId, existingPolicy.id),
+                eq(policyVersions.versionNumber, 1),
+              ),
+            )
+            .limit(1);
+          if (versionRow === undefined) {
+            return err(internal(new Error(`policy ${input.name} has no version 1`)));
+          }
+          const version = toVersion(versionRow);
+          if (version.contentHash !== expectedHash) {
+            return err({
+              code: 'policy.seed_document_mismatch',
+              message: `policy ${input.name} exists with a different document`,
+              isRetryable: false,
+              details: { name: input.name },
+              cause: null,
+            });
+          }
+          return ok({
+            policy: toPolicy(existingPolicy),
+            version,
+            created: false,
+          });
+        }
+
+        const now = clock.now();
+        const policyId = idGenerator.next('pol');
+        const versionId = idGenerator.next('pver');
+        const created = await db.transaction(async (tx) => {
+          const [policyRow] = await tx
+            .insert(policies)
+            .values({ id: policyId, name: input.name, createdAt: now })
+            .returning();
+          const [versionRow] = await tx
+            .insert(policyVersions)
+            .values({
+              id: versionId,
+              policyId,
+              versionNumber: 1,
+              status: 'accepted',
+              document: input.document,
+              contentHash: expectedHash,
+              baseVersionId: null,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .returning();
+          invariant(policyRow !== undefined && versionRow !== undefined, 'insert returned no row');
+          return { policyRow, versionRow };
+        });
+        return ok({
+          policy: toPolicy(created.policyRow),
+          version: toVersion(created.versionRow),
+          created: true,
+        });
+      } catch (cause) {
+        if (isUniqueViolation(cause, 'uq_policies__name')) {
+          return err({
+            code: 'policy.name_conflict',
+            message: `a policy named ${input.name} already exists`,
+            isRetryable: false,
+            details: { name: input.name },
+            cause: null,
+          });
+        }
         return err(internal(cause));
       }
     },
