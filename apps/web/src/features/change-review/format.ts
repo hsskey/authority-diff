@@ -1,12 +1,4 @@
-import type {
-  ChangeReviewResponse,
-  DiffGroupSamplesResponse,
-  ReviewDiffGroupResponse,
-} from '@authority/contracts/schema';
-
-type SampleAction = DiffGroupSamplesResponse['items'][number]['action'];
-export type Operation = SampleAction['operations'][number];
-type Target = Operation['target'];
+import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
 
 type Verdict = ReviewDiffGroupResponse['verdict'];
 type NonNullVerdict = Exclude<Verdict, null>;
@@ -53,31 +45,6 @@ export function bySeverityThenImpact(
 
 export function formatZoneTransition(from: string, to: string): string {
   return from === to ? from : `${from} → ${to}`;
-}
-
-export function formatTarget(target: Target): string {
-  switch (target.kind) {
-    case 'path':
-      return `path: ${target.path}${target.isInsideWorkspace ? ' (workspace)' : ''}`;
-    case 'host':
-      return `host: ${target.scheme ? `${target.scheme}://` : ''}${target.host}`;
-    case 'vcs_remote':
-      return `vcs remote: ${target.remoteName ?? target.remoteKey ?? 'unknown'}${
-        target.branch ? `@${target.branch}` : ''
-      }`;
-    case 'package':
-      return `package: ${target.ecosystem}${target.source ? ` (${target.source})` : ''}`;
-    case 'mcp':
-      return `mcp: ${target.server}/${target.tool}`;
-    case 'deploy_target':
-      return `deploy: ${target.label ?? 'unknown'}`;
-    case 'unknown':
-      return 'unknown target';
-  }
-}
-
-export function operationSummary(operation: Operation): string {
-  return `${operation.capability} · ${formatTarget(operation.target)} · analyzability: ${operation.analyzability}`;
 }
 
 /**

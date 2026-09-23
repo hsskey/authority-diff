@@ -564,6 +564,10 @@ input {
   gap: 1rem;
 }
 
+.decision-view {
+  align-content: start;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

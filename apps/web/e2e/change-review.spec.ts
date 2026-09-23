@@ -151,7 +151,7 @@ function samples(): unknown {
             {
               index: 0,
               capability: 'execute',
-              target: { kind: 'path', path: '~/project/run.sh', isInsideWorkspace: true },
+              target: { kind: 'path', path: '~/.ssh/config', isInsideWorkspace: false },
               analyzability: 'partial',
               program: 'bash',
               fragment: 'redacted fragment not shown in UI',
@@ -167,6 +167,7 @@ function samples(): unknown {
           classifierVersion: 'v1',
           recordedAt: TS,
         },
+        targetKeys: ['~/.ssh'],
         baselineDecision: {
           effect: 'ask',
           decidingOperationIndex: 0,
@@ -195,6 +196,8 @@ function samples(): unknown {
             },
           ],
         },
+        baselineRuleRationales: { baseline_rule: 'Baseline asks before running scripts.' },
+        candidateRuleRationales: { candidate_rule: 'Candidate allows scripts on this host.' },
       },
     ],
   };
@@ -299,6 +302,14 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await expect(page.getByText(REDACTED_INPUT)).toBeVisible();
   await expect(page.getByText('Baseline 결정')).toBeVisible();
   await expect(page.getByText('Candidate 결정')).toBeVisible();
+  await expect(page.getByText('#0 execute · workspace → host · ~/.ssh')).toBeVisible();
+  await expect(page.getByText('~/.ssh/config')).toHaveCount(0);
+  await expect(page.getByText('redacted fragment not shown in UI')).toHaveCount(0);
+  await expect(page.getByText('Baseline asks before running scripts.')).toBeVisible();
+  await expect(page.getByText('Candidate allows scripts on this host.')).toBeVisible();
+  await expect(page.getByText('baseline_rule')).toBeHidden();
+  await page.getByText('기술 세부').first().click();
+  await expect(page.getByText('baseline_rule')).toBeVisible();
 
   // verdict -> record the widening group as expected
   await page.getByLabel('execute 판정').selectOption('expected');

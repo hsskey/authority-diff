@@ -10,10 +10,7 @@ import { callRoute, describeApiError } from '../../../../shared/api-client.ts';
 import { EmptyState } from '../../../../shared/components/EmptyState.tsx';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
-import {
-  formatZoneTransition,
-  operationSummary,
-} from '../../../../features/change-review/format.ts';
+import { formatZoneTransition } from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
@@ -213,23 +210,50 @@ function SampleCard({ sample }: { sample: Sample }) {
       <div>
         <h3 className="section-title">Operations ({action.operations.length})</h3>
         <ul className="issue-list">
-          {action.operations.map((operation) => (
+          {action.operations.map((operation, position) => (
             <li key={operation.index}>
-              <span className="mono">#{operation.index}</span> {operationSummary(operation)}
-              {operation.signals.length > 0 ? ` · signals: ${operation.signals.join(', ')}` : ''}
+              #{operation.index} {operation.capability} ·{' '}
+              {formatZoneTransition(
+                zoneOf(sample.baselineDecision, operation.index),
+                zoneOf(sample.candidateDecision, operation.index),
+              )}{' '}
+              · {sample.targetKeys[position] ?? 'unknown'}
             </li>
           ))}
         </ul>
       </div>
       <div className="decision-pair">
-        <DecisionView title="Baseline 결정" decision={sample.baselineDecision} />
-        <DecisionView title="Candidate 결정" decision={sample.candidateDecision} />
+        <DecisionView
+          title="Baseline 결정"
+          decision={sample.baselineDecision}
+          rationales={sample.baselineRuleRationales}
+        />
+        <DecisionView
+          title="Candidate 결정"
+          decision={sample.candidateDecision}
+          rationales={sample.candidateRuleRationales}
+        />
       </div>
     </div>
   );
 }
 
-function DecisionView({ title, decision }: { title: string; decision: Decision }) {
+function zoneOf(decision: Decision, operationIndex: number): string {
+  return (
+    decision.operations.find((operation) => operation.operationIndex === operationIndex)?.zone ??
+    'unknown'
+  );
+}
+
+function DecisionView({
+  title,
+  decision,
+  rationales,
+}: {
+  title: string;
+  decision: Decision;
+  rationales: Sample['baselineRuleRationales'];
+}) {
   return (
     <div className="stack decision-view">
       <div className="row-between">
@@ -243,7 +267,7 @@ function DecisionView({ title, decision }: { title: string; decision: Decision }
             <th scope="col">Zone</th>
             <th scope="col">Reversibility</th>
             <th scope="col">Effect</th>
-            <th scope="col">Deciding rule</th>
+            <th scope="col">근거</th>
           </tr>
         </thead>
         <tbody>
@@ -257,11 +281,25 @@ function DecisionView({ title, decision }: { title: string; decision: Decision }
                   {operation.effect}
                 </span>
               </td>
-              <td className="mono">{operation.decidingRuleId ?? '-'}</td>
+              <td>
+                {operation.decidingRuleId === null
+                  ? '-'
+                  : (rationales[operation.decidingRuleId] ?? '-')}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <details>
+        <summary>기술 세부</summary>
+        <ul className="issue-list">
+          {decision.operations.map((operation) => (
+            <li key={operation.operationIndex} className="mono">
+              #{operation.operationIndex} {operation.decidingRuleId ?? '-'}
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }
