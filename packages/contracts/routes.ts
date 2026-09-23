@@ -8,6 +8,7 @@ import {
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
   CreatePolicyRequestSchema,
+  CreatePolicyResponseSchema,
   CreatePolicyVersionRequestSchema,
   CreateReplayRunRequestSchema,
   CreateRuntimeObservationsRequestSchema,
@@ -20,7 +21,6 @@ import {
   ListDiffGroupsResponseSchema,
   ListPoliciesResponseSchema,
   ListReviewDiffGroupsResponseSchema,
-  PolicyResponseSchema,
   PolicyVersionResponseSchema,
   ReclassifyActionsRequestSchema,
   ReclassifyActionsResponseSchema,
@@ -94,7 +94,7 @@ export const routes = {
   getAction: get(`${API}/actions/:actionKey`, ActionResponseSchema),
 
   listPolicies: get(`${API}/policies`, ListPoliciesResponseSchema),
-  createPolicy: post(`${API}/policies`, CreatePolicyRequestSchema, PolicyResponseSchema),
+  createPolicy: post(`${API}/policies`, CreatePolicyRequestSchema, CreatePolicyResponseSchema),
   createPolicyVersion: post(
     `${API}/policies/:policyId/versions`,
     CreatePolicyVersionRequestSchema,

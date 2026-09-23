@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { err, ok } from '@authority/kernel';
 import {
+  CreatePolicyResponseSchema,
   ErrorEnvelopeSchema,
   ListPoliciesResponseSchema,
-  PolicyResponseSchema,
   PolicyVersionResponseSchema,
   ValidatePolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
@@ -17,12 +17,15 @@ const policyError = (code: string) =>
   err({ code, message: code, isRetryable: false, details: null, cause: null });
 
 describe('POST /api/v1/policies', () => {
-  test('creates a policy and returns 201 with the contract shape', async () => {
+  test('creates a policy and returns 201 with the policy and its draft version 1', async () => {
     const app = buildPolicyApp(
       makeModule({
         createPolicy: () =>
           Promise.resolve(
-            ok({ policy: samplePolicy({ name: 'alpha' }), initialVersion: sampleVersion() }),
+            ok({
+              policy: samplePolicy({ name: 'alpha' }),
+              initialVersion: sampleVersion({ status: 'draft' }),
+            }),
           ),
       }),
     );
@@ -31,20 +34,24 @@ describe('POST /api/v1/policies', () => {
       authed({ method: 'POST', body: JSON.stringify({ name: 'alpha', template: 'default' }) }),
     );
     expect(res.status).toBe(201);
-    const body = PolicyResponseSchema.parse(await res.json());
-    expect(body.name).toBe('alpha');
+    const body = CreatePolicyResponseSchema.parse(await res.json());
+    expect(body.policy.name).toBe('alpha');
+    expect(body.initialVersion).toMatchObject({ policyId: body.policy.id, status: 'draft' });
   });
 
-  test('maps a name conflict to 409', async () => {
+  test.each([
+    ['policy.name_conflict', 409],
+    ['policy.organization_policy_exists', 409],
+  ] as const)('maps %s to %d', async (code, status) => {
     const app = buildPolicyApp(
-      makeModule({ createPolicy: () => Promise.resolve(policyError('policy.name_conflict')) }),
+      makeModule({ createPolicy: () => Promise.resolve(policyError(code)) }),
     );
     const res = await app.request(
       '/api/v1/policies',
       authed({ method: 'POST', body: JSON.stringify({ name: 'dup', template: 'empty' }) }),
     );
-    expect(res.status).toBe(409);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('policy.name_conflict');
+    expect(res.status).toBe(status);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(code);
   });
 
   test('rejects a malformed body with 422', async () => {

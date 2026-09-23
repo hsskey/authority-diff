@@ -168,6 +168,13 @@ export type CreatePolicyVersionRequest = z.infer<typeof CreatePolicyVersionReque
 export const PolicyVersionResponseSchema = PolicyVersionSchema;
 export type PolicyVersionResponse = z.infer<typeof PolicyVersionResponseSchema>;
 
+/** POST /policies answers with the Policy and its draft version 1. */
+export const CreatePolicyResponseSchema = z.object({
+  policy: PolicyResponseSchema,
+  initialVersion: PolicyVersionResponseSchema,
+});
+export type CreatePolicyResponse = z.infer<typeof CreatePolicyResponseSchema>;
+
 export const ListPolicyVersionsResponseSchema = pageOf(PolicyVersionResponseSchema);
 export type ListPolicyVersionsResponse = z.infer<typeof ListPolicyVersionsResponseSchema>;
 

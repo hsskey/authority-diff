@@ -40,6 +40,7 @@ export interface PolicyPage {
 }
 
 export interface PolicyRepository {
+  /** Creates a Policy whose version 1 is a draft built from the template. */
   createPolicy(
     input: CreatePolicyInput,
   ): Promise<Result<{ policy: Policy; initialVersion: PolicyVersion }, AppError>>;
@@ -58,7 +59,15 @@ export interface PolicyRepository {
     id: PolicyVersionId,
     transition: PolicyTransition,
   ): Promise<Result<PolicyVersion, AppError>>;
+  /** The latest accepted version, or `policy.no_accepted_version` when none was accepted yet. */
   getBaseline(policyId: PolicyId): Promise<Result<PolicyVersion, AppError>>;
+  hasAcceptedVersion(policyId: PolicyId): Promise<Result<boolean, AppError>>;
+  /**
+   * Legacy, test-only path: inserts an accepted version 1 without a Change
+   * Review. Product code creates a draft version 1 with `createPolicy` and
+   * accepts it through review; this stays for fixtures and mirrors the rows
+   * that were seeded before that change, which remain valid.
+   */
   seedAcceptedPolicy(
     input: SeedAcceptedPolicyInput,
   ): Promise<Result<SeedAcceptedPolicyResult, AppError>>;
@@ -144,7 +153,7 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
               id: versionId,
               policyId,
               versionNumber: 1,
-              status: 'accepted',
+              status: 'draft',
               document,
               contentHash: contentHash(document),
               baseVersionId: null,
@@ -347,17 +356,9 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
         if (accepted !== undefined) {
           return ok(toVersion(accepted));
         }
-        const [initial] = await db
-          .select()
-          .from(policyVersions)
-          .where(and(eq(policyVersions.policyId, policyId), eq(policyVersions.versionNumber, 1)))
-          .limit(1);
-        if (initial !== undefined) {
-          return ok(toVersion(initial));
-        }
         return err({
-          code: 'policy.version_not_found',
-          message: `policy ${policyId} has no baseline version`,
+          code: 'policy.no_accepted_version',
+          message: `policy ${policyId} has no accepted version`,
           isRetryable: false,
           details: { policyId },
           cause: null,
@@ -367,7 +368,19 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
       }
     },
 
-    // Seed-only path: inserts an accepted version 1 without Change Review.
+    async hasAcceptedVersion(policyId) {
+      try {
+        const [accepted] = await db
+          .select({ id: policyVersions.id })
+          .from(policyVersions)
+          .where(and(eq(policyVersions.policyId, policyId), eq(policyVersions.status, 'accepted')))
+          .limit(1);
+        return ok(accepted !== undefined);
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
     async seedAcceptedPolicy(input) {
       const issues = validatePolicyDocument(input.document);
       if (issues.length > 0) {

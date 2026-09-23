@@ -7,7 +7,7 @@ import {
   parseConfig,
 } from '@authority/platform';
 import type { Database } from '@authority/platform';
-import { createPolicyRepository } from '@authority/policy';
+import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
 import {
   createReviewStore,
@@ -48,16 +48,16 @@ afterAll(async () => {
 });
 
 async function seedInReviewCandidate(): Promise<PolicyVersionId> {
-  const created = await repository.createPolicy({
+  const seeded = await repository.seedAcceptedPolicy({
     name: idGenerator.next('policy'),
-    template: 'empty',
+    document: EMPTY_POLICY_DOCUMENT,
   });
-  if (!created.ok) {
-    throw new Error('createPolicy failed');
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
   }
   const draft = await repository.createDraftVersion(
-    created.value.policy.id,
-    created.value.initialVersion.id,
+    seeded.value.policy.id,
+    seeded.value.version.id,
   );
   if (!draft.ok) {
     throw new Error('createDraftVersion failed');

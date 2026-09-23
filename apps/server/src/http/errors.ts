@@ -14,6 +14,7 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'trace.action_not_found': 404,
   'policy.version_not_found': 404,
   'policy.name_conflict': 409,
+  'policy.organization_policy_exists': 409,
   'policy.draft_exists': 409,
   'policy.version_not_draft': 409,
   'policy.in_review_exists': 409,

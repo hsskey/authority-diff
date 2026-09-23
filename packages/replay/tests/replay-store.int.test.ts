@@ -7,7 +7,11 @@ import {
   parseConfig,
 } from '@authority/platform';
 import type { Database } from '@authority/platform';
-import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
+import {
+  createPolicyRepository,
+  DEFAULT_POLICY_DOCUMENT,
+  EMPTY_POLICY_DOCUMENT,
+} from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
 import { createTraceModule } from '@authority/trace';
 import { ParsedSessionSchema } from '@authority/trace/schema';
@@ -68,16 +72,16 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
   const idGenerator = createUlidGenerator();
   const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
 
-  const created = await repository.createPolicy({
+  const seeded = await repository.seedAcceptedPolicy({
     name: idGenerator.next('policy'),
-    template: 'default',
+    document: DEFAULT_POLICY_DOCUMENT,
   });
-  if (!created.ok) {
-    throw new Error('createPolicy failed');
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
   }
-  const baselineVersion = created.value.initialVersion;
+  const baselineVersion = seeded.value.version;
 
-  const draft = await repository.createDraftVersion(created.value.policy.id, baselineVersion.id);
+  const draft = await repository.createDraftVersion(seeded.value.policy.id, baselineVersion.id);
   if (!draft.ok) {
     throw new Error('createDraftVersion failed');
   }
@@ -179,14 +183,14 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   const clock = createSystemClock();
   const idGenerator = createUlidGenerator();
   const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
-  const created = await repository.createPolicy({
+  const seeded = await repository.seedAcceptedPolicy({
     name: idGenerator.next('policy'),
-    template: 'default',
+    document: DEFAULT_POLICY_DOCUMENT,
   });
-  if (!created.ok) {
-    throw new Error('createPolicy failed');
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
   }
-  const candidate = created.value.initialVersion;
+  const candidate = seeded.value.version;
   const trace = createTraceModule({ database, clock, idGenerator });
   const session = ParsedSessionSchema.parse(sessionFixture);
   const imported = await trace.importTrace(session);
@@ -297,14 +301,14 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
   const clock = createSystemClock();
   const idGenerator = createUlidGenerator();
   const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
-  const created = await repository.createPolicy({
+  const seeded = await repository.seedAcceptedPolicy({
     name: idGenerator.next('policy'),
-    template: 'default',
+    document: DEFAULT_POLICY_DOCUMENT,
   });
-  if (!created.ok) {
-    throw new Error('createPolicy failed');
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
   }
-  const candidate = created.value.initialVersion;
+  const candidate = seeded.value.version;
   const trace = createTraceModule({ database, clock, idGenerator });
   const imported = await trace.importTrace(ParsedSessionSchema.parse(sessionFixture));
   if (!imported.ok) {
