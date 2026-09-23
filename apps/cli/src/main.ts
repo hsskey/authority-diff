@@ -3,6 +3,7 @@ import { runImport } from './commands/import.command.ts';
 import { runInstallHooks } from './commands/install-hooks.command.ts';
 import { runProbeCommand } from './commands/probe.command.ts';
 import { runSpoolFlush } from './commands/spool-flush.command.ts';
+import { runVerifyAudit } from './commands/verify-audit.command.ts';
 import { writeStderr } from './output.ts';
 
 function runAsync(task: Promise<void>): void {
@@ -49,6 +50,8 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
   runAsync(runImport(dir));
 } else if (args[0] === 'spool-flush') {
   runAsync(runSpoolFlush());
+} else if (args[0] === 'verify-audit') {
+  runAsync(runVerifyAudit());
 } else {
   process.exit(1);
 }

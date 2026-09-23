@@ -7,6 +7,7 @@ import { internalUnexpected, respondError } from './errors.ts';
 import { createAuthMiddleware } from './middleware/auth.ts';
 import { createRequestIdMiddleware } from './middleware/request-id.ts';
 import { createRequestLogMiddleware } from './middleware/request-log.ts';
+import { registerAuditRoutes } from './routes/audit.routes.ts';
 import { registerHealthRoutes } from './routes/health.ts';
 import { registerReplayModule } from '../modules/replay.wiring.ts';
 import { registerReviewModule } from '../modules/review.wiring.ts';
@@ -44,6 +45,8 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
     clock: createSystemClock(),
     idGenerator: deps.idGenerator,
   });
+
+  registerAuditRoutes(app, deps.db);
 
   app.get('*', serveStatic({ root: '../web/dist' }));
 

@@ -29,6 +29,20 @@
       "when": 1790119838392,
       "tag": "0003_known_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790132422031,
+      "tag": "0004_review_decisions_hash_chain",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790132422350,
+      "tag": "0005_review_decisions_append_only",
+      "breakpoints": true
     }
   ]
 }

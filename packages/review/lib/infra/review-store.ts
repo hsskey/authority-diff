@@ -18,6 +18,7 @@ import type {
   StoredVerdict,
   UpsertVerdictInput,
 } from '../app/ports.ts';
+import { appendReviewDecision, type ReviewDecisionRecord } from './audit-chain.ts';
 import { changeReviews, reviewDecisions, reviewVerdicts } from './tables.ts';
 
 export interface ReviewStoreDeps {
@@ -55,7 +56,7 @@ function reviewInsertValues(review: ChangeReview): ReviewRow {
   };
 }
 
-function decisionInsertValues(decision: ReviewDecision): typeof reviewDecisions.$inferInsert {
+function decisionRecord(decision: ReviewDecision): ReviewDecisionRecord {
   return {
     changeReviewId: decision.changeReviewId,
     decision: decision.decision,
@@ -169,7 +170,7 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
             transitioned.ok,
             `decide: candidate ${input.candidateVersionId} could not transition to ${input.decision.decision}`,
           );
-          await tx.insert(reviewDecisions).values(decisionInsertValues(input.decision));
+          await appendReviewDecision(tx, decisionRecord(input.decision));
           await tx
             .update(changeReviews)
             .set({

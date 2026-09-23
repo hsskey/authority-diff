@@ -32,6 +32,9 @@ export function createReviewModule(deps: CreateReviewModuleDeps): ReviewModule {
 }
 
 export { migrateReviewStore } from './lib/infra/migrate.ts';
+export { createReviewStore } from './lib/infra/review-store.ts';
+export { verifyAuditChain } from './lib/infra/audit-chain.ts';
+export type { AuditVerification } from './lib/infra/audit-chain.ts';
 export { assembleReviewModule } from './lib/app/module.ts';
 export { computeGate } from './lib/domain/gate.ts';
 export { renderReport } from './lib/domain/report.ts';
