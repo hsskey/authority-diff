@@ -314,7 +314,7 @@ classify 처리량(Action/초), none의 signal 상위 20개
 
 - 정책 A: 기본 template + 본인 환경의 Environment Profile.
 - 정책 B: `measure`에서 `push`, `install`, `fetch`, `send` 중 Action 수가 가장 많은 `ask` 조합을 `allow`로 바꾸는 변경.
-- 정책 B′: B의 `trustedRemotes`를 `github.com/*`처럼 넓게 적은 실수.
+- 정책 B′: B의 `trustedRemotes`를 `github.com/**`처럼 넓게 적은 실수.
 - 예상 목록: replay 전에 적은 `replay-predictions.md`.
 
 | 측정 | 통과 기준 |
