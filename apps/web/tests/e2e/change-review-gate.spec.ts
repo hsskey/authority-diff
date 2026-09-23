@@ -22,6 +22,7 @@ function reviewWithGate(blocker: { code: string; count: number }): unknown {
     id: REVIEW_ID,
     policyId: `pol_${SUFFIX}`,
     candidateVersionId: `pver_${SUFFIX}`,
+    kind: 'change',
     candidateContentHash: 'a'.repeat(64),
     baselineVersionId: `pver_${'Z'.repeat(26)}`,
     windowFrom: TS,

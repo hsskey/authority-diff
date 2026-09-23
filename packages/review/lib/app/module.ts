@@ -2,7 +2,13 @@ import { err, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
 import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
 import type { ReplayModule } from '@authority/replay';
-import type { DiffGroup, ReplayRun, ReplayRunStatus, ReplayStats } from '@authority/replay/schema';
+import type {
+  AdoptionGroup,
+  DiffGroup,
+  ReplayRun,
+  ReplayRunStatus,
+  ReplayStats,
+} from '@authority/replay/schema';
 import {
   ChangeReviewIdSchema,
   type ChangeReview,
@@ -13,8 +19,14 @@ import {
   type VerdictSnapshotEntry,
 } from '../../schema.ts';
 import { computeGate } from '../domain/gate.ts';
-import { renderReport, type ReportGroup } from '../domain/report.ts';
-import type { ReviewStore, StoredVerdict } from './ports.ts';
+import {
+  renderAdoptionReport,
+  renderReport,
+  type AdoptionReportGroup,
+  type ReportDecision,
+  type ReportGroup,
+} from '../domain/report.ts';
+import type { ChainedDecision, ReviewStore } from './ports.ts';
 
 /** The narrow policy surface the review module reads and transitions. */
 export interface PolicyVersionSummary {
@@ -26,12 +38,14 @@ export interface PolicyVersionSummary {
 
 export interface PolicyReviewRepository {
   getVersion(id: PolicyVersionId): Promise<Result<PolicyVersionSummary, AppError>>;
+  /** The latest accepted version, or `policy.no_accepted_version` when none was accepted yet. */
   getBaseline(
     policyId: PolicyId,
   ): Promise<Result<{ id: PolicyVersionId; contentHash: string }, AppError>>;
   submitForReview(id: PolicyVersionId): Promise<Result<void, AppError>>;
 }
 
+/** `stats` is the diff stats of a change review's run; an adoption run's stats live on the run. */
 export interface ReplaySummary {
   readonly replayRunId: ReplayRun['id'] | null;
   readonly status: ReplayRunStatus;
@@ -89,6 +103,23 @@ export interface ReviewDiffGroupsResult {
   readonly nextCursor: string | null;
 }
 
+export interface ReviewAdoptionGroup extends AdoptionGroup {
+  readonly verdict: Verdict | null;
+}
+
+/** `cursor` is the groupKey of the last group returned, in the run's review order. */
+export interface ListReviewAdoptionGroupsInput {
+  readonly effect?: AdoptionGroup['effect'] | undefined;
+  readonly verdict?: Verdict | undefined;
+  readonly cursor?: string | undefined;
+  readonly limit: number;
+}
+
+export interface ReviewAdoptionGroupsResult {
+  readonly items: readonly ReviewAdoptionGroup[];
+  readonly nextCursor: string | null;
+}
+
 export interface ReviewModule {
   createChangeReview(input: CreateChangeReviewInput): Promise<Result<ChangeReviewView, AppError>>;
   getChangeReview(id: ChangeReviewId): Promise<Result<ChangeReviewView, AppError>>;
@@ -100,6 +131,11 @@ export interface ReviewModule {
     id: ChangeReviewId,
     input: ListReviewDiffGroupsInput,
   ): Promise<Result<ReviewDiffGroupsResult, AppError>>;
+  /** An adoption review's Adoption Groups with their Verdicts; empty for a change review. */
+  listAdoptionGroups(
+    id: ChangeReviewId,
+    input: ListReviewAdoptionGroupsInput,
+  ): Promise<Result<ReviewAdoptionGroupsResult, AppError>>;
 }
 
 export interface AssembleReviewModuleDeps {
@@ -130,12 +166,12 @@ function notOpen(id: ChangeReviewId): AppError {
   };
 }
 
-function noActiveBaseline(policyId: string): AppError {
+function openReviewExists(policyId: PolicyId, changeReviewId: ChangeReviewId): AppError {
   return {
-    code: 'review.no_active_baseline',
-    message: `policy ${policyId} has no baseline version to compare against`,
+    code: 'review.open_review_exists',
+    message: `policy ${policyId} already has an open review; decide it before creating another`,
     isRetryable: false,
-    details: { policyId },
+    details: { policyId, changeReviewId },
     cause: null,
   };
 }
@@ -163,14 +199,14 @@ function gateBlocked(gate: Gate): AppError {
 function groupNotFound(groupKey: string): AppError {
   return {
     code: 'replay.group_not_found',
-    message: `no diff group ${groupKey} in this review's replay`,
+    message: `no group ${groupKey} in this review's replay`,
     isRetryable: false,
     details: { groupKey },
     cause: null,
   };
 }
 
-/** A Change Review's replay is always a version_diff run; any other kind has no diff stats. */
+/** A change review's replay is a version_diff run; any other kind has no diff stats. */
 function diffStatsOf(run: ReplayRun): ReplayStats | null {
   return run.kind === 'version_diff' ? run.stats : null;
 }
@@ -187,10 +223,23 @@ function replaySummaryOf(run: ReplayRun | null): ReplaySummary {
   };
 }
 
+function reportDecisionOf(chained: ChainedDecision): ReportDecision {
+  return {
+    decision: chained.decision.decision,
+    reviewerName: chained.decision.reviewerName,
+    decidedAt: chained.decision.decidedAt,
+    note: chained.decision.note,
+    sequence: chained.sequence,
+    hash: chained.hash,
+    replayInputsHash: chained.decision.replayInputsHash,
+    replayResultHash: chained.decision.replayResultHash,
+  };
+}
+
 export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModule {
   const { store, replay, policy, clock, idGenerator } = deps;
 
-  const fetchAllGroups = async (
+  const fetchAllDiffGroups = async (
     runId: ReplayRun['id'],
   ): Promise<Result<readonly DiffGroup[], AppError>> => {
     const groups: DiffGroup[] = [];
@@ -206,26 +255,96 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
     return ok(groups);
   };
 
+  const fetchAllAdoptionGroups = async (
+    runId: ReplayRun['id'],
+  ): Promise<Result<readonly AdoptionGroup[], AppError>> => {
+    const groups: AdoptionGroup[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await replay.listAdoptionGroups(runId, { limit: 200, cursor });
+      if (!page.ok) {
+        return page;
+      }
+      groups.push(...page.value.items);
+      cursor = page.value.nextCursor ?? undefined;
+    } while (cursor !== undefined);
+    return ok(groups);
+  };
+
+  const verdictsByGroup = async (reviewId: ChangeReviewId): Promise<Map<string, Verdict>> => {
+    const verdicts = await store.listVerdicts(reviewId);
+    return new Map(verdicts.map((entry) => [entry.groupKey, entry.verdict]));
+  };
+
+  // The groups a kind puts under review: a change review's Widening groups, an
+  // adoption review's ask and deny groups.
+  const gateVerdicts = async (
+    review: ChangeReview,
+    runId: ReplayRun['id'],
+  ): Promise<Result<readonly (Verdict | null)[], AppError>> => {
+    const verdicts = await verdictsByGroup(review.id);
+    if (review.kind === 'adoption') {
+      const groups = await fetchAllAdoptionGroups(runId);
+      if (!groups.ok) {
+        return groups;
+      }
+      return ok(groups.value.map((group) => verdicts.get(group.groupKey) ?? null));
+    }
+    const groups = await fetchAllDiffGroups(runId);
+    if (!groups.ok) {
+      return groups;
+    }
+    return ok(
+      groups.value
+        .filter((group) => group.direction === 'widening')
+        .map((group) => verdicts.get(group.groupKey) ?? null),
+    );
+  };
+
   const gateFor = async (
     review: ChangeReview,
     run: ReplayRun | null,
   ): Promise<Result<Gate, AppError>> => {
+    const { kind } = review;
     if (run === null || run.status === 'failed') {
-      return ok(computeGate({ replayCompleted: false, replayFailed: true, wideningVerdicts: [] }));
+      return ok(computeGate({ kind, replayCompleted: false, replayFailed: true, verdicts: [] }));
     }
     if (run.status !== 'completed') {
-      return ok(computeGate({ replayCompleted: false, replayFailed: false, wideningVerdicts: [] }));
+      return ok(computeGate({ kind, replayCompleted: false, replayFailed: false, verdicts: [] }));
     }
-    const groupsResult = await fetchAllGroups(run.id);
-    if (!groupsResult.ok) {
-      return groupsResult;
+    const verdicts = await gateVerdicts(review, run.id);
+    if (!verdicts.ok) {
+      return verdicts;
     }
-    const verdicts = await store.listVerdicts(review.id);
-    const verdictByGroup = new Map(verdicts.map((entry) => [entry.groupKey, entry.verdict]));
-    const wideningVerdicts = groupsResult.value
-      .filter((group) => group.direction === 'widening')
-      .map((group) => verdictByGroup.get(group.groupKey) ?? null);
-    return ok(computeGate({ replayCompleted: true, replayFailed: false, wideningVerdicts }));
+    return ok(
+      computeGate({ kind, replayCompleted: true, replayFailed: false, verdicts: verdicts.value }),
+    );
+  };
+
+  /** Every group of the review's replay that a Verdict may be recorded on. */
+  const reviewGroupKeys = async (
+    review: ChangeReview,
+    runId: ReplayRun['id'],
+  ): Promise<Result<ReadonlySet<string>, AppError>> => {
+    const groups =
+      review.kind === 'adoption'
+        ? await fetchAllAdoptionGroups(runId)
+        : await fetchAllDiffGroups(runId);
+    if (!groups.ok) {
+      return groups;
+    }
+    return ok(new Set(groups.value.map((group) => group.groupKey)));
+  };
+
+  /** Null for an adoption review, which has no baseline. */
+  const baselineContentHashOf = async (
+    review: ChangeReview,
+  ): Promise<Result<string | null, AppError>> => {
+    if (review.baselineVersionId === null) {
+      return ok(null);
+    }
+    const baseline = await policy.getVersion(review.baselineVersionId);
+    return baseline.ok ? ok(baseline.value.contentHash) : err(baseline.error);
   };
 
   // Poll behaviour: a review left `computing` catches up to the linked replay's
@@ -258,6 +377,66 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
     return ok({ review, replaySummary: replaySummaryOf(run), gate: gate.value });
   };
 
+  const changeReportGroups = async (
+    review: ChangeReview,
+    run: ReplayRun | null,
+  ): Promise<
+    Result<{ groups: ReportGroup[]; analyzabilityNoneCount: number | null }, AppError>
+  > => {
+    if (run === null || run.status !== 'completed') {
+      return ok({ groups: [], analyzabilityNoneCount: null });
+    }
+    const groupsResult = await fetchAllDiffGroups(run.id);
+    if (!groupsResult.ok) {
+      return groupsResult;
+    }
+    const verdicts = await verdictsByGroup(review.id);
+    const groups = groupsResult.value.map((group) => ({
+      direction: group.direction,
+      headline: group.headline,
+      fromEffect: group.fromEffect,
+      toEffect: group.toEffect,
+      actionCount: group.actionCount,
+      targetSummary: group.targetSummary.map((target) => ({
+        key: target.key,
+        count: target.count,
+      })),
+      verdict: verdicts.get(group.groupKey) ?? null,
+    }));
+    const analyzabilityNoneCount = groupsResult.value.reduce(
+      (sum, group) => sum + group.analyzabilityNoneCount,
+      0,
+    );
+    return ok({ groups, analyzabilityNoneCount });
+  };
+
+  const adoptionReportGroups = async (
+    review: ChangeReview,
+    run: ReplayRun | null,
+  ): Promise<Result<AdoptionReportGroup[], AppError>> => {
+    if (run === null || run.status !== 'completed') {
+      return ok([]);
+    }
+    const groupsResult = await fetchAllAdoptionGroups(run.id);
+    if (!groupsResult.ok) {
+      return groupsResult;
+    }
+    const verdicts = await verdictsByGroup(review.id);
+    return ok(
+      groupsResult.value.map((group) => ({
+        effect: group.effect,
+        headline: group.headline,
+        actionCount: group.actionCount,
+        sessionCount: group.sessionCount,
+        targetSummary: group.targetSummary.map((target) => ({
+          key: target.key,
+          count: target.count,
+        })),
+        verdict: verdicts.get(group.groupKey) ?? null,
+      })),
+    );
+  };
+
   return {
     async createChangeReview(input) {
       const candidateResult = await policy.getVersion(input.candidateVersionId);
@@ -270,11 +449,18 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         return err(transitionNotAllowed(candidate.id, candidate.status));
       }
 
-      const baselineResult = await policy.getBaseline(candidate.policyId);
-      if (!baselineResult.ok) {
-        return err(noActiveBaseline(candidate.policyId));
+      const open = await store.findOpenChangeReview(candidate.policyId);
+      if (open !== null) {
+        return err(openReviewExists(candidate.policyId, open.id));
       }
-      const baseline = baselineResult.value;
+
+      // A Policy with no accepted version has nothing to compare against: the
+      // candidate is the first version to adopt, so the review is an adoption.
+      const baselineResult = await policy.getBaseline(candidate.policyId);
+      if (!baselineResult.ok && baselineResult.error.code !== 'policy.no_accepted_version') {
+        return err(baselineResult.error);
+      }
+      const baseline = baselineResult.ok ? baselineResult.value : null;
 
       if (candidate.status === 'draft') {
         const submitted = await policy.submitForReview(candidate.id);
@@ -283,12 +469,15 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         }
       }
 
-      const replayResult = await replay.requestReplay({
-        baselineVersionId: baseline.id,
-        candidateVersionId: candidate.id,
-        windowFrom: input.windowFrom,
-        windowTo: input.windowTo,
-      });
+      const window = { windowFrom: input.windowFrom, windowTo: input.windowTo };
+      const replayResult =
+        baseline === null
+          ? await replay.requestAdoptionReplay({ candidateVersionId: candidate.id, ...window })
+          : await replay.requestReplay({
+              baselineVersionId: baseline.id,
+              candidateVersionId: candidate.id,
+              ...window,
+            });
       if (!replayResult.ok) {
         return err(replayResult.error);
       }
@@ -297,11 +486,11 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       const review: ChangeReview = {
         id: ChangeReviewIdSchema.parse(idGenerator.next('rev')),
         policyId: candidate.policyId,
+        kind: baseline === null ? 'adoption' : 'change',
         candidateVersionId: candidate.id,
         candidateContentHash: candidate.contentHash,
-        baselineVersionId: baseline.id,
-        windowFrom: input.windowFrom,
-        windowTo: input.windowTo,
+        baselineVersionId: baseline === null ? null : baseline.id,
+        ...window,
         replayRunId: run.id,
         status: run.status === 'completed' ? 'ready' : 'computing',
         decidedBy: null,
@@ -328,17 +517,14 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         return err(notFound(input.changeReviewId));
       }
       const synced = await syncStatus(review);
-      if (synced.status !== 'ready') {
+      if (synced.status !== 'ready' || synced.replayRunId === null) {
         return err(notOpen(input.changeReviewId));
       }
-      if (synced.replayRunId === null) {
-        return err(notOpen(input.changeReviewId));
+      const groupKeys = await reviewGroupKeys(synced, synced.replayRunId);
+      if (!groupKeys.ok) {
+        return groupKeys;
       }
-      const groupsResult = await fetchAllGroups(synced.replayRunId);
-      if (!groupsResult.ok) {
-        return groupsResult;
-      }
-      if (!groupsResult.value.some((group) => group.groupKey === input.groupKey)) {
+      if (!groupKeys.value.has(input.groupKey)) {
         return err(groupNotFound(input.groupKey));
       }
       await store.upsertVerdict({
@@ -369,9 +555,9 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       if (run === null || run.status !== 'completed' || run.resultHash === null) {
         return err(notOpen(input.changeReviewId));
       }
-      const baselineResult = await policy.getVersion(review.baselineVersionId);
-      if (!baselineResult.ok) {
-        return err(baselineResult.error);
+      const baselineContentHash = await baselineContentHashOf(review);
+      if (!baselineContentHash.ok) {
+        return err(baselineContentHash.error);
       }
 
       if (input.decision === 'accept') {
@@ -396,7 +582,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
         note: input.note,
         reviewerName: input.reviewerName,
         decidedAt,
-        baselineContentHash: baselineResult.value.contentHash,
+        baselineContentHash: baselineContentHash.value,
         candidateContentHash: review.candidateContentHash,
         replayInputsHash: run.inputsHash,
         replayResultHash: run.resultHash,
@@ -436,68 +622,51 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       }
       const review = await syncStatus(stored);
       const run = review.replayRunId === null ? null : await replay.getRun(review.replayRunId);
-      const isComplete = run !== null && run.status === 'completed';
+      const chained = await store.getChainedDecision(review.id);
+      const decision = chained === null ? null : reportDecisionOf(chained);
 
-      let groups: ReportGroup[] = [];
-      let analyzabilityNoneCount: number | null = null;
-      if (isComplete) {
-        const groupsResult = await fetchAllGroups(run.id);
-        if (!groupsResult.ok) {
-          return groupsResult;
+      if (review.kind === 'adoption') {
+        const groups = await adoptionReportGroups(review, run);
+        if (!groups.ok) {
+          return groups;
         }
-        const verdicts = await store.listVerdicts(review.id);
-        const verdictByGroup = new Map(verdicts.map((entry) => [entry.groupKey, entry.verdict]));
-        groups = groupsResult.value.map((group) => ({
-          direction: group.direction,
-          headline: group.headline,
-          fromEffect: group.fromEffect,
-          toEffect: group.toEffect,
-          actionCount: group.actionCount,
-          targetSummary: group.targetSummary.map((target) => ({
-            key: target.key,
-            count: target.count,
-          })),
-          verdict: verdictByGroup.get(group.groupKey) ?? null,
-        }));
-        analyzabilityNoneCount = groupsResult.value.reduce(
-          (sum, group) => sum + group.analyzabilityNoneCount,
-          0,
+        return ok(
+          renderAdoptionReport({
+            changeReviewId: review.id,
+            status: review.status,
+            candidateContentHash: review.candidateContentHash,
+            windowFrom: review.windowFrom,
+            windowTo: review.windowTo,
+            stats: run !== null && run.kind === 'adoption' ? run.stats : null,
+            groups: groups.value,
+            decision,
+          }),
         );
       }
 
+      const reportGroups = await changeReportGroups(review, run);
+      if (!reportGroups.ok) {
+        return reportGroups;
+      }
       const stats = run === null ? null : diffStatsOf(run);
-      const baseline = await policy.getVersion(review.baselineVersionId);
-      const baselineContentHash = baseline.ok ? baseline.value.contentHash : '';
-      const chained = await store.getChainedDecision(review.id);
-
-      const markdown = renderReport({
-        changeReviewId: review.id,
-        status: review.status,
-        baselineContentHash,
-        candidateContentHash: review.candidateContentHash,
-        windowFrom: review.windowFrom,
-        windowTo: review.windowTo,
-        evaluatedActions: stats?.evaluatedActions ?? null,
-        changedActions: stats?.changedActions ?? null,
-        analyzabilityNoneCount,
-        transitions: stats?.transitions ?? null,
-        operationWidening: stats?.operationWidening ?? null,
-        groups,
-        decision:
-          chained === null
-            ? null
-            : {
-                decision: chained.decision.decision,
-                reviewerName: chained.decision.reviewerName,
-                decidedAt: chained.decision.decidedAt,
-                note: chained.decision.note,
-                sequence: chained.sequence,
-                hash: chained.hash,
-                replayInputsHash: chained.decision.replayInputsHash,
-                replayResultHash: chained.decision.replayResultHash,
-              },
-      });
-      return ok(markdown);
+      const baselineContentHash = await baselineContentHashOf(review);
+      return ok(
+        renderReport({
+          changeReviewId: review.id,
+          status: review.status,
+          baselineContentHash: baselineContentHash.ok ? (baselineContentHash.value ?? '') : '',
+          candidateContentHash: review.candidateContentHash,
+          windowFrom: review.windowFrom,
+          windowTo: review.windowTo,
+          evaluatedActions: stats?.evaluatedActions ?? null,
+          changedActions: stats?.changedActions ?? null,
+          analyzabilityNoneCount: reportGroups.value.analyzabilityNoneCount,
+          transitions: stats?.transitions ?? null,
+          operationWidening: stats?.operationWidening ?? null,
+          groups: reportGroups.value.groups,
+          decision,
+        }),
+      );
     },
 
     async listDiffGroups(id, input) {
@@ -509,21 +678,52 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       if (review.replayRunId === null) {
         return ok({ items: [], nextCursor: null });
       }
-      const groupsResult = await fetchAllGroups(review.replayRunId);
+      const groupsResult = await fetchAllDiffGroups(review.replayRunId);
       if (!groupsResult.ok) {
         return groupsResult;
       }
-      const verdicts = await store.listVerdicts(review.id);
-      const verdictByGroup = new Map(
-        verdicts.map((entry: StoredVerdict) => [entry.groupKey, entry.verdict]),
-      );
+      const verdicts = await verdictsByGroup(review.id);
       const { cursor, direction, severity, verdict, limit } = input;
       const matches = groupsResult.value
-        .map((group) => ({ ...group, verdict: verdictByGroup.get(group.groupKey) ?? null }))
+        .map((group) => ({ ...group, verdict: verdicts.get(group.groupKey) ?? null }))
         .filter((group) => direction === undefined || group.direction === direction)
         .filter((group) => severity === undefined || group.severity === severity)
         .filter((group) => verdict === undefined || group.verdict === verdict)
         .filter((group) => cursor === undefined || group.groupKey > cursor);
+      const items = matches.slice(0, limit);
+      const nextCursor =
+        matches.length > limit ? (items[items.length - 1]?.groupKey ?? null) : null;
+      return ok({ items, nextCursor });
+    },
+
+    async listAdoptionGroups(id, input) {
+      const stored = await store.getChangeReview(id);
+      if (stored === null) {
+        return err(notFound(id));
+      }
+      const review = await syncStatus(stored);
+      if (review.replayRunId === null) {
+        return ok({ items: [], nextCursor: null });
+      }
+      const groupsResult = await fetchAllAdoptionGroups(review.replayRunId);
+      if (!groupsResult.ok) {
+        return groupsResult;
+      }
+      const verdicts = await verdictsByGroup(review.id);
+      const { cursor, effect, verdict, limit } = input;
+      // Groups keep the run's review order, so the cursor names the last group of
+      // the previous page; a cursor naming no group yields no rows, as in replay.
+      const ordered = groupsResult.value.map((group) => ({
+        ...group,
+        verdict: verdicts.get(group.groupKey) ?? null,
+      }));
+      const cursorIndex =
+        cursor === undefined ? -1 : ordered.findIndex((group) => group.groupKey === cursor);
+      const afterCursor =
+        cursor !== undefined && cursorIndex === -1 ? [] : ordered.slice(cursorIndex + 1);
+      const matches = afterCursor
+        .filter((group) => effect === undefined || group.effect === effect)
+        .filter((group) => verdict === undefined || group.verdict === verdict);
       const items = matches.slice(0, limit);
       const nextCursor =
         matches.length > limit ? (items[items.length - 1]?.groupKey ?? null) : null;

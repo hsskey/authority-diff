@@ -9,6 +9,8 @@ import {
   ImportTraceResponseSchema,
   ListActionsQuerySchema,
   ListAdoptionGroupsQuerySchema,
+  ListReviewAdoptionGroupsQuerySchema,
+  ReviewAdoptionGroupResponseSchema,
 } from '../schema.ts';
 import parsedSessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
@@ -114,13 +116,16 @@ describe('contracts DTO round-trip', () => {
     expect(ListAdoptionGroupsQuerySchema.safeParse({ effect: 'allow' }).success).toBe(false);
   });
 
-  test('carries replay summary and gate on a change review response', () => {
+  test.each([
+    ['a change review', { kind: 'change', baselineVersionId: `pver_${ULID}` }, 'replay_incomplete'],
+    ['an adoption review', { kind: 'adoption', baselineVersionId: null }, 'adoption_unreviewed'],
+  ])('carries replay summary and gate on %s response', (_name, kindFields, blockerCode) => {
     const value = {
       id: `rev_${ULID}`,
       policyId: `pol_${ULID}`,
+      ...kindFields,
       candidateVersionId: `pver_${ULID}`,
       candidateContentHash: HASH,
-      baselineVersionId: `pver_${ULID}`,
       windowFrom: TS,
       windowTo: TS,
       replayRunId: null,
@@ -130,9 +135,39 @@ describe('contracts DTO round-trip', () => {
       decisionNote: null,
       createdAt: TS,
       replaySummary: { replayRunId: null, status: 'queued', stats: null, resultHash: null },
-      gate: { isOpen: false, blockers: [{ code: 'replay_incomplete', count: 1 }] },
+      gate: { isOpen: false, blockers: [{ code: blockerCode, count: 1 }] },
     };
     expect(ChangeReviewResponseSchema.parse(value)).toEqual(value);
+  });
+
+  test('a review adoption group carries the review verdict on the replay group shape', () => {
+    const value = {
+      groupKey: HASH,
+      effect: 'deny',
+      capability: 'read',
+      zone: 'credentials',
+      program: null,
+      programSummary: [{ program: 'cat', count: 1 }],
+      distinctProgramCount: 1,
+      actionCount: 1,
+      sessionCount: 1,
+      analyzabilityNoneCount: 0,
+      firstOccurredAt: TS,
+      lastOccurredAt: TS,
+      decidingRuleIds: ['deny_credentials_access'],
+      targetSummary: [{ key: '~/.synthetic-credentials', count: 1 }],
+      headline: "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.",
+      sampleActionKeys: [HASH],
+      verdict: null,
+    };
+    expect(ReviewAdoptionGroupResponseSchema.parse(value)).toEqual(value);
+  });
+
+  test('parses the review adoption groups query with effect and verdict filters', () => {
+    expect(
+      ListReviewAdoptionGroupsQuerySchema.parse({ effect: 'ask', verdict: 'expected' }),
+    ).toEqual({ effect: 'ask', verdict: 'expected', limit: 50 });
+    expect(ListReviewAdoptionGroupsQuerySchema.safeParse({ effect: 'allow' }).success).toBe(false);
   });
 
   test('round-trips the error envelope', () => {

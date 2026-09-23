@@ -1,5 +1,5 @@
 import type { AppError, IsoTimestamp, Result } from '@authority/kernel';
-import type { PolicyVersionId } from '@authority/policy/schema';
+import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
 import type {
   ChangeReview,
   ChangeReviewId,
@@ -44,6 +44,8 @@ export interface DecideStoreInput {
 export interface ReviewStore {
   insertChangeReview(review: ChangeReview): Promise<void>;
   getChangeReview(id: ChangeReviewId): Promise<ChangeReview | null>;
+  /** The Policy's review in `computing` or `ready`, of either kind; there is at most one. */
+  findOpenChangeReview(policyId: PolicyId): Promise<ChangeReview | null>;
   updateStatus(id: ChangeReviewId, status: ChangeReviewStatus): Promise<void>;
   upsertVerdict(input: UpsertVerdictInput): Promise<void>;
   getVerdict(changeReviewId: ChangeReviewId, groupKey: string): Promise<StoredVerdict | null>;

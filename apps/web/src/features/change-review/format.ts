@@ -35,6 +35,10 @@ const BLOCKER_LABEL: Record<GateBlocker['code'], (count: number) => string> = {
   widening_investigate: (count) => `investigate로 남은 group ${count}개`,
   widening_unexpected: (count) =>
     `예상 밖으로 판정된 group ${count}개. 정책을 고쳐 새 review를 만드세요`,
+  adoption_unreviewed: (count) => `판정하지 않은 group ${count}개`,
+  adoption_investigate: (count) => `보류로 남은 group ${count}개`,
+  adoption_unexpected: (count) =>
+    `정책 수정 필요로 판정된 group ${count}개. 정책을 고쳐 새 review를 만드세요`,
 };
 
 export function blockerLabel(code: GateBlocker['code'], count: number): string {

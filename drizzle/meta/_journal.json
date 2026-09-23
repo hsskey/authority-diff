@@ -64,6 +64,13 @@
       "when": 1790163018946,
       "tag": "0008_replay_adoption_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790169804357,
+      "tag": "0009_change_reviews_kind",
+      "breakpoints": true
     }
   ]
 }

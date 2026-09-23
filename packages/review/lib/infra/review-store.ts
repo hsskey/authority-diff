@@ -1,6 +1,7 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { err, invariant, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
+import type { PolicyId } from '@authority/policy/schema';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
@@ -43,6 +44,7 @@ function reviewInsertValues(review: ChangeReview): ReviewRow {
   return {
     id: review.id,
     policyId: review.policyId,
+    kind: review.kind,
     candidateVersionId: review.candidateVersionId,
     candidateContentHash: review.candidateContentHash,
     baselineVersionId: review.baselineVersionId,
@@ -98,6 +100,20 @@ export function createReviewStore(deps: ReviewStoreDeps): ReviewStore {
 
     async getChangeReview(id: ChangeReviewId): Promise<ChangeReview | null> {
       const [row] = await db.select().from(changeReviews).where(eq(changeReviews.id, id)).limit(1);
+      return row === undefined ? null : toReview(row);
+    },
+
+    async findOpenChangeReview(policyId: PolicyId): Promise<ChangeReview | null> {
+      const [row] = await db
+        .select()
+        .from(changeReviews)
+        .where(
+          and(
+            eq(changeReviews.policyId, policyId),
+            inArray(changeReviews.status, ['computing', 'ready']),
+          ),
+        )
+        .limit(1);
       return row === undefined ? null : toReview(row);
     },
 

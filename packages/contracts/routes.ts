@@ -20,6 +20,7 @@ import {
   ListConformanceFindingsResponseSchema,
   ListDiffGroupsResponseSchema,
   ListPoliciesResponseSchema,
+  ListReviewAdoptionGroupsResponseSchema,
   ListReviewDiffGroupsResponseSchema,
   PolicyVersionResponseSchema,
   ReclassifyActionsRequestSchema,
@@ -146,6 +147,10 @@ export const routes = {
   listReviewDiffGroups: get(
     `${API}/change-reviews/:id/diff-groups`,
     ListReviewDiffGroupsResponseSchema,
+  ),
+  listReviewAdoptionGroups: get(
+    `${API}/change-reviews/:id/adoption-groups`,
+    ListReviewAdoptionGroupsResponseSchema,
   ),
   recordVerdict: put(
     `${API}/change-reviews/:id/verdicts/:groupKey`,

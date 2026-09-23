@@ -198,7 +198,7 @@ flowchart BT
 - `ChangeReview.status`: `computing`, `ready`, `accepted`, `rejected`, `failed`.
   probe와 stale 관련 field 제거.
 - 신규 `review_decisions`(insert와 select만, trigger가 UPDATE, DELETE, TRUNCATE 차단): `changeReviewId`, `decision`, `note`, `reviewerName`, `decidedAt`, `baselineContentHash`, `candidateContentHash`, `replayInputsHash`, `replayResultHash`, `classifierVersion`, `verdictSnapshot`에 audit hash chain column `sequence`, `prevHash`, `hash`를 더한다(계약은 `docs/acr/0006-review-decision-hash-chain.md`).
-- gate blocker: `replay_incomplete`, `replay_failed`, `widening_unreviewed`, `widening_investigate`, `widening_unexpected` 다섯 개.
+- gate blocker: `replay_incomplete`, `replay_failed`, `widening_unreviewed`, `widening_investigate`, `widening_unexpected` 다섯 개. 최초 도입 review(kind `adoption`, ADR-0010)는 `widening_*` 대신 `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`로 닫힌다.
 - `kernel` port: `Clock`, `IdGenerator`, `Logger`, `TransactionRunner`만 남깁니다.
 
 R1의 severity 규칙:
