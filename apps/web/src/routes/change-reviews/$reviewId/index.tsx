@@ -343,9 +343,7 @@ function GateBlockers({ review }: { review: ChangeReviewResponse }) {
       ) : (
         <ul className="issue-list">
           {gate.blockers.map((blocker) => (
-            <li key={blocker.code}>
-              {blockerLabel(blocker.code)} ({blocker.count})
-            </li>
+            <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
           ))}
         </ul>
       )}

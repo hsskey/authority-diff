@@ -25,16 +25,17 @@ export function verdictLabel(verdict: Verdict): string {
   return verdict === null ? '미판정' : VERDICT_LABEL[verdict];
 }
 
-const BLOCKER_LABEL: Record<GateBlocker['code'], string> = {
-  replay_incomplete: 'replay가 아직 끝나지 않음',
-  replay_failed: 'replay가 실패함',
-  widening_unreviewed: '판정이 없는 widening group이 있음',
-  widening_investigate: '조사 필요로 남은 group이 있음',
-  widening_unexpected: '예상 밖으로 판정된 group이 있음',
+const BLOCKER_LABEL: Record<GateBlocker['code'], (count: number) => string> = {
+  replay_incomplete: (count) => `replay가 아직 끝나지 않음 (${count})`,
+  replay_failed: (count) => `replay가 실패함 (${count})`,
+  widening_unreviewed: (count) => `판정하지 않은 group ${count}개`,
+  widening_investigate: (count) => `investigate로 남은 group ${count}개`,
+  widening_unexpected: (count) =>
+    `예상 밖으로 판정된 group ${count}개. 정책을 고쳐 새 review를 만드세요`,
 };
 
-export function blockerLabel(code: GateBlocker['code']): string {
-  return BLOCKER_LABEL[code];
+export function blockerLabel(code: GateBlocker['code'], count: number): string {
+  return BLOCKER_LABEL[code](count);
 }
 
 /** critical group을 먼저, 같은 severity 안에서는 action 수가 많은 순으로 정렬한다. */
@@ -112,7 +113,7 @@ export function buildReviewReport(
     review.gate.isOpen
       ? '- gate 열림: blocker 없음'
       : review.gate.blockers
-          .map((blocker) => `- ${blockerLabel(blocker.code)} (${blocker.count})`)
+          .map((blocker) => `- ${blockerLabel(blocker.code, blocker.count)}`)
           .join('\n'),
     '',
     '## Widening group',
