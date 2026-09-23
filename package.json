@@ -24,6 +24,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:boundaries && pnpm lint:prove && pnpm test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.2",
     "dependency-cruiser": "^18.3.1",
     "drizzle-kit": "0.31.11",
