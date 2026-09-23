@@ -39,6 +39,29 @@ describe('POST /api/v1/trace-imports', () => {
     expect(body.acceptedCount).toBe(3);
   });
 
+  test('maps a storage rejection to 422', async () => {
+    const app = buildTraceApp(
+      makeModule({
+        importTrace: () =>
+          Promise.resolve(
+            err({
+              code: 'trace.import_rejected',
+              message: 'the import could not be stored',
+              isRetryable: false,
+              details: null,
+              cause: null,
+            }),
+          ),
+      }),
+    );
+    const res = await app.request(
+      '/api/v1/trace-imports',
+      authed({ method: 'POST', body: JSON.stringify(parsedSessionFixture) }),
+    );
+    expect(res.status).toBe(422);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('trace.import_rejected');
+  });
+
   test('maps a redaction failure to 422', async () => {
     const app = buildTraceApp(
       makeModule({

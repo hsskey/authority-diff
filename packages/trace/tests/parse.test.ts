@@ -336,6 +336,42 @@ describe('parseTranscript structural credential masking', () => {
   });
 });
 
+describe('parseTranscript NUL stripping', () => {
+  test('strips a NUL character from a Bash command before redaction', () => {
+    const parsed = parseTranscript({
+      sessionExternalId: 'nul-session',
+      lines: [
+        assistantLine({
+          id: 't',
+          name: 'Bash',
+          toolInput: { command: 'printf a\x00b' },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    expect(parsed.toolCalls[0]?.toolInputRedacted).toBe('printf ab');
+    expect(parsed.toolCalls[0]?.toolInputRedacted.includes('\0')).toBe(false);
+  });
+
+  test('strips NUL from a non-Bash tool input before canonicalization', () => {
+    const parsed = parseTranscript({
+      sessionExternalId: 'nul-session',
+      lines: [
+        assistantLine({
+          id: 'join',
+          name: 'Write',
+          toolInput: { body: 'before\u0000after' },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    expect(parsed.toolCalls[0]?.toolInputRedacted.includes('\0')).toBe(false);
+    expect(JSON.parse(parsed.toolCalls[0]?.toolInputRedacted ?? '{}')).toEqual({
+      body: 'beforeafter',
+    });
+  });
+});
+
 describe('parseTranscript line handling', () => {
   test('assigns sequence in tool_use appearance order', () => {
     const multi = JSON.stringify({

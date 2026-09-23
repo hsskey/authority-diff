@@ -1,12 +1,14 @@
 import { err, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
-import type { ClassifyToolCall, ToolCall } from '@authority/action/schema';
+import { OperationSchema, type ClassifyToolCall, type ToolCall } from '@authority/action/schema';
+import { z } from 'zod';
 import { deriveActionKey } from '../client/actions.ts';
 import { redactText } from '../client/redact.ts';
-import { redactionMissing } from '../domain/errors.ts';
+import { importRejected, redactionMissing } from '../domain/errors.ts';
+import { stripNul, stripNulDeep } from '../client/strip-nul.ts';
 import { AgentSessionIdSchema, TraceImportIdSchema } from '../../schema.ts';
 import type { ParsedSession, StoredAgentAction } from '../../schema.ts';
-import type { TraceStore } from './ports.ts';
+import type { TraceStore, WriteCounts } from './ports.ts';
 
 export interface ImportTraceDeps {
   readonly store: TraceStore;
@@ -38,6 +40,15 @@ function prefersCandidate(candidate: StoredAgentAction, existing: StoredAgentAct
     return candidate.occurredAt < existing.occurredAt;
   }
   return candidate.sessionExternalId < existing.sessionExternalId;
+}
+
+function sanitizeStoredAction(action: StoredAgentAction): StoredAgentAction {
+  const operations = z.array(OperationSchema).parse(stripNulDeep(action.operations));
+  return {
+    ...action,
+    toolInputRedacted: stripNul(action.toolInputRedacted),
+    operations,
+  };
 }
 
 function buildActions(deps: ImportTraceDeps, session: ParsedSession): readonly StoredAgentAction[] {
@@ -95,33 +106,38 @@ export async function importTrace(
     return err(redactionMissing(residual));
   }
 
-  const actions = buildActions(deps, session);
+  const actions = buildActions(deps, session).map(sanitizeStoredAction);
   const redactionCount = session.redactions.reduce((sum, entry) => sum + entry.count, 0);
   const importId = deps.idGenerator.next('imp');
-  const counts = await deps.store.writeImport({
-    traceImport: {
-      id: TraceImportIdSchema.parse(importId),
-      runtime: session.runtime,
-      source: 'transcript',
-      sessionExternalId: session.sessionExternalId,
-      redactionCount,
-      classifierVersion: deps.classifierVersion,
-      createdAt: deps.clock.now(),
-    },
-    session: {
-      id: AgentSessionIdSchema.parse(deps.idGenerator.next('ses')),
-      runtime: session.runtime,
-      runtimeVersion: session.runtimeVersion,
-      sessionExternalId: session.sessionExternalId,
-      workspaceRoot: session.workspaceRoot,
-      gitBranch: session.gitBranch,
-      hasHookCoverage: false,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-    },
-    actions,
-    attemptedCount: session.toolCalls.length,
-  });
+  let counts: WriteCounts;
+  try {
+    counts = await deps.store.writeImport({
+      traceImport: {
+        id: TraceImportIdSchema.parse(importId),
+        runtime: session.runtime,
+        source: 'transcript',
+        sessionExternalId: session.sessionExternalId,
+        redactionCount,
+        classifierVersion: deps.classifierVersion,
+        createdAt: deps.clock.now(),
+      },
+      session: {
+        id: AgentSessionIdSchema.parse(deps.idGenerator.next('ses')),
+        runtime: session.runtime,
+        runtimeVersion: session.runtimeVersion,
+        sessionExternalId: session.sessionExternalId,
+        workspaceRoot: session.workspaceRoot,
+        gitBranch: session.gitBranch,
+        hasHookCoverage: false,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+      },
+      actions,
+      attemptedCount: session.toolCalls.length,
+    });
+  } catch (cause) {
+    return err(importRejected(cause));
+  }
 
   return ok({
     importId,
