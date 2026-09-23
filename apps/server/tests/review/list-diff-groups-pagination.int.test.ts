@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { err, IsoTimestampSchema, ok } from '@authority/kernel';
@@ -15,13 +14,12 @@ import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
 import { ParsedSessionSchema } from '@authority/trace/schema';
-import { createReviewModule, migrateReviewStore } from '@authority/review';
+import { createReviewModule } from '@authority/review';
 import type { ChangeReviewView, PolicyReviewRepository, ReviewModule } from '@authority/review';
 import { ChangeReviewIdSchema } from '@authority/review/schema';
 import sessionFixture from '../../../../tests/fixtures/parsed-session.json' with { type: 'json' };
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
-const MIGRATIONS = fileURLToPath(new URL('../../../../drizzle', import.meta.url));
 const WINDOW_FROM = IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z');
 
 function freshWindow() {
@@ -104,7 +102,6 @@ beforeAll(async () => {
     throw new Error('test config failed to parse');
   }
   database = createDatabase(config.value);
-  await migrateReviewStore(database.db, MIGRATIONS);
   repository = createPolicyRepository({ db: database.db, clock, idGenerator });
   const trace = createTraceModule({ database, clock, idGenerator });
   const imported = await trace.importTrace(ParsedSessionSchema.parse(sessionFixture));

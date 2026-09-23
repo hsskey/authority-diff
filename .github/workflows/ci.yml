@@ -19,6 +19,22 @@ jobs:
       - run: pnpm check
       - run: pnpm lint:boundaries:prove
 
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:int:db:up
+      - run: pnpm test:int
+      - name: Tear down
+        if: always()
+        run: pnpm test:int:db:down
+
   laundering-rate:
     runs-on: ubuntu-latest
     steps:

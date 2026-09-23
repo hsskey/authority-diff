@@ -26,7 +26,6 @@ export function createReplayModule(deps: CreateReplayModuleDeps) {
   });
 }
 
-export { migrateReplayStore } from './lib/infra/migrate.ts';
 export { assembleReplayModule } from './lib/app/module.ts';
 export type {
   AssembleReplayModuleDeps,

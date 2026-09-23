@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
   createDatabase,
@@ -11,7 +10,6 @@ import {
   createPolicyRepository,
   DEFAULT_POLICY_DOCUMENT,
   EMPTY_POLICY_DOCUMENT,
-  migratePolicyStore,
   type PolicyRepository,
 } from '../index.ts';
 import { PolicyVersionIdSchema } from '../schema.ts';
@@ -19,7 +17,6 @@ import { expectErr, expectOk } from './support/result.ts';
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
-const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 // Each test uses a fresh unique policy name so the shared database needs no
 // truncation between tests; rows are isolated by their generated policy id.
@@ -29,7 +26,7 @@ const uniqueName = (): string => names.next('policy');
 let database: Database;
 let repository: PolicyRepository;
 
-beforeAll(async () => {
+beforeAll(() => {
   const config = expectOk(
     parseConfig({
       AUTHORITY_DB_URL: TEST_DB_URL,
@@ -38,7 +35,6 @@ beforeAll(async () => {
     }),
   );
   database = createDatabase(config);
-  await migratePolicyStore(database.db, MIGRATIONS);
   repository = createPolicyRepository({
     db: database.db,
     clock: createSystemClock(),
