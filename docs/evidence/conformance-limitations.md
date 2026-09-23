@@ -45,7 +45,7 @@ The first conformance run under the default template reported 6 violations.
   Whether the runtime prompted is unobserved, because they fell in the hook outage gap above.
 
 The runtime did not stop either kind, and the agent executed them.
-The hook only observes, so this records what the runtime allowed.
+The hook is observation-only, and V1 stops no tool call; hook availability matters only for observation gaps.
 The shared-remote rewrites show a gap in the policy wording.
 The default template's `deny_shared_history_rewrite` does not distinguish a lease push to one's own pull request branch from a force push to the default branch.
-A policy change that adds an `ask` rule for rewrites of one's own branch is a candidate.
+A policy change that adds an `ask_own_branch_rewrite` rule, asking before a rewrite of one's own branch, is a candidate.
