@@ -18,6 +18,7 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
     changedActions: 15,
     analyzabilityNoneCount: 2,
     transitions: [{ from: 'ask', to: 'allow', count: 15 }],
+    operationWidening: [],
     groups: [
       {
         direction: 'widening',
@@ -66,4 +67,21 @@ test('the report names the reviewer and decision when decided', () => {
 test('an undecided review still renders without a reviewer line', () => {
   const report = renderReport(makeInput({ decision: null }));
   expect(report).toContain('아직 결정되지 않았습니다.');
+});
+
+test('the report lists operation-level widening when Action effect is unchanged', () => {
+  const report = renderReport(
+    makeInput({
+      changedActions: 0,
+      transitions: [{ from: 'ask', to: 'ask', count: 1 }],
+      operationWidening: [
+        { capability: 'push', fromZone: 'public_remote', toZone: 'trusted_remote', count: 1 },
+        { capability: 'push', fromZone: 'unknown_remote', toZone: 'trusted_remote', count: 2 },
+      ],
+      groups: [],
+    }),
+  );
+  expect(report).toContain('Action effect unchanged, operation-level widening');
+  expect(report).toContain('| push | unknown_remote | trusted_remote | 2 |');
+  expect(report).toContain('| push | public_remote | trusted_remote | 1 |');
 });

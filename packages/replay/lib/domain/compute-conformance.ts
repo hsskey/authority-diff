@@ -120,6 +120,8 @@ function buildFinding(findingKey: string, entries: readonly FindingEntry[]): Con
  * `executed_prompt_unknown` Disposition are excluded from the transitions.
  * A `violation` is still reported for an excluded `executed_prompt_unknown`
  * Action. Findings sort by findingKey.
+ * operationWidening is empty: Disposition is Action-level, so this path has no
+ * Operation Effect pair to count.
  * `resultHash = sha256Hex(canonicalJson({ stats, findings }))`.
  */
 export function computeConformanceWith(
@@ -192,6 +194,7 @@ export function computeConformanceWith(
     transitions: EFFECT_ORDER.flatMap((from) =>
       EFFECT_ORDER.map((to) => ({ from, to, count: transitionCounts.get(`${from}>${to}`) ?? 0 })),
     ),
+    operationWidening: [],
   };
   const findings = [...grouped.entries()]
     .map(([findingKey, entries]) => buildFinding(findingKey, entries))

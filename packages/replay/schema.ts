@@ -12,12 +12,20 @@ const TransitionSchema = z.object({
   count: z.number().int().nonnegative(),
 });
 
+const OperationWideningSchema = z.object({
+  capability: CapabilitySchema,
+  fromZone: ZoneSchema,
+  toZone: ZoneSchema,
+  count: z.number().int().positive(),
+});
+
 export const ReplayStatsSchema = z.object({
   totalActions: z.number().int().nonnegative(),
   evaluatedActions: z.number().int().nonnegative(),
   excludedActions: z.number().int().nonnegative(),
   changedActions: z.number().int().nonnegative(),
   transitions: z.array(TransitionSchema).length(9),
+  operationWidening: z.array(OperationWideningSchema).default([]),
 });
 export type ReplayStats = z.infer<typeof ReplayStatsSchema>;
 
@@ -92,6 +100,10 @@ export type DeriveTargetKey = (target: Target) => string;
  * with no Operations, evaluatedActions equals totalActions minus
  * excludedActions, and changedActions counts evaluated Actions whose Effects
  * differ. The sum of all nine transition counts equals evaluatedActions.
+ * operationWidening counts Operations whose Effect widened while their Action's
+ * Effect stayed the same. Each row is `{capability, fromZone, toZone, count}`.
+ * Rows sort by capability, fromZone, then toZone, all ascending UTF-16.
+ * Diff Groups and Verdicts stay Action-level.
  *
  * For each changed Action, the signature Operation is selected among
  * Operations whose baseline and candidate Effects differ. For widening,

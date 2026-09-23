@@ -1,4 +1,5 @@
 import type { Effect, IsoTimestamp } from '@authority/kernel';
+import type { ReplayStats } from '@authority/replay/schema';
 import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
 
 /**
@@ -6,8 +7,8 @@ import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
  * this report reproduces each Diff Group's `headline` as given and never
  * rewrites it. The report deliberately carries no raw command text, `ruleId`,
  * or regex: only plain-language headlines, Target key summaries, counts,
- * transitions, Verdicts, hashes, and the reviewer (docs/cutline.md section 5,
- * item 9).
+ * transitions, operation-level widening while Action Effect is unchanged,
+ * Verdicts, hashes, and the reviewer (docs/cutline.md section 5, item 9).
  */
 export interface ReportTransition {
   readonly from: Effect;
@@ -48,6 +49,7 @@ export interface ReportInput {
   readonly changedActions: number | null;
   readonly analyzabilityNoneCount: number | null;
   readonly transitions: readonly ReportTransition[] | null;
+  readonly operationWidening: ReplayStats['operationWidening'] | null;
   readonly groups: readonly ReportGroup[];
   readonly decision: ReportDecision | null;
 }
@@ -97,6 +99,18 @@ function renderNoneRatio(input: ReportInput): string {
     `- Effect가 바뀐 Action: ${changed}건`,
     `- 그중 analyzability none: ${none}건 (${ratio(none, changed)})`,
   ].join('\n');
+}
+
+function renderOperationWidening(rows: ReplayStats['operationWidening'] | null): string {
+  if (rows === null) {
+    return '아직 replay가 완료되지 않아 operation-level widening 표가 없습니다.';
+  }
+  const table = [
+    '| capability | fromZone | toZone | count |',
+    '| --- | --- | --- | --- |',
+    ...rows.map((row) => `| ${row.capability} | ${row.fromZone} | ${row.toZone} | ${row.count} |`),
+  ];
+  return table.join('\n');
 }
 
 function renderTransitions(transitions: readonly ReportTransition[] | null): string {
@@ -184,6 +198,10 @@ export function renderReport(input: ReportInput): string {
     '## Effect transition',
     '',
     renderTransitions(input.transitions),
+    '',
+    '## Action effect unchanged, operation-level widening',
+    '',
+    renderOperationWidening(input.operationWidening),
     '',
     '## Diff Group과 Verdict',
     '',

@@ -276,6 +276,64 @@ function directionOf(baseline: Effect, candidate: Effect): 'widening' | 'narrowi
   return EFFECT_RANK[candidate] < EFFECT_RANK[baseline] ? 'widening' : 'narrowing';
 }
 
+interface OperationWideningRow {
+  readonly capability: Capability;
+  readonly fromZone: Zone;
+  readonly toZone: Zone;
+  readonly count: number;
+}
+
+function accumulateOperationWidening(
+  action: ActionForReplay,
+  baseline: Decision,
+  candidate: Decision,
+  rows: Map<string, OperationWideningRow>,
+): void {
+  const baselineByIndex = new Map(baseline.operations.map((op) => [op.operationIndex, op]));
+  const candidateByIndex = new Map(candidate.operations.map((op) => [op.operationIndex, op]));
+  const ordered = [...action.operations].sort((a, b) => a.index - b.index);
+  for (const operation of ordered) {
+    const baselineOp = baselineByIndex.get(operation.index);
+    const candidateOp = candidateByIndex.get(operation.index);
+    invariant(
+      baselineOp !== undefined && candidateOp !== undefined,
+      'every Operation index has a baseline and candidate Operation Decision',
+    );
+    if (baselineOp.effect === candidateOp.effect) {
+      continue;
+    }
+    if (EFFECT_RANK[candidateOp.effect] >= EFFECT_RANK[baselineOp.effect]) {
+      continue;
+    }
+    const key = canonicalJson([operation.capability, baselineOp.zone, candidateOp.zone]);
+    const existing = rows.get(key);
+    if (existing === undefined) {
+      rows.set(key, {
+        capability: operation.capability,
+        fromZone: baselineOp.zone,
+        toZone: candidateOp.zone,
+        count: 1,
+      });
+    } else {
+      rows.set(key, { ...existing, count: existing.count + 1 });
+    }
+  }
+}
+
+function operationWideningRows(
+  rows: ReadonlyMap<string, OperationWideningRow>,
+): readonly OperationWideningRow[] {
+  return [...rows.values()].sort((a, b) => {
+    if (a.capability !== b.capability) {
+      return a.capability < b.capability ? -1 : 1;
+    }
+    if (a.fromZone !== b.fromZone) {
+      return a.fromZone < b.fromZone ? -1 : 1;
+    }
+    return a.toZone < b.toZone ? -1 : a.toZone > b.toZone ? 1 : 0;
+  });
+}
+
 /**
  * The deterministic diff core. Receives injected evaluators so it can be
  * developed and tested independently of the Policy evaluation package.
@@ -294,6 +352,7 @@ export function computeDiffWith(
   }
 
   const transitionCounts = new Map<string, number>();
+  const operationWideningCounts = new Map<string, OperationWideningRow>();
   const changedEntries: ChangedEntry[] = [];
   let excludedActions = 0;
 
@@ -311,6 +370,8 @@ export function computeDiffWith(
     if (baseline.effect !== candidate.effect) {
       const direction = directionOf(baseline.effect, candidate.effect);
       changedEntries.push(selectSignatureOperation(action, baseline, candidate, direction));
+    } else {
+      accumulateOperationWidening(action, baseline, candidate, operationWideningCounts);
     }
   }
 
@@ -355,6 +416,7 @@ export function computeDiffWith(
     excludedActions,
     changedActions: changedEntries.length,
     transitions,
+    operationWidening: [...operationWideningRows(operationWideningCounts)],
   };
 
   const hashProjection = {

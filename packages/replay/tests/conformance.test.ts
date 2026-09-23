@@ -322,6 +322,7 @@ describe('computeConformanceWith', () => {
         { from: 'deny', to: 'ask', count: 0 },
         { from: 'deny', to: 'deny', count: 0 },
       ],
+      operationWidening: [],
     });
   });
 
