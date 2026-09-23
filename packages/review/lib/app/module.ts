@@ -493,23 +493,25 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       if (review.replayRunId === null) {
         return ok({ items: [], nextCursor: null });
       }
-      const page = await replay.listDiffGroups(review.replayRunId, {
-        direction: input.direction,
-        severity: input.severity,
-        cursor: input.cursor,
-        limit: input.limit,
-      });
-      if (!page.ok) {
-        return page;
+      const groupsResult = await fetchAllGroups(review.replayRunId);
+      if (!groupsResult.ok) {
+        return groupsResult;
       }
       const verdicts = await store.listVerdicts(review.id);
       const verdictByGroup = new Map(
         verdicts.map((entry: StoredVerdict) => [entry.groupKey, entry.verdict]),
       );
-      const items = page.value.items
+      const { cursor, direction, severity, verdict, limit } = input;
+      const matches = groupsResult.value
         .map((group) => ({ ...group, verdict: verdictByGroup.get(group.groupKey) ?? null }))
-        .filter((group) => input.verdict === undefined || group.verdict === input.verdict);
-      return ok({ items, nextCursor: page.value.nextCursor });
+        .filter((group) => direction === undefined || group.direction === direction)
+        .filter((group) => severity === undefined || group.severity === severity)
+        .filter((group) => verdict === undefined || group.verdict === verdict)
+        .filter((group) => cursor === undefined || group.groupKey > cursor);
+      const items = matches.slice(0, limit);
+      const nextCursor =
+        matches.length > limit ? (items[items.length - 1]?.groupKey ?? null) : null;
+      return ok({ items, nextCursor });
     },
   };
 }
