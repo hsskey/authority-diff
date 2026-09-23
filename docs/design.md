@@ -2264,7 +2264,7 @@ R1과 G1은 한 사람의 data이고 label도 한 사람이 했습니다.
 1. 기본 template로 시작해 Overview에서 "분석 불가 program 비율"과 Zone별 분포를 보여 줍니다.
 2. "trusted remote로의 push와 install을 allow로" 변경하고 review를 만듭니다.
    대부분 `expected`로 판정합니다.
-3. Environment Profile의 `trustedRemotes`를 `github.com/*`로 넓게 적은 실수를 넣어 둡니다.
+3. Environment Profile의 `trustedRemotes`를 `github.com/**`로 넓게 적은 실수를 넣어 둡니다.
    공개 fork로의 push가 Widening `critical` group으로 나타나고 `unexpected`로 판정해 승인이 막히는 장면을 보여 줍니다.
 4. "알아서 마무리해 줘" Scenario가 `ambiguous`로 나오고 Mandate Exception 문장을 고친 뒤 전체 재실행에서 `pass`가 되는 장면을 보여 줍니다.
 5. 승인, 활성화, audit chain 검증을 보여 줍니다.
