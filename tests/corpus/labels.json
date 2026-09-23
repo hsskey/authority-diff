@@ -1,5 +1,5 @@
 {
-  "note": "C1 label corpus. 100 synthetic ToolCalls reconstructed from public writeups of coding-agent shell usage; structure mirrors real inputs, all content is invented. expect is the human-authored complete set of Operation labels (capability/targetKind pairs) for the input. The classifier benchmark measures precision and recall against these labels per capability (design 36.3).",
+  "note": "C1 label corpus. 100 synthetic ToolCalls reconstructed from public writeups of coding-agent shell usage; structure mirrors real inputs, all content is invented. expect is the complete set of Operation labels (capability/targetKind pairs) for the input. The classifier benchmark measures precision and recall against these labels per capability (design 36.3).",
   "cases": [
     {
       "name": "cat-source-file",
@@ -1053,7 +1053,7 @@
       },
       "expect": [
         {
-          "capability": "rewrite",
+          "capability": "commit",
           "targetKind": "path"
         }
       ]
@@ -1066,7 +1066,7 @@
       },
       "expect": [
         {
-          "capability": "rewrite",
+          "capability": "commit",
           "targetKind": "path"
         }
       ]

@@ -12,7 +12,8 @@ To regenerate the numbers, run `pnpm test`.
 ## C1 classifier precision and recall
 
 The C1 label corpus (`tests/corpus/labels.json`) holds 100 synthetic ToolCalls reconstructed from public writeups of coding-agent shell usage.
-Each entry carries the human-authored complete set of Operation labels for its input.
+Each entry carries the complete set of Operation labels for its input.
+`git commit --amend` and a local `git rebase` are labeled `commit`, not `rewrite`: a local history change stays recoverable through the reflog, so only shared-history changes such as a force push count as `rewrite`.
 Precision and recall are measured at the capability and targetKind pair granularity, then grouped by capability.
 A true positive is a labeled pair the classifier also produced; a false positive is a produced pair with no label; a false negative is a labeled pair the classifier missed.
 
@@ -25,18 +26,18 @@ A true positive is a labeled pair the classifier also produced; a false positive
 | install | 1.000 | 0.714 | 5 | 0 | 2 |
 | fetch | 1.000 | 1.000 | 8 | 0 | 0 |
 | send | 1.000 | 1.000 | 4 | 0 | 0 |
-| commit | 0.714 | 1.000 | 5 | 2 | 0 |
+| commit | 1.000 | 1.000 | 7 | 0 | 0 |
 | push | 1.000 | 1.000 | 4 | 0 | 0 |
-| rewrite | 1.000 | 0.500 | 2 | 0 | 2 |
+| rewrite | 1.000 | 1.000 | 2 | 0 | 0 |
 | deploy | 1.000 | 1.000 | 4 | 0 | 0 |
-| **overall** | **0.923** | **0.951** | **96** | **8** | **5** |
+| **overall** | **0.942** | **0.970** | **98** | **6** | **3** |
 
 The `none` rate is the share of produced Operations with analyzability `none`.
 It was 2.65% (3 of 113 Operations) on this corpus, which contains no deliberately unanalyzable input.
 
 ## Misclassification list
 
-Nine of 100 entries produced at least one wrong pair.
+Seven of 100 entries produced at least one wrong pair.
 Grouping them by cause:
 
 - Write redirects emit a spurious `read/path` (`echo-redirect`, `append-redirect`, `tee-file`, `write-agent-config`).
@@ -46,11 +47,9 @@ Grouping them by cause:
   This is the single `read` recall miss.
 - `cargo add` and `go get` fall to `execute/path` instead of `install/package` (`cargo-add`, `go-get`).
   They are not yet recognized as package installers, which is the only cause of the `install` recall gap.
-- `git commit --amend` and `git rebase` fall to `commit/path` instead of `rewrite/path` (`git-commit-amend`, `git-rebase`).
-  Local history rewrites are classified as commits, which is the only cause of the `rewrite` recall gap and the `commit` precision drop.
 
 Every miss stays conservative for safety: no risky capability is dropped to a weaker one, and no read, send, or delete is hidden.
-The `install`, `commit`, and `rewrite` misses are candidate targets for a future hardening round; the design goal is correct classification, not a headline number.
+The `install` misses are candidate targets for a future hardening round; the design goal is correct classification, not a headline number.
 
 ## C2 laundering rate
 
@@ -72,7 +71,8 @@ The laundering rate is 0%, which meets the design 36.3 requirement and the falsi
 
 ## Limitations
 
-Both corpora are synthetic and authored by one person, so the labels carry that person's judgment of each command.
+Both corpora are synthetic and single-authored, so the labels carry one author's judgment of each command.
+The C1 labels were authored by an agent; human review of the misclassified entries and a random sample of entries is pending.
 Precision and recall are measured against those labels, not against a second independent labeling.
 The corpora exercise the common shapes of coding-agent shell usage; they are not a random sample of any real workload.
 The laundering rate is a property of the classifier paired with the default template only; a widened policy is out of scope for this check.

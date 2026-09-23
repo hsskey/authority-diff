@@ -7,7 +7,7 @@ import type { ClassifyToolCall, ToolCall } from '../schema.ts';
 import corpus from '../../../tests/corpus/labels.json' with { type: 'json' };
 
 // C1 classifier benchmark (design 36.3): precision and recall against the
-// human-authored label corpus, measured at the capability/targetKind pair
+// label corpus, measured at the capability/targetKind pair
 // granularity and grouped by capability, plus the analyzability `none` rate.
 // The report at docs/evidence/classifier-benchmark.md is generated from the
 // breakdown this test writes to .local; floors here guard against regression.
