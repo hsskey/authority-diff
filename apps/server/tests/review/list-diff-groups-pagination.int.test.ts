@@ -10,6 +10,7 @@ import {
 import type { Database } from '@authority/platform';
 import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyDocument, PolicyId, PolicyVersionId } from '@authority/policy/schema';
+import { createMemoryLogger } from '@authority/platform/testing';
 import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
@@ -114,6 +115,7 @@ beforeAll(async () => {
     policy: makePolicyReader(repository),
     clock,
     idGenerator,
+    logger: createMemoryLogger(),
     classifierVersion: trace.classifierVersion,
   });
   review = createReviewModule({

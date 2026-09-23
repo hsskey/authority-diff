@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type { Clock, IdGenerator, IsoTimestamp, Logger } from '@authority/kernel';
@@ -49,4 +50,15 @@ export async function resetTestDatabase(
   await db.execute('drop schema if exists public cascade');
   await db.execute('create schema public');
   await migrate(db, { migrationsFolder });
+}
+
+export async function countRowsByRun(
+  db: PostgresJsDatabase,
+  table: string,
+  replayRunId: string,
+): Promise<number> {
+  const rows = await db.execute(
+    sql`select count(*)::int as n from ${sql.identifier(table)} where replay_run_id = ${replayRunId}`,
+  );
+  return Number(rows[0]?.n);
 }

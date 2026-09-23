@@ -1,4 +1,4 @@
-import { pino } from 'pino';
+import { pino, stdSerializers } from 'pino';
 import type { DestinationStream } from 'pino';
 import type { Logger } from '@authority/kernel';
 import type { Config } from './config.ts';
@@ -21,6 +21,7 @@ export function createLogger(config: Config, options?: LoggerOptions): Logger {
     level: config.log.level,
     base: { service: options?.service ?? 'server' },
     redact: { paths: REDACT_PATHS, censor: '[redacted]' },
+    serializers: { cause: stdSerializers.err },
   };
   const instance = options?.destination
     ? pino(pinoOptions, options.destination)

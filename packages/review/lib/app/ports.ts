@@ -41,6 +41,16 @@ export interface DecideStoreInput {
   readonly candidateVersionId: PolicyVersionId;
 }
 
+/**
+ * The review's replay failed: marks the review `failed` and returns its
+ * candidate Policy Version from `in_review` to `draft` in one transaction, so a
+ * new review can be created from that draft.
+ */
+export interface FailReviewInput {
+  readonly changeReviewId: ChangeReviewId;
+  readonly candidateVersionId: PolicyVersionId;
+}
+
 /** The review module's persistence port; the drizzle adapter lives in lib/infra. */
 export interface ReviewStore {
   insertChangeReview(review: ChangeReview): Promise<void>;
@@ -50,6 +60,7 @@ export interface ReviewStore {
   /** Every review of the Policy, newest first. */
   listChangeReviews(policyId: PolicyId): Promise<readonly ChangeReview[]>;
   updateStatus(id: ChangeReviewId, status: ChangeReviewStatus): Promise<void>;
+  failReview(input: FailReviewInput): Promise<void>;
   upsertVerdict(input: UpsertVerdictInput): Promise<void>;
   getVerdict(changeReviewId: ChangeReviewId, groupKey: string): Promise<StoredVerdict | null>;
   listVerdicts(changeReviewId: ChangeReviewId): Promise<readonly StoredVerdict[]>;

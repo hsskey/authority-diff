@@ -1,5 +1,5 @@
 import type { Hono } from 'hono';
-import type { Clock, IdGenerator } from '@authority/kernel';
+import type { Clock, IdGenerator, Logger } from '@authority/kernel';
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
@@ -38,6 +38,7 @@ export interface RegisterReplayModuleDeps {
   readonly database: Database;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
+  readonly logger: Logger;
 }
 
 /** Wires the replay module and its routes; runs restart recovery once at init. */
@@ -53,6 +54,7 @@ export function registerReplayModule(app: Hono<AppEnv>, deps: RegisterReplayModu
     policy: makePolicyReader(repository),
     clock: deps.clock,
     idGenerator: deps.idGenerator,
+    logger: deps.logger,
     classifierVersion: deps.trace.classifierVersion,
   });
 

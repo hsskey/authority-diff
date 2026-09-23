@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { err, ok } from '@authority/kernel';
-import type { Clock, IdGenerator } from '@authority/kernel';
+import type { Clock, IdGenerator, Logger } from '@authority/kernel';
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
@@ -68,6 +68,7 @@ export interface RegisterReviewModuleDeps {
   readonly database: Database;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
+  readonly logger: Logger;
 }
 
 /** Wires the review module (over its own replay module) and its HTTP routes. */
@@ -83,6 +84,7 @@ export function registerReviewModule(app: Hono<AppEnv>, deps: RegisterReviewModu
     policy: makePolicyReader(repository),
     clock: deps.clock,
     idGenerator: deps.idGenerator,
+    logger: deps.logger,
     classifierVersion: deps.trace.classifierVersion,
   });
   const review: ReviewModule = createReviewModule({
