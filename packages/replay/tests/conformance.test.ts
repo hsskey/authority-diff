@@ -9,7 +9,7 @@ import type {
   ObservationForReplay,
   ObservedOutcome,
 } from '@authority/trace/schema';
-import { computeConformanceWith, deriveDisposition } from '../diff.ts';
+import { computeConformanceWith, deriveDisposition, pairPermissionRequests } from '../diff.ts';
 
 type Evidence = Pick<ObservationForReplay, 'event' | 'hookDecision'>;
 
@@ -65,9 +65,92 @@ function decision(effects: readonly Effect[], zone: Zone = 'workspace'): Decisio
   };
 }
 
-function observationsFor(target: ActionForReplay, evidence: readonly Evidence[]) {
-  return evidence.map((item) => ({ ...item, actionKey: target.actionKey }));
+const TOOL_INPUT_HASH = 'c'.repeat(64);
+
+function observationsFor(
+  target: ActionForReplay,
+  evidence: readonly Evidence[],
+): ObservationForReplay[] {
+  return evidence.map((item) => ({
+    ...item,
+    actionKey: target.actionKey,
+    sessionExternalId: target.sessionExternalId,
+    toolName: 'Bash',
+    toolInputHash: TOOL_INPUT_HASH,
+    occurredAt: target.occurredAt,
+  }));
 }
+
+function hookEvent(
+  event: 'pre_tool_use' | 'permission_request',
+  at: string,
+  extra: { actionKey?: string; session?: string } = {},
+): ObservationForReplay {
+  return {
+    actionKey: extra.actionKey ?? null,
+    event,
+    sessionExternalId: extra.session ?? 'synthetic-session-1',
+    toolName: 'Bash',
+    toolInputHash: TOOL_INPUT_HASH,
+    hookDecision: null,
+    occurredAt: IsoTimestampSchema.parse(at),
+  };
+}
+
+describe('pairPermissionRequests', () => {
+  const FIRST_KEY = 'a'.repeat(64);
+  const SECOND_KEY = 'b'.repeat(64);
+
+  test('a permission_request inherits the actionKey of its pre_tool_use', () => {
+    const pre = hookEvent('pre_tool_use', '2026-01-02T00:00:00.000Z', { actionKey: FIRST_KEY });
+    const request = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
+
+    const result = pairPermissionRequests([request, pre]);
+
+    expect(result).toEqual({
+      observations: [pre, { ...request, actionKey: FIRST_KEY }],
+      unpairedPermissionRequests: 0,
+    });
+  });
+
+  test('a pre_tool_use of another Session does not pair and the request counts as unpaired', () => {
+    const pre = hookEvent('pre_tool_use', '2026-01-02T00:00:00.000Z', {
+      actionKey: FIRST_KEY,
+      session: 'synthetic-session-2',
+    });
+    const request = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
+
+    const result = pairPermissionRequests([pre, request]);
+
+    expect(result).toEqual({ observations: [pre, request], unpairedPermissionRequests: 1 });
+  });
+
+  test('with the same input hash twice, a request pairs only with the nearest earlier pre_tool_use', () => {
+    const older = hookEvent('pre_tool_use', '2026-01-02T00:00:00.000Z', { actionKey: FIRST_KEY });
+    const nearer = hookEvent('pre_tool_use', '2026-01-02T00:00:01.000Z', { actionKey: SECOND_KEY });
+    const request = hookEvent('permission_request', '2026-01-02T00:00:01.100Z');
+
+    const result = pairPermissionRequests([older, nearer, request]);
+
+    expect(result).toEqual({
+      observations: [older, nearer, { ...request, actionKey: SECOND_KEY }],
+      unpairedPermissionRequests: 0,
+    });
+  });
+
+  test('a pre_tool_use that is already paired is not paired again', () => {
+    const pre = hookEvent('pre_tool_use', '2026-01-02T00:00:00.000Z', { actionKey: FIRST_KEY });
+    const first = hookEvent('permission_request', '2026-01-02T00:00:00.100Z');
+    const second = hookEvent('permission_request', '2026-01-02T00:00:00.200Z');
+
+    const result = pairPermissionRequests([pre, first, second]);
+
+    expect(result).toEqual({
+      observations: [pre, { ...first, actionKey: FIRST_KEY }, second],
+      unpairedPermissionRequests: 1,
+    });
+  });
+});
 
 describe('deriveDisposition', () => {
   test.each<[string, ObservedOutcome, readonly Evidence[], string]>([
@@ -110,6 +193,22 @@ describe('computeConformanceWith', () => {
     expect(result.findings.map((finding) => finding.kind)).toEqual(
       expected === null ? [] : [expected],
     );
+  });
+
+  test('a permission_request without an actionKey reaches its Action through the paired pre_tool_use', () => {
+    const target = action('a', [operation(0, 'write')]);
+    const [pre] = observationsFor(target, [PRE]);
+    if (pre === undefined) {
+      throw new Error('one pre_tool_use');
+    }
+
+    const result = computeConformanceWith(
+      () => decision(['allow']),
+      [target],
+      [pre, { ...pre, actionKey: null, event: 'permission_request' }],
+    );
+
+    expect(result.findings.map((finding) => finding.kind)).toEqual(['over_asked']);
   });
 
   test('groups Actions by kind, capability, zone, and program of the signature Operation', () => {

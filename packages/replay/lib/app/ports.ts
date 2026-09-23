@@ -9,7 +9,6 @@ import type {
   DiffGroup,
   ReplayRun,
   ReplayRunId,
-  ReplayRunKind,
   ReplayStats,
   StoredChangedAction,
   StoredConformanceFinding,
@@ -17,9 +16,13 @@ import type {
 } from '../../schema.ts';
 import type { AuthorityMapCell } from '../domain/build-matrix.ts';
 
-/** The stored `stats` jsonb: the diff core's stats plus the authority-map matrix. */
+/**
+ * The stored `stats` jsonb: the diff core's stats plus the authority-map matrix,
+ * and for a conformance run the permission_requests left without a pre_tool_use.
+ */
 export interface StoredReplayStats extends ReplayStats {
   readonly matrix: readonly AuthorityMapCell[];
+  readonly unpairedPermissionRequests?: number;
 }
 
 /** The candidate/baseline policy documents replay reads through trace's sibling policy module. */
@@ -72,6 +75,15 @@ export interface AuthorityMapRunView {
   readonly matrix: readonly AuthorityMapCell[];
 }
 
+/** The most recent completed conformance run. */
+export interface ConformanceRunView {
+  readonly replayRunId: ReplayRunId;
+  readonly candidateVersionId: PolicyVersionId;
+  readonly windowFrom: IsoTimestamp;
+  readonly windowTo: IsoTimestamp;
+  readonly unpairedPermissionRequests: number;
+}
+
 /**
  * The persistence port owned by replay. `lib/infra` implements it against
  * drizzle; tests implement it in memory. Idempotency is the natural
@@ -89,6 +101,6 @@ export interface ReplayStore {
   failStaleRunningRuns(input: FailStaleRunsInput): Promise<number>;
   /** Completed `version_diff` runs only; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;
-  findLatestCompletedRun(kind: ReplayRunKind): Promise<ReplayRun | null>;
+  findLatestConformanceRun(): Promise<ConformanceRunView | null>;
   listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]>;
 }

@@ -43,7 +43,7 @@ export function assembleTraceModule(deps: AssembleTraceModuleDeps): TraceModule 
       streamActions: (query) => store.streamActions(query),
       countStaleClassifications: (query) =>
         store.countStaleClassifications({ ...query, classifierVersion }),
-      getObservations: (actionKeys) => store.getObservations(actionKeys),
+      getObservations: (sessionExternalIds) => store.getObservations(sessionExternalIds),
     },
     classifierVersion,
   };

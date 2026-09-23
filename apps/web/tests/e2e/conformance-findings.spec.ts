@@ -21,6 +21,7 @@ test('lists each finding with its kind, capability, zone, and counts', async ({ 
         policyVersionId: `pver_${SUFFIX}`,
         windowFrom: TS,
         windowTo: TS,
+        unpairedPermissionRequests: 0,
       },
       items: [
         {

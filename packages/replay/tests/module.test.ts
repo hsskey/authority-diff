@@ -6,7 +6,11 @@ import { PolicyDocumentSchema, PolicyVersionIdSchema } from '@authority/policy/s
 import type { PolicyVersionId, PolicyVersionStatus } from '@authority/policy/schema';
 import type { ActionReader } from '@authority/trace';
 import { ActionForReplaySchema, StoredAgentActionSchema } from '@authority/trace/schema';
-import type { ActionForReplay, StoredAgentAction } from '@authority/trace/schema';
+import type {
+  ActionForReplay,
+  ObservationForReplay,
+  StoredAgentAction,
+} from '@authority/trace/schema';
 import { assembleReplayModule } from '../index.ts';
 import type { AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
 import { computeDiff } from '../diff.ts';
@@ -45,6 +49,24 @@ function toStored(action: ActionForReplay): StoredAgentAction {
 
 const storedActions = actions.map(toStored);
 
+const TOOL_INPUT_HASH = 'c'.repeat(64);
+
+function observation(
+  target: ActionForReplay,
+  event: 'pre_tool_use' | 'permission_request',
+  actionKey: string | null = target.actionKey,
+): ObservationForReplay {
+  return {
+    actionKey,
+    event,
+    sessionExternalId: target.sessionExternalId,
+    toolName: 'Bash',
+    toolInputHash: TOOL_INPUT_HASH,
+    hookDecision: null,
+    occurredAt: target.occurredAt,
+  };
+}
+
 interface FakeStore extends ReplayStore {
   readonly runs: Map<string, ReplayRun>;
 }
@@ -54,6 +76,7 @@ function makeStore(): FakeStore {
   const groups = new Map<string, StoredDiffGroup[]>();
   const matrices = new Map<string, readonly AuthorityMapCell[]>();
   const findings = new Map<string, readonly ConformanceFinding[]>();
+  const unpaired = new Map<string, number>();
   const completedNewestFirst = () =>
     [...runs.values()]
       .filter((run) => run.status === 'completed')
@@ -94,6 +117,7 @@ function makeStore(): FakeStore {
         input.findings.map(({ replayRunId: _replayRunId, ...finding }) => finding),
       );
       matrices.set(input.replayRunId, input.stats.matrix);
+      unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
       return Promise.resolve();
     },
     markFailed: (id, errorCode, completedAt) => {
@@ -129,8 +153,20 @@ function makeStore(): FakeStore {
       }
       return Promise.resolve(failed);
     },
-    findLatestCompletedRun: (kind) =>
-      Promise.resolve(completedNewestFirst().find((run) => run.kind === kind) ?? null),
+    findLatestConformanceRun: () => {
+      const run = completedNewestFirst().find((candidate) => candidate.kind === 'conformance');
+      return Promise.resolve(
+        run === undefined
+          ? null
+          : {
+              replayRunId: run.id,
+              candidateVersionId: run.candidateVersionId,
+              windowFrom: run.windowFrom,
+              windowTo: run.windowTo,
+              unpairedPermissionRequests: unpaired.get(run.id) ?? 0,
+            },
+      );
+    },
     listConformanceFindings: (id) => Promise.resolve(findings.get(id) ?? []),
     listCompletedRunsNewestFirst: () =>
       Promise.resolve(
@@ -365,13 +401,16 @@ describe('replay module', () => {
   });
 
   test('a conformance run lists its findings against the candidate version', async () => {
-    const pushAction = actions[1]?.actionKey ?? '';
+    const pushAction = actions[1];
+    if (pushAction === undefined) {
+      throw new Error('fixture has a push Action');
+    }
     const { module } = makeModule({
       reader: makeReader({
         getObservations: () =>
           Promise.resolve([
-            { actionKey: pushAction, event: 'pre_tool_use', hookDecision: null },
-            { actionKey: pushAction, event: 'permission_request', hookDecision: null },
+            observation(pushAction, 'pre_tool_use'),
+            observation(pushAction, 'permission_request', null),
           ]),
       }),
     });
@@ -404,8 +443,29 @@ describe('replay module', () => {
     ]);
   });
 
+  test('a conformance run reports the permission_requests no pre_tool_use matched', async () => {
+    const target = actions[0];
+    if (target === undefined) {
+      throw new Error('fixture has an Action');
+    }
+    const { module } = makeModule({
+      reader: makeReader({
+        getObservations: () => Promise.resolve([observation(target, 'permission_request', null)]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+    const listed = await module.listConformanceFindings();
+
+    expect(listed.run?.unpairedPermissionRequests).toBe(1);
+  });
+
   test('a new observation makes a repeated conformance request run again', async () => {
-    const observations: { actionKey: string; event: 'pre_tool_use'; hookDecision: null }[] = [];
+    const observations: ObservationForReplay[] = [];
     const { module } = makeModule({
       reader: makeReader({ getObservations: () => Promise.resolve([...observations]) }),
     });
@@ -414,11 +474,11 @@ describe('replay module', () => {
       throw new Error(first.error.code);
     }
     await first.value.execution;
-    observations.push({
-      actionKey: actions[0]?.actionKey ?? '',
-      event: 'pre_tool_use',
-      hookDecision: null,
-    });
+    const target = actions[0];
+    if (target === undefined) {
+      throw new Error('fixture has an Action');
+    }
+    observations.push(observation(target, 'pre_tool_use'));
 
     const second = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
 

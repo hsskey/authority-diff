@@ -9,12 +9,12 @@ import {
   type ConformanceFinding,
   type ReplayRun,
   type ReplayRunId,
-  type ReplayRunKind,
   type StoredConformanceFinding,
   type StoredDiffGroup,
 } from '../../schema.ts';
 import type {
   AuthorityMapRunView,
+  ConformanceRunView,
   DiffGroupsPage,
   FailStaleRunsInput,
   ListDiffGroupsQuery,
@@ -232,14 +232,24 @@ export function createReplayStore(database: Database): ReplayStore {
       });
     },
 
-    async findLatestCompletedRun(kind: ReplayRunKind): Promise<ReplayRun | null> {
+    async findLatestConformanceRun(): Promise<ConformanceRunView | null> {
       const [row] = await db
         .select()
         .from(replayRuns)
-        .where(and(eq(replayRuns.status, 'completed'), eq(replayRuns.kind, kind)))
+        .where(and(eq(replayRuns.status, 'completed'), eq(replayRuns.kind, 'conformance')))
         .orderBy(desc(replayRuns.completedAt), desc(replayRuns.id))
         .limit(1);
-      return row === undefined ? null : toRun(row);
+      if (row === undefined) {
+        return null;
+      }
+      const run = toRun(row);
+      return {
+        replayRunId: run.id,
+        candidateVersionId: run.candidateVersionId,
+        windowFrom: run.windowFrom,
+        windowTo: run.windowTo,
+        unpairedPermissionRequests: row.stats?.unpairedPermissionRequests ?? 0,
+      };
     },
 
     async listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]> {

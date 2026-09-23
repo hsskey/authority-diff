@@ -55,6 +55,7 @@ export interface ConformanceFindingsView {
     readonly policyVersionId: PolicyVersionId;
     readonly windowFrom: IsoTimestamp;
     readonly windowTo: IsoTimestamp;
+    readonly unpairedPermissionRequests: number;
   } | null;
   readonly items: readonly ConformanceFinding[];
 }
@@ -164,10 +165,10 @@ async function collectObservations(
   reader: ActionReader,
   actions: readonly ActionForReplay[],
 ): Promise<ObservationForReplay[]> {
+  const sessions = [...new Set(actions.map((action) => action.sessionExternalId))];
   const observations: ObservationForReplay[] = [];
-  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
-    const keys = actions.slice(i, i + BATCH_SIZE).map((action) => action.actionKey);
-    observations.push(...(await reader.getObservations(keys)));
+  for (let i = 0; i < sessions.length; i += BATCH_SIZE) {
+    observations.push(...(await reader.getObservations(sessions.slice(i, i + BATCH_SIZE))));
   }
   return observations;
 }
@@ -318,7 +319,11 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           const result = computeConformanceWith(evaluateCandidate, actions, observations);
           return {
             resultHash: result.resultHash,
-            stats: { ...result.stats, matrix: buildMatrix(actions, evaluateCandidate) },
+            stats: {
+              ...result.stats,
+              matrix: buildMatrix(actions, evaluateCandidate),
+              unpairedPermissionRequests: result.unpairedPermissionRequests,
+            },
             groups: [],
             changedActions: [],
             findings: result.findings.map((finding) => ({ ...finding, replayRunId: run.id })),
@@ -329,18 +334,19 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
     },
 
     async listConformanceFindings() {
-      const run = await store.findLatestCompletedRun('conformance');
+      const run = await store.findLatestConformanceRun();
       if (run === null) {
         return { run: null, items: [] };
       }
       return {
         run: {
-          replayRunId: run.id,
+          replayRunId: run.replayRunId,
           policyVersionId: run.candidateVersionId,
           windowFrom: run.windowFrom,
           windowTo: run.windowTo,
+          unpairedPermissionRequests: run.unpairedPermissionRequests,
         },
-        items: await store.listConformanceFindings(run.id),
+        items: await store.listConformanceFindings(run.replayRunId),
       };
     },
 

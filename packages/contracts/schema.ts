@@ -259,6 +259,8 @@ export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 // GET /conformance-findings
 // The findings of the most recent completed conformance run; the run carries
 // the candidate version and window, so the request takes no query parameters.
+// unpairedPermissionRequests counts the run's permission_requests that no
+// pre_tool_use matched, so they could not reach any Action's Disposition.
 export const ConformanceFindingResponseSchema = ConformanceFindingSchema;
 export type ConformanceFindingResponse = z.infer<typeof ConformanceFindingResponseSchema>;
 
@@ -269,6 +271,7 @@ export const ListConformanceFindingsResponseSchema = z.object({
       policyVersionId: PolicyVersionIdSchema,
       windowFrom: IsoTimestampSchema,
       windowTo: IsoTimestampSchema,
+      unpairedPermissionRequests: z.number().int().nonnegative(),
     })
     .nullable(),
   items: z.array(ConformanceFindingResponseSchema),
