@@ -440,7 +440,7 @@ Target Architecture의 완성이 아닙니다.
 6. 판정이 끝나지 않은 Widening group이 있으면 수락되지 않습니다(I7).
 7. 수락 또는 반려가 `review_decisions`에 hash와 함께 남고 Evidence report에 5장의 고정 문구가 들어갑니다.
 8. demo에서 `github.com/*` 실수의 critical Widening 장면이 나옵니다. 실제 기록에서 나오면 그것을 쓰고, 나오지 않으면 `synthetic` label이 붙은 별도 danger fixture로 시연하며 실제 기록과 같은 review에 섞지 않습니다. 화면, Evidence report, README에 provenance, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준)을 적고, 등급보다 강한 표현을 쓰지 않습니다.
-9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm e2e`가 CI에서 통과합니다.
+9. `pnpm check`(typecheck, lint, 경계 규칙, unit과 property test, laundering rate 0)와 `pnpm test:e2e`가 CI에서 통과합니다.
 10. `docs/evidence`에 실제 기록 측정, diff와 예상 목록, classifier benchmark(C1 100건), 검증 지표 표가 있습니다.
 11. README에 한계가 적혀 있습니다.
     한 사람의 기록, 단일 runtime, 근사인 remote 해석, runtime 동작과의 일치를 측정하지 않았다는 점, demo에 synthetic fixture를 썼는지, 실제 기록의 예상 밖 widening 유무, 결과 등급(강/중/약, 11장 핵심 journey 검증 기준), 13장의 목록.
