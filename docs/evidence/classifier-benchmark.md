@@ -1,3 +1,5 @@
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.1
+
 # Classifier benchmark
 
 This report covers the two classifier measurements from design 36.3: precision and recall on the C1 label corpus, and the laundering rate on the C2 risk corpus.
