@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./schema": "./schema.ts"
+    "./schema": "./schema.ts",
+    "./routes": "./routes.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

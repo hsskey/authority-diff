@@ -8,151 +8,155 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root';
-import { Route as IndexRouteImport } from './routes/index';
-import { Route as LoginRouteImport } from './routes/login';
-import { Route as ChangeReviewsReviewIdRouteImport } from './routes/change-reviews/$reviewId';
-import { Route as ChangeReviewsReviewIdGroupsGroupKeyRouteImport } from './routes/change-reviews/$reviewId/groups/$groupKey';
-import { Route as PoliciesPolicyIdVersionsVersionIdRouteImport } from './routes/policies/$policyId/versions/$versionId';
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ChangeReviewsReviewIdRouteImport } from './routes/change-reviews/$reviewId'
+import { Route as ChangeReviewsReviewIdGroupsGroupKeyRouteImport } from './routes/change-reviews/$reviewId/groups/$groupKey'
+import { Route as PoliciesPolicyIdVersionsVersionIdRouteImport } from './routes/policies/$policyId/versions/$versionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ChangeReviewsReviewIdRoute = ChangeReviewsReviewIdRouteImport.update({
   id: '/change-reviews/$reviewId',
   path: '/change-reviews/$reviewId',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ChangeReviewsReviewIdGroupsGroupKeyRoute =
   ChangeReviewsReviewIdGroupsGroupKeyRouteImport.update({
     id: '/groups/$groupKey',
     path: '/groups/$groupKey',
     getParentRoute: () => ChangeReviewsReviewIdRoute,
-  } as any);
-const PoliciesPolicyIdVersionsVersionIdRoute = PoliciesPolicyIdVersionsVersionIdRouteImport.update({
-  id: '/policies/$policyId/versions/$versionId',
-  path: '/policies/$policyId/versions/$versionId',
-  getParentRoute: () => rootRouteImport,
-} as any);
+  } as any)
+const PoliciesPolicyIdVersionsVersionIdRoute =
+  PoliciesPolicyIdVersionsVersionIdRouteImport.update({
+    id: '/policies/$policyId/versions/$versionId',
+    path: '/policies/$policyId/versions/$versionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute;
-  '/login': typeof LoginRoute;
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren;
-  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute;
-  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute;
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
+  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute;
-  '/login': typeof LoginRoute;
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren;
-  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute;
-  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute;
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
+  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  '/': typeof IndexRoute;
-  '/login': typeof LoginRoute;
-  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren;
-  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute;
-  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/change-reviews/$reviewId': typeof ChangeReviewsReviewIdRouteWithChildren
+  '/change-reviews/$reviewId/groups/$groupKey': typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
+  '/policies/$policyId/versions/$versionId': typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
     | '/change-reviews/$reviewId'
     | '/change-reviews/$reviewId/groups/$groupKey'
-    | '/policies/$policyId/versions/$versionId';
-  fileRoutesByTo: FileRoutesByTo;
+    | '/policies/$policyId/versions/$versionId'
+  fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/change-reviews/$reviewId'
     | '/change-reviews/$reviewId/groups/$groupKey'
-    | '/policies/$policyId/versions/$versionId';
+    | '/policies/$policyId/versions/$versionId'
   id:
     | '__root__'
     | '/'
     | '/login'
     | '/change-reviews/$reviewId'
     | '/change-reviews/$reviewId/groups/$groupKey'
-    | '/policies/$policyId/versions/$versionId';
-  fileRoutesById: FileRoutesById;
+    | '/policies/$policyId/versions/$versionId'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  LoginRoute: typeof LoginRoute;
-  ChangeReviewsReviewIdRoute: typeof ChangeReviewsReviewIdRouteWithChildren;
-  PoliciesPolicyIdVersionsVersionIdRoute: typeof PoliciesPolicyIdVersionsVersionIdRoute;
+  IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  ChangeReviewsReviewIdRoute: typeof ChangeReviewsReviewIdRouteWithChildren
+  PoliciesPolicyIdVersionsVersionIdRoute: typeof PoliciesPolicyIdVersionsVersionIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/': {
-      id: '/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
-      id: '/login';
-      path: '/login';
-      fullPath: '/login';
-      preLoaderRoute: typeof LoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/change-reviews/$reviewId': {
-      id: '/change-reviews/$reviewId';
-      path: '/change-reviews/$reviewId';
-      fullPath: '/change-reviews/$reviewId';
-      preLoaderRoute: typeof ChangeReviewsReviewIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/change-reviews/$reviewId'
+      path: '/change-reviews/$reviewId'
+      fullPath: '/change-reviews/$reviewId'
+      preLoaderRoute: typeof ChangeReviewsReviewIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/change-reviews/$reviewId/groups/$groupKey': {
-      id: '/change-reviews/$reviewId/groups/$groupKey';
-      path: '/groups/$groupKey';
-      fullPath: '/change-reviews/$reviewId/groups/$groupKey';
-      preLoaderRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRouteImport;
-      parentRoute: typeof ChangeReviewsReviewIdRoute;
-    };
+      id: '/change-reviews/$reviewId/groups/$groupKey'
+      path: '/groups/$groupKey'
+      fullPath: '/change-reviews/$reviewId/groups/$groupKey'
+      preLoaderRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRouteImport
+      parentRoute: typeof ChangeReviewsReviewIdRoute
+    }
     '/policies/$policyId/versions/$versionId': {
-      id: '/policies/$policyId/versions/$versionId';
-      path: '/policies/$policyId/versions/$versionId';
-      fullPath: '/policies/$policyId/versions/$versionId';
-      preLoaderRoute: typeof PoliciesPolicyIdVersionsVersionIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/policies/$policyId/versions/$versionId'
+      path: '/policies/$policyId/versions/$versionId'
+      fullPath: '/policies/$policyId/versions/$versionId'
+      preLoaderRoute: typeof PoliciesPolicyIdVersionsVersionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface ChangeReviewsReviewIdRouteChildren {
-  ChangeReviewsReviewIdGroupsGroupKeyRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRoute;
+  ChangeReviewsReviewIdGroupsGroupKeyRoute: typeof ChangeReviewsReviewIdGroupsGroupKeyRoute
 }
 
 const ChangeReviewsReviewIdRouteChildren: ChangeReviewsReviewIdRouteChildren = {
-  ChangeReviewsReviewIdGroupsGroupKeyRoute: ChangeReviewsReviewIdGroupsGroupKeyRoute,
-};
+  ChangeReviewsReviewIdGroupsGroupKeyRoute:
+    ChangeReviewsReviewIdGroupsGroupKeyRoute,
+}
 
-const ChangeReviewsReviewIdRouteWithChildren = ChangeReviewsReviewIdRoute._addFileChildren(
-  ChangeReviewsReviewIdRouteChildren,
-);
+const ChangeReviewsReviewIdRouteWithChildren =
+  ChangeReviewsReviewIdRoute._addFileChildren(
+    ChangeReviewsReviewIdRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ChangeReviewsReviewIdRoute: ChangeReviewsReviewIdRouteWithChildren,
-  PoliciesPolicyIdVersionsVersionIdRoute: PoliciesPolicyIdVersionsVersionIdRoute,
-};
+  PoliciesPolicyIdVersionsVersionIdRoute:
+    PoliciesPolicyIdVersionsVersionIdRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

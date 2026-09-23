@@ -219,11 +219,9 @@ export const DiffGroupSamplesResponseSchema = z.object({
 export type DiffGroupSamplesResponse = z.infer<typeof DiffGroupSamplesResponseSchema>;
 
 // GET /authority-map
-export const AuthorityMapQuerySchema = z.object({
-  windowDays: z.coerce.number().int().positive().default(30),
-});
-export type AuthorityMapQuery = z.infer<typeof AuthorityMapQuerySchema>;
-
+// The map is the most recent completed run for the accepted baseline; its
+// period is carried by the run's windowFrom/windowTo, so the request takes no
+// query parameters.
 export const AuthorityMapCellSchema = z.object({
   capability: CapabilitySchema,
   zone: ZoneSchema,
