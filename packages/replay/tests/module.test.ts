@@ -12,7 +12,7 @@ import type {
   StoredAgentAction,
 } from '@authority/trace/schema';
 import { assembleReplayModule } from '../index.ts';
-import type { AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
+import type { AnalyzabilityCounts, AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
 import { computeDiff } from '../diff.ts';
 import { ReplayRunIdSchema } from '../schema.ts';
 import type { ConformanceFinding, ReplayRun, StoredDiffGroup } from '../schema.ts';
@@ -75,6 +75,7 @@ function makeStore(): FakeStore {
   const runs = new Map<string, ReplayRun>();
   const groups = new Map<string, StoredDiffGroup[]>();
   const matrices = new Map<string, readonly AuthorityMapCell[]>();
+  const analyzabilityCounts = new Map<string, AnalyzabilityCounts>();
   const findings = new Map<string, readonly ConformanceFinding[]>();
   const unpaired = new Map<string, number>();
   const completedNewestFirst = () =>
@@ -117,6 +118,7 @@ function makeStore(): FakeStore {
         input.findings.map(({ replayRunId: _replayRunId, ...finding }) => finding),
       );
       matrices.set(input.replayRunId, input.stats.matrix);
+      analyzabilityCounts.set(input.replayRunId, input.stats.analyzability);
       unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
       return Promise.resolve();
     },
@@ -178,6 +180,7 @@ function makeStore(): FakeStore {
             windowFrom: run.windowFrom,
             windowTo: run.windowTo,
             matrix: matrices.get(run.id) ?? [],
+            analyzability: analyzabilityCounts.get(run.id) ?? { full: 0, partial: 0, none: 0 },
           })),
       ),
   };
@@ -361,6 +364,7 @@ describe('replay module', () => {
     expect(map.run?.policyVersionId).toBe(candidateVersionId);
     const total = map.cells.reduce((sum, cell) => sum + cell.count, 0);
     expect(total).toBe(3);
+    expect(map.analyzability).toEqual({ full: 2, partial: 0, none: 1 });
   });
 
   test('authority-map returns run null when no completed run candidate is accepted', async () => {
@@ -371,6 +375,7 @@ describe('replay module', () => {
 
     expect(map.run).toBeNull();
     expect(map.cells).toEqual([]);
+    expect(map.analyzability).toEqual({ full: 0, partial: 0, none: 0 });
   });
 
   test('recoverInterruptedRuns fails a run left running past 60 seconds', async () => {

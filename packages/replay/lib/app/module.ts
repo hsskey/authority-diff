@@ -18,8 +18,8 @@ import type {
   StoredChangedAction,
   StoredDiffGroup,
 } from '../../schema.ts';
-import { buildMatrix } from '../domain/build-matrix.ts';
-import type { AuthorityMapCell } from '../domain/build-matrix.ts';
+import { buildAnalyzabilityCounts, buildMatrix } from '../domain/build-matrix.ts';
+import type { AnalyzabilityCounts, AuthorityMapCell } from '../domain/build-matrix.ts';
 import { computeConformanceWith } from '../domain/compute-conformance.ts';
 import { computeDiffWith } from '../domain/compute-diff.ts';
 import type { PolicyReader, RecordCompletionInput, ReplayStore } from './ports.ts';
@@ -74,6 +74,7 @@ export interface AuthorityMapView {
     readonly windowTo: IsoTimestamp;
   } | null;
   readonly cells: readonly AuthorityMapCell[];
+  readonly analyzability: AnalyzabilityCounts;
 }
 
 export interface ListDiffGroupsInput {
@@ -281,7 +282,11 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         );
         return {
           resultHash: diff.resultHash,
-          stats: { ...diff.stats, matrix: buildMatrix(actions, evaluateCandidate) },
+          stats: {
+            ...diff.stats,
+            matrix: buildMatrix(actions, evaluateCandidate),
+            analyzability: buildAnalyzabilityCounts(actions, evaluateCandidate),
+          },
           groups: diff.groups.map((group): StoredDiffGroup => ({ ...group, replayRunId: run.id })),
           changedActions: diff.changedActions.map((changed): StoredChangedAction => ({
             ...changed,
@@ -333,6 +338,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
             stats: {
               ...result.stats,
               matrix: buildMatrix(actions, evaluateCandidate),
+              analyzability: buildAnalyzabilityCounts(actions, evaluateCandidate),
               unpairedPermissionRequests: result.unpairedPermissionRequests,
             },
             groups: [],
@@ -428,10 +434,11 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
               windowTo: candidate.windowTo,
             },
             cells: candidate.matrix,
+            analyzability: candidate.analyzability,
           };
         }
       }
-      return { run: null, cells: [] };
+      return { run: null, cells: [], analyzability: { full: 0, partial: 0, none: 0 } };
     },
 
     async recoverInterruptedRuns() {

@@ -14,14 +14,16 @@ import type {
   StoredConformanceFinding,
   StoredDiffGroup,
 } from '../../schema.ts';
-import type { AuthorityMapCell } from '../domain/build-matrix.ts';
+import type { AnalyzabilityCounts, AuthorityMapCell } from '../domain/build-matrix.ts';
 
 /**
- * The stored `stats` jsonb: the diff core's stats plus the authority-map matrix,
- * and for a conformance run the permission_requests left without a pre_tool_use.
+ * The stored `stats` jsonb: the diff core's stats plus the authority-map matrix
+ * and analyzability counts, and for a conformance run the permission_requests
+ * left without a pre_tool_use.
  */
 export interface StoredReplayStats extends ReplayStats {
   readonly matrix: readonly AuthorityMapCell[];
+  readonly analyzability: AnalyzabilityCounts;
   readonly unpairedPermissionRequests?: number;
 }
 
@@ -66,13 +68,14 @@ export interface FailStaleRunsInput {
   readonly errorCode: string;
 }
 
-/** A completed run and its stored matrix, for the authority-map query. */
+/** A completed run and its stored matrix and analyzability counts, for the authority-map query. */
 export interface AuthorityMapRunView {
   readonly replayRunId: ReplayRunId;
   readonly candidateVersionId: PolicyVersionId;
   readonly windowFrom: IsoTimestamp;
   readonly windowTo: IsoTimestamp;
   readonly matrix: readonly AuthorityMapCell[];
+  readonly analyzability: AnalyzabilityCounts;
 }
 
 /** The most recent completed conformance run. */

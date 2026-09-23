@@ -52,7 +52,10 @@ function runInsertValues(run: ReplayRun): RunRow {
     classifierVersion: run.classifierVersion,
     inputsHash: run.inputsHash,
     resultHash: run.resultHash,
-    stats: run.stats === null ? null : { ...run.stats, matrix: [] },
+    stats:
+      run.stats === null
+        ? null
+        : { ...run.stats, matrix: [], analyzability: { full: 0, partial: 0, none: 0 } },
     errorCode: run.errorCode,
     createdAt: run.createdAt,
     startedAt: run.startedAt,
@@ -228,6 +231,7 @@ export function createReplayStore(database: Database): ReplayStore {
           windowFrom: run.windowFrom,
           windowTo: run.windowTo,
           matrix: row.stats?.matrix ?? [],
+          analyzability: row.stats?.analyzability ?? { full: 0, partial: 0, none: 0 },
         };
       });
     },
