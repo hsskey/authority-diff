@@ -1,0 +1,1309 @@
+{
+  "note": "C1 label corpus. 100 synthetic ToolCalls reconstructed from public writeups of coding-agent shell usage; structure mirrors real inputs, all content is invented. expect is the human-authored complete set of Operation labels (capability/targetKind pairs) for the input. The classifier benchmark measures precision and recall against these labels per capability (design 36.3).",
+  "cases": [
+    {
+      "name": "cat-source-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cat src/index.ts"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "head-log",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "head -n 50 build.log"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "tail-follow-log",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "tail -f server.log"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "grep-recursive",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "grep -rn TODO src"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "ripgrep-pattern",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rg \"function\" src"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "wc-lines",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "wc -l package.json"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "less-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "less README.md"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-status",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git status"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-diff",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git diff HEAD~1"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-log-oneline",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git log --oneline -20"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-show",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git show HEAD"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "ls-long",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "ls -la"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "stat-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "stat package.json"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "file-type",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "file dist/app"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "diff-two-files",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "diff a.txt b.txt"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "cat-dotenv-credentials",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cat .env"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "read-ssh-key",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cat ~/.ssh/id_rsa"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "grep-pipe-count",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cat access.log | grep 500 | wc -l"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "sed-print",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "sed -n \"1,10p\" file.txt"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "sort-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "sort names.txt"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "du-usage",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "du -sh dist"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "echo-redirect",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "echo \"hello\" > notes.txt"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "append-redirect",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "echo \"more\" >> notes.txt"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "tee-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "echo \"x\" | tee out.txt"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "touch-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "touch newfile.ts"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "sed-in-place",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "sed -i \"s/a/b/\" config.yaml"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "mkdir-dir",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "mkdir -p src/new"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "cp-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cp a.txt b.txt"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        },
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "mv-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "mv old.txt new.txt"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "mktemp-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "mktemp /tmp/build.XXXX"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "chmod-exec",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "chmod +x run.sh"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "write-agent-config",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "echo config > .claude/settings.json"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "tar-extract",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "tar xzf archive.tgz"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "tar-create",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "tar czf out.tgz src"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "unzip-archive",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "unzip bundle.zip -d out"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "rm-file",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rm stale.log"
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "rm-rf-dir",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rm -rf dist"
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "rmdir",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rmdir emptydir"
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-clean",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git clean -fd"
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "rm-var",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rm -rf \"$OUT\""
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "find-delete",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "find . -name \"*.tmp\" -delete"
+      },
+      "expect": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "pnpm-test",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "pnpm test"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "npm-run-build",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "npm run build"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "node-script",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "node scripts/seed.js"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "python-script",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "python3 scripts/report.py"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "make-target",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "make build"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "run-shell-script",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "./deploy-local.sh"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "docker-build",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "docker build -t app ."
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "go-test",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "go test ./..."
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "cargo-build",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cargo build --release"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "vitest-run",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "vitest run"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "eval-var",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "eval \"$CMD\""
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "env-run",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "env NODE_ENV=test node app.js"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "npm-install",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "npm install"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "pnpm-add",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "pnpm add zod"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "pip-install",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "pip install flask"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "cargo-add",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cargo add serde"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "go-get",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "go get github.com/pkg/errors"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "brew-install",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "brew install jq"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "apt-get-install",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "apt-get install -y curl"
+      },
+      "expect": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "git-clone",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git clone https://github.com/acme/toolkit.git"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "git-fetch",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git fetch origin"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "git-pull",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git pull origin main"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "curl-download",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "curl -O https://example.com/tool.tar.gz"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "wget-download",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "wget https://example.com/data.csv"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "git-ls-remote",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git ls-remote origin"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "curl-post",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "curl -X POST -d @body.json https://api.example.com/v1"
+      },
+      "expect": [
+        {
+          "capability": "send",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "scp-upload",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "scp report.pdf user@host.example.com:/tmp"
+      },
+      "expect": [
+        {
+          "capability": "send",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "rsync-push",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rsync -a ./dist user@host.example.com:/srv"
+      },
+      "expect": [
+        {
+          "capability": "send",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "curl-put",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "curl -T file.txt https://files.example.com/up"
+      },
+      "expect": [
+        {
+          "capability": "send",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "git-commit",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git commit -m \"fix bug\""
+      },
+      "expect": [
+        {
+          "capability": "commit",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-add",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git add -A"
+      },
+      "expect": [
+        {
+          "capability": "commit",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-init",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git init"
+      },
+      "expect": [
+        {
+          "capability": "commit",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-tag",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git tag v1.0.0"
+      },
+      "expect": [
+        {
+          "capability": "commit",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-stash",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git stash"
+      },
+      "expect": [
+        {
+          "capability": "commit",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-push",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git push origin feature"
+      },
+      "expect": [
+        {
+          "capability": "push",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "docker-push",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "docker push registry.example.com/app:1"
+      },
+      "expect": [
+        {
+          "capability": "push",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "npm-publish",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "npm publish"
+      },
+      "expect": [
+        {
+          "capability": "push",
+          "targetKind": "package"
+        }
+      ]
+    },
+    {
+      "name": "git-push-tags",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git push --tags origin"
+      },
+      "expect": [
+        {
+          "capability": "push",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "git-reset-hard",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git reset --hard HEAD~1"
+      },
+      "expect": [
+        {
+          "capability": "rewrite",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-commit-amend",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git commit --amend -m \"x\""
+      },
+      "expect": [
+        {
+          "capability": "rewrite",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-rebase",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git rebase -i main"
+      },
+      "expect": [
+        {
+          "capability": "rewrite",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "git-push-force",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git push --force origin feature"
+      },
+      "expect": [
+        {
+          "capability": "rewrite",
+          "targetKind": "vcs_remote"
+        }
+      ]
+    },
+    {
+      "name": "kubectl-apply",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "kubectl apply -f k8s/app.yaml"
+      },
+      "expect": [
+        {
+          "capability": "deploy",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "terraform-apply",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "terraform apply -auto-approve"
+      },
+      "expect": [
+        {
+          "capability": "deploy",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "helm-install",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "helm install app ./chart"
+      },
+      "expect": [
+        {
+          "capability": "deploy",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "kubectl-rollout",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "kubectl rollout restart deployment/app"
+      },
+      "expect": [
+        {
+          "capability": "deploy",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "read-tool",
+      "input": {
+        "toolName": "Read",
+        "toolInputRedacted": "{\"file_path\":\"/work/repo/src/a.ts\"}"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "write-tool",
+      "input": {
+        "toolName": "Write",
+        "toolInputRedacted": "{\"file_path\":\"/work/repo/src/b.ts\",\"content\":\"x\"}"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "edit-tool",
+      "input": {
+        "toolName": "Edit",
+        "toolInputRedacted": "{\"file_path\":\"/work/repo/src/c.ts\",\"old_string\":\"a\",\"new_string\":\"b\"}"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "grep-tool",
+      "input": {
+        "toolName": "Grep",
+        "toolInputRedacted": "{\"pattern\":\"foo\",\"path\":\"src\"}"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "glob-tool",
+      "input": {
+        "toolName": "Glob",
+        "toolInputRedacted": "{\"pattern\":\"**/*.ts\"}"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "ls-tool",
+      "input": {
+        "toolName": "LS",
+        "toolInputRedacted": "{\"path\":\"/work/repo\"}"
+      },
+      "expect": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "webfetch-tool",
+      "input": {
+        "toolName": "WebFetch",
+        "toolInputRedacted": "{\"url\":\"https://example.com/doc\"}"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "host"
+        }
+      ]
+    },
+    {
+      "name": "websearch-tool",
+      "input": {
+        "toolName": "WebSearch",
+        "toolInputRedacted": "{\"query\":\"zod docs\"}"
+      },
+      "expect": [
+        {
+          "capability": "fetch",
+          "targetKind": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "multiedit-tool",
+      "input": {
+        "toolName": "MultiEdit",
+        "toolInputRedacted": "{\"file_path\":\"/work/repo/src/d.ts\",\"edits\":[]}"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "notebook-edit-tool",
+      "input": {
+        "toolName": "NotebookEdit",
+        "toolInputRedacted": "{\"notebook_path\":\"/work/repo/nb.ipynb\",\"new_source\":\"x\"}"
+      },
+      "expect": [
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ]
+    },
+    {
+      "name": "mcp-github-tool",
+      "input": {
+        "toolName": "mcp__github__create_issue",
+        "toolInputRedacted": "{\"title\":\"x\"}"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "mcp"
+        }
+      ]
+    },
+    {
+      "name": "mcp-slack-tool",
+      "input": {
+        "toolName": "mcp__slack__post_message",
+        "toolInputRedacted": "{\"channel\":\"x\"}"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "mcp"
+        }
+      ]
+    },
+    {
+      "name": "unknown-tool",
+      "input": {
+        "toolName": "SomeUnknownTool",
+        "toolInputRedacted": "{}"
+      },
+      "expect": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ]
+    }
+  ]
+}
