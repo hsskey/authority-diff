@@ -1,4 +1,4 @@
-export function LoadingState({ label = 'Loading' }: { label?: string }) {
+export function LoadingState({ label = '불러오는 중' }: { label?: string }) {
   return (
     <div className="panel" role="status" aria-live="polite">
       <p className="state-message">{label}</p>

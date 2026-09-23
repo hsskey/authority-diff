@@ -26,11 +26,11 @@ function ConformanceFindingListPage() {
   return (
     <section>
       <h1 className="page-title">적합성</h1>
-      {findingsQuery.isPending ? <LoadingState label="Loading conformance findings" /> : null}
+      {findingsQuery.isPending ? <LoadingState label="Conformance Finding을 불러오는 중" /> : null}
       {findingsQuery.isError ? (
         <ErrorState
-          title="Could not load conformance findings"
-          message={findingsQuery.error?.message ?? 'An unexpected error occurred'}
+          title="Conformance Finding을 불러오지 못했습니다"
+          message={findingsQuery.error?.message ?? '알 수 없는 오류'}
         />
       ) : null}
       {findingsQuery.isSuccess ? <FindingList findings={findingsQuery.data} /> : null}
@@ -46,8 +46,8 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
   if (findings.run === null) {
     return (
       <EmptyState
-        title="No observations compared yet"
-        message="Findings appear once a conformance run compares runtime observations with a policy version."
+        title="아직 비교한 runtime 관측이 없습니다"
+        message="conformance run이 runtime 관측과 Policy Version을 비교하면 finding이 여기에 나타납니다."
       />
     );
   }
@@ -56,41 +56,41 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
     <div className="stack">
       <dl className="meta-grid panel">
         <div>
-          <dt>Policy version</dt>
+          <dt>Policy Version</dt>
           <dd className="mono">{findings.run.policyVersionId}</dd>
         </div>
         <div>
-          <dt>Window</dt>
+          <dt>기간</dt>
           <dd>
             {findings.run.windowFrom} → {findings.run.windowTo}
           </dd>
         </div>
         <div>
-          <dt>Replay run</dt>
+          <dt>Replay Run</dt>
           <dd className="mono">{findings.run.replayRunId}</dd>
         </div>
       </dl>
 
       {findings.items.length === 0 ? (
         <EmptyState
-          title="No findings"
-          message="Every observed action matched the policy version in this run."
+          title="finding 없음"
+          message="이 run에서 관측된 모든 Action이 Policy Version과 일치했습니다."
         />
       ) : (
         <div className="table-scroll">
           <table className="data-table">
-            <caption>{findings.items.length} findings, times in UTC</caption>
+            <caption>finding {findings.items.length}건, 시각은 UTC</caption>
             <thead>
               <tr>
-                <th scope="col">Kind</th>
+                <th scope="col">종류</th>
                 <th scope="col">Capability</th>
                 <th scope="col">Zone</th>
                 <th scope="col">Program</th>
                 <th scope="col" className="num">
-                  Actions
+                  Action
                 </th>
-                <th scope="col">First seen</th>
-                <th scope="col">Last seen</th>
+                <th scope="col">최초</th>
+                <th scope="col">최근</th>
               </tr>
             </thead>
             <tbody>

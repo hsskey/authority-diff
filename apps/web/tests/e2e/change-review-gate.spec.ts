@@ -51,7 +51,7 @@ function reviewWithGate(blocker: { code: string; count: number }): unknown {
 
 const WIDENING_BLOCKER_CASES: { code: string; text: string }[] = [
   { code: 'widening_unreviewed', text: '판정하지 않은 group 1개' },
-  { code: 'widening_investigate', text: 'investigate로 남은 group 1개' },
+  { code: 'widening_investigate', text: '조사 필요로 남은 group 1개' },
   {
     code: 'widening_unexpected',
     text: '예상 밖으로 판정된 group 1개. 정책을 고쳐 새 review를 만드세요',
