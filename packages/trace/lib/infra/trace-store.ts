@@ -132,6 +132,19 @@ export function createTraceStore(database: Database): TraceStore {
       return { acceptedCount: returned.length, duplicateCount: batch.length - returned.length };
     },
 
+    async listObservationSessions(query: WindowQuery): Promise<readonly string[]> {
+      const rows = await db
+        .selectDistinct({ sessionExternalId: runtimeObservations.sessionExternalId })
+        .from(runtimeObservations)
+        .where(
+          and(
+            gte(runtimeObservations.occurredAt, query.from),
+            lte(runtimeObservations.occurredAt, query.to),
+          ),
+        );
+      return rows.map((row) => row.sessionExternalId);
+    },
+
     async getObservations(
       sessionExternalIds: readonly string[],
     ): Promise<readonly ObservationForReplay[]> {

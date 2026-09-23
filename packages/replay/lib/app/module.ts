@@ -164,11 +164,16 @@ function lastActionKeyOf(actions: readonly ActionForReplay[]): string {
 async function collectObservations(
   reader: ActionReader,
   actions: readonly ActionForReplay[],
+  window: { from: IsoTimestamp; to: IsoTimestamp },
 ): Promise<ObservationForReplay[]> {
-  const sessions = [...new Set(actions.map((action) => action.sessionExternalId))];
+  const sessions = new Set(actions.map((action) => action.sessionExternalId));
+  for (const sessionExternalId of await reader.listObservationSessions(window)) {
+    sessions.add(sessionExternalId);
+  }
+  const sessionList = [...sessions];
   const observations: ObservationForReplay[] = [];
-  for (let i = 0; i < sessions.length; i += BATCH_SIZE) {
-    observations.push(...(await reader.getObservations(sessions.slice(i, i + BATCH_SIZE))));
+  for (let i = 0; i < sessionList.length; i += BATCH_SIZE) {
+    observations.push(...(await reader.getObservations(sessionList.slice(i, i + BATCH_SIZE))));
   }
   return observations;
 }
@@ -298,7 +303,10 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         return prepared;
       }
       const actions = prepared.value;
-      const observations = await collectObservations(reader, actions);
+      const observations = await collectObservations(reader, actions, {
+        from: input.windowFrom,
+        to: input.windowTo,
+      });
       const inputsHash = sha256Hex(
         canonicalJson([
           'observed_runtime',
