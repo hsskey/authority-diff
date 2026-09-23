@@ -34,7 +34,7 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 That is what the Policy says about this corpus, reported as-is.
 Reviewing the whole preview took 23 Verdicts, one per Adoption Group.
-The fresh-volume re-run of the journey showed the same figures on screen.
+The fresh-volume re-run of the journey showed the same figures on screen; the deny tile rounds to `0.1%` because tiles show one decimal, and the count 20 is exact.
 
 ### Change Review (github.com/** scene)
 

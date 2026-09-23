@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.2; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `3c51b552…e157`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.2; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `f6601304…e3a7` (server), `3c51b552…e157` (local pipeline)
 
 # Adoption preview (first Policy)
 
@@ -92,12 +92,44 @@ Analyzability moved from 17,769 / 6,810 / 9,911 to 17,909 / 6,670 / 9,911 for th
 ## Determinism and consistency with the Change Review baseline
 
 - Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `3c51b5522a40cc88ad0b6b555b3fddc203aa68811b6c3d4aa6f3f404ad94e157` (502 ms and 535 ms).
+- Two server runs over the imported Actions gave the same `resultHash` `f6601304932d2c6dd1b3a9d1b61b6cb18501467bb53c20e8f72cf448607ee3a7`; the one-Session difference from the local value is explained under "Fresh-volume journey re-run".
 - The preview agrees with the Gate 2 A vs B replay on the same classifier: allow→allow 8,217 = allow; ask→allow 132 + ask→ask 26,121 = 26,253 = ask; deny→deny 20 = deny; evaluated 34,490 and excluded 450 in both (`docs/evidence/gate2-replay.md`).
 - The `resultHash` covers stats, the groups in group-key order (Program Summary included, Headline excluded), and the (actionKey, groupKey, effect) assignments in action-key order.
 
 ## Fresh-volume journey re-run
 
-TBD022_JOURNEY_SECTION
+Run on 2026-09-24 on a compose project of its own with an empty volume, server image built from the commit that carries classifier 0.2.2 and the chunked replay inserts, and the web app served from `apps/web` against that server.
+The maintainer's stack was not used.
+Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop times are Agent tool latency, not a person's reading time.
+
+| step | screen | result |
+| --- | --- | --- |
+| 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed; every Action carries classifier 0.2.2 |
+| 2 overview, no Policy | `/` | Session 665 (30-day window), Action 34,940, evaluable 34,490; analyzability 17,909 / 6,670 / 9,911 (51.9% / 19.3% / 28.7%); Capability, Target Kind, top program, and remote host tables; "아직 조직 정책이 없습니다" with "첫 조직 정책 만들기". No repository name on the screen |
+| 3 first Policy | version editor | draft version 1 from the default template; document replaced with policy A (content hash `f96ed41d…beb8`), "draft 저장", "검증: 통과" |
+| 4 adoption preview | review, `/` | review kind `adoption`, "기준 VERSION 없음 (최초 도입)", "판정 대기"; 평가한 action 34490 (전체 34940, 제외 450); tiles 허용 8217 23.8%, 확인 필요 26253 76.1%, 차단 20 0.1%; "확인 필요 group (21)", "차단 group (2)". `/` shows the same tiles under "도입 preview" with "최초 정책 설정 계속하기" |
+| 5 group detail | deny `read · credentials`, ask `execute · host` | Headlines "자격 증명에서의 읽기 13건이 이 정책에서 '차단' 대상이 됩니다." and "호스트에서의 실행 6322건이 이 정책에서 '확인 필요' 대상이 됩니다."; "Program 구성: 서로 다른 program 4개 / 117개"; outside the sample panel and the "기술 세부" toggle: 0 ruleId, 0 home path (checked on the DOM with those two removed) |
+| 6 verdicts | review | 23 selects set to 의도한 제한 one by one; the blocker counted down ("판정하지 않은 group 22개" … "12개"), then "Gate: 열림 / 승인을 막는 blocker가 없습니다."; "최초 정책 채택" stays disabled until a reviewer name is entered |
+| 7 adopt | review, `/` | status 채택됨, 결정 기록 "최초 정책 채택", 23 selects disabled, sentence "채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다."; version 1 `accepted` via the API; no 적용됨 / 활성화 / enforced on any screen. `/` shows "채택된 정책: version #1" |
+| 8 report | download | adoption Evidence Report: candidate hash, Replay inputsHash, resultHash `f6601304…e3a7`, 분석 규모, 정책 적용 결과, the two group tables with Verdicts, 결정, Decision Record sequence 1 and hash, audit tail, both notices; 0 ruleId |
+| 9 conformance | API + `/conformance` | spool copies flushed (2 files, 3,789 observations: pre_tool_use 3,666, session_end 121, permission_request 2); `conformance` run for the accepted version 1 completed; findings table on `/conformance` (violation and under_asked rows). Figures in `docs/evidence/conformance.md` |
+| 10 change review B' | version 2, review | draft 2 from the accepted version 1, document B' (`ebea9a23…0cc9`), "검증: 통과", "변경 검토 만들기"; kind `change`, baseline version 1, 평가 34,490, 넓어진 132, Widening group 7, resultHash `55a0cb73…cd18` (same as the local Gate 2 value); the two repo-02 groups `unknown_remote → trusted_remote` critical (gh 4 / 2 Sessions, git 2 / 2) |
+| 11 unexpected, reject, B, accept | review, version 3 | 5 groups 예상된 변화, the 2 repo-02 groups 예상 밖 → "Gate: blocker 1건 / 예상 밖으로 판정된 group 2개. 정책을 고쳐 새 review를 만드세요", accept disabled; 정책 변경 반려 with a reason → 반려됨; draft 3 from version 2 with B (`45197245…6515`) → review 넓어진 132, group 5, resultHash `55592458…c08b`; all 예상된 변화 → "Gate: 열림" → 정책 변경 수락 → 채택됨. Loop from the first unexpected Verdict to the accept: 114 s (Agent) |
+| 12 audit | CLI, `/` | `verify-audit` `{"isIntact": true, "checkedCount": 3, "firstBrokenSequence": null}`; chain 1 accept (baseline hash null, candidate `f96ed41d`) → 2 reject (`f96ed41d` → `ebea9a23`) → 3 accept (`f96ed41d` → `45197245`); `/` shows "채택된 정책: version #3" with the Effect distribution of the version 3 run (허용 8,349 24.2%, 확인 필요 26,121 75.7%, 차단 20) |
+
+The four figures match the measurement above: evaluated 34,490, ask 76.1%, deny 20 (rendered 0.1%), 23 Adoption Groups.
+Whole journey wall time including tool latency: 12 minutes.
+
+Server and local agreement: the server adoption run has the same stats, the same 23 group keys, the same Action counts, Program Summaries, Target Summaries, and sample keys as the local computation, and a second server run over the same Actions returned the same `resultHash` `f6601304…e3a7`.
+The server hash differs from the local `3c51b552…e157` by exactly one field: `ask · execute · host` has 571 Sessions on the server and 572 locally, because one Action whose tool-use id appears both in a Session transcript and in its sub-agent transcript is attributed to the parent Session by the import and to the sub-agent transcript by the local pipeline (which copy survives the duplicate removal depends on file order).
+Action counts and group keys are unaffected; the difference is recorded rather than hidden.
+
+Findings from this run (none blocks the journey):
+
+- After the first Policy is adopted, `/` shows "완료된 replay run이 없습니다" under the accepted Policy until a Change Review runs: the Effect distribution reads only `version_diff` runs, so neither the adoption run nor the conformance run of version 1 fills it. The E2E stub returns cells there, so the test does not see it.
+- The adoption Evidence Report lists Target keys of two path segments, and for a home directory the second segment is the operating-system user name; Remote Keys carry owner and repository names by design. The screens keep paths inside the sample panel. The report is meant to be shared, so its local-path Target keys need the same masking decision that the change-review report's local-path targets still wait for.
+- The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
+- The candidate stays `in_review` after a replay failure and returns to `draft` on the next read; there is no withdraw control (`docs/evidence/review-limitations.md`).
 
 ## Re-run procedure (fresh volume)
 
