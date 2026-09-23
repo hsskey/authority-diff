@@ -104,6 +104,16 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
       return Promise.resolve({ acceptedCount: inserted, duplicateCount: batch.length - inserted });
     },
 
+    listObservationSessions(query: WindowQuery): Promise<readonly string[]> {
+      const sessions = new Set<string>();
+      for (const observation of observations.values()) {
+        if (observation.occurredAt >= query.from && observation.occurredAt <= query.to) {
+          sessions.add(observation.sessionExternalId);
+        }
+      }
+      return Promise.resolve([...sessions]);
+    },
+
     getObservations(
       sessionExternalIds: readonly string[],
     ): Promise<readonly ObservationForReplay[]> {

@@ -192,6 +192,7 @@ function makeReader(overrides: Partial<ActionReader> = {}): ActionReader {
     getActions: (keys) =>
       Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
     countStaleClassifications: () => Promise.resolve(0),
+    listObservationSessions: () => Promise.resolve([]),
     getObservations: () => Promise.resolve([]),
     ...overrides,
   };
@@ -451,6 +452,35 @@ describe('replay module', () => {
     const { module } = makeModule({
       reader: makeReader({
         getObservations: () => Promise.resolve([observation(target, 'permission_request', null)]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+    const listed = await module.listConformanceFindings();
+
+    expect(listed.run?.unpairedPermissionRequests).toBe(1);
+  });
+
+  test('a permission_request with null tool identity in another Session inside the window counts as unpaired', async () => {
+    const orphanSession = 'orphan-session';
+    const orphanRequest: ObservationForReplay = {
+      actionKey: null,
+      event: 'permission_request',
+      sessionExternalId: orphanSession,
+      toolName: null,
+      toolInputHash: null,
+      hookDecision: null,
+      occurredAt: IsoTimestampSchema.parse('2026-01-02T02:46:00.000Z'),
+    };
+    const { module } = makeModule({
+      reader: makeReader({
+        listObservationSessions: () => Promise.resolve([orphanSession]),
+        getObservations: (sessionExternalIds) =>
+          Promise.resolve(sessionExternalIds.includes(orphanSession) ? [orphanRequest] : []),
       }),
     });
 
