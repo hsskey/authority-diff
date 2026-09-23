@@ -1,12 +1,8 @@
-import { ok } from '@authority/kernel';
+import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
 import type { PolicyIssue, PolicyVersionId } from '../../schema.ts';
 import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
-import {
-  createPolicyRepository,
-  type PolicyRepository,
-  type PolicyRepositoryDeps,
-} from './repository.ts';
+import type { PolicyRepository } from './repository.ts';
 
 export interface PolicyValidation {
   readonly isValid: boolean;
@@ -17,10 +13,32 @@ export interface PolicyModule extends PolicyRepository {
   validateVersion(id: PolicyVersionId): Promise<Result<PolicyValidation, AppError>>;
 }
 
-export function createPolicyModule(deps: PolicyRepositoryDeps): PolicyModule {
-  const repository = createPolicyRepository(deps);
+/**
+ * The organization has one Policy: a second `createPolicy` is refused with
+ * `policy.organization_policy_exists`, and when several rows exist none is
+ * picked. The store still allows several rows; ADR-0010 records why the
+ * constraint is not in the database.
+ */
+export function createPolicyModule(repository: PolicyRepository): PolicyModule {
   return {
     ...repository,
+    async createPolicy(input) {
+      const existing = await repository.listPolicies(null, 1);
+      if (!existing.ok) {
+        return existing;
+      }
+      const [first] = existing.value.items;
+      if (first !== undefined) {
+        return err({
+          code: 'policy.organization_policy_exists',
+          message: 'the organization already has a Policy',
+          isRetryable: false,
+          details: { policyId: first.id },
+          cause: null,
+        });
+      }
+      return repository.createPolicy(input);
+    },
     async validateVersion(id) {
       const version = await repository.getVersion(id);
       if (!version.ok) {

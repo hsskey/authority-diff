@@ -5,7 +5,7 @@ import {
   CreatePolicyVersionRequestSchema,
   UpdatePolicyVersionRequestSchema,
 } from '@authority/contracts/schema';
-import { createPolicyModule } from '@authority/policy';
+import { createPolicyModule, createPolicyRepository } from '@authority/policy';
 import type { PolicyModule, PolicyRepositoryDeps } from '@authority/policy';
 import { PolicyIdSchema, PolicyVersionIdSchema } from '@authority/policy/schema';
 import type { AppEnv } from '../http/env.ts';
@@ -58,7 +58,7 @@ export function registerPolicyRoutes(app: Hono<AppEnv>, policy: PolicyModule): v
     if (!result.ok) {
       return respondError(c, result.error);
     }
-    return c.json(result.value.policy, 201);
+    return c.json(result.value, 201);
   });
 
   app.get(`${API}/policies`, async (c) => {
@@ -153,6 +153,8 @@ export function registerPolicyRoutes(app: Hono<AppEnv>, policy: PolicyModule): v
 }
 
 export function wirePolicy(app: Hono<AppEnv>, deps: PolicyWiringDeps): void {
-  const policy = createPolicyModule({ db: deps.db, clock: deps.clock, idGenerator: deps.ids });
+  const policy = createPolicyModule(
+    createPolicyRepository({ db: deps.db, clock: deps.clock, idGenerator: deps.ids }),
+  );
   registerPolicyRoutes(app, policy);
 }

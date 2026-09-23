@@ -17,9 +17,16 @@ Status: accepted (V1). 출처: docs/cutline.md 5·6장과 최초 도입(Initial 
   program은 group key가 아니라 group 안의 근거다. `programSummary`(상위 10개)와 `distinctProgramCount`를 group에 싣고 `resultHash`에 포함한다. group의 `program` field는 항상 null이다.
   Change Review(`version_diff`)의 Diff Group signature는 그대로 program을 포함한다. 두 review는 다른 질문에 답한다. adoption은 "이 제한이 의도한 것인가"를, change는 "이렇게 넓어진 동작이 예상한 것인가"를 묻고, 후자는 무엇이 넓어졌는지 program까지 구체적이어야 한다. `computeDiffWith`의 signature와 `resultHash`는 바꾸지 않는다.
   Adoption Group에는 severity가 없다. widening용 `critical`을 재사용하지 않는다. allow Action은 집계만 하고 group으로 만들지 않는다. 정렬은 deny → ask → actionCount 내림차순 → sessionCount 내림차순 → groupKey다.
+- Decision (policy lifecycle):
+  `createPolicy`는 version 1을 `draft`로 만든다. accepted는 review의 결정으로만 생긴다.
+  `getBaseline`은 가장 최근 `accepted` version만 돌려주고, 없으면 `policy.no_accepted_version`이다. version 1으로 대신하지 않는다.
+  조직의 Policy는 하나다. policy module의 `createPolicy`는 Policy가 이미 있으면 `policy.organization_policy_exists`로 거부하고, 여러 개가 있어도 그중 하나를 고르지 않는다.
+  이 invariant는 application 계층(policy module)에 있다. 저장소(`createPolicyRepository`)는 여러 Policy row를 허용하는데, integration test가 공유 database에서 test마다 Policy 하나로 격리하기 때문이다. database 제약은 그 격리 방식을 바꾼 뒤에 둔다.
+  `seedAcceptedPolicy`는 legacy·test 전용이다. 그 경로로 seed된 accepted version 1 row는 그대로 유효하다.
 - Alternatives:
   signature A. group마다 program이 하나라 가장 구체적이지만 같은 Rule 판단이 최대 117개 group으로 흩어지고, "정책 수정 필요" verdict를 Policy에 반영할 단위(Rule 또는 Zone 설정)와 group이 어긋난다.
   observedOutcome을 baseline으로 쓰는 `historical_activity` Decision Source. 승인 여부를 복원하지 못한 값으로 전이를 만들게 된다.
+  Policy 하나 제약을 `policies` table의 database 제약으로 두는 것. 공유 test database에서 Policy 단위로 격리하는 integration test 5개 파일을 먼저 바꿔야 한다.
   Change Review signature를 adoption에 맞춰 program을 빼는 것. Change Review evidence가 아직 적어 판단할 근거가 없다.
 - Consequences:
   review kind별로 grouping 단위가 다르다. UI와 문서는 두 grouping을 구분해 적어야 한다.

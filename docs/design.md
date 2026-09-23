@@ -1791,7 +1791,7 @@ REST 하나만 씁니다.
 | `GET /trace-imports` | import 이력 | `cursor`, `limit` | page | 없음 | 해당 없음 |
 | `GET /actions` | Action 목록 | `windowFrom`, `windowTo`, `capability`, `analyzability`, `sessionId`, `cursor`, `limit` | page of `AgentActionResponse` | `validation.invalid_request` | 해당 없음 |
 | `GET /actions/{actionId}` | Action 상세 | `policyVersionId`(선택, 있으면 Decision 포함) | `AgentActionResponse` | `trace.action_not_found`(404) | 해당 없음 |
-| `GET /policies` / `POST /policies` | Policy 목록, 생성(template으로 draft 1개 포함) | `{ name, template: 'default' \| 'empty' }` | `PolicyResponse` | `policy.name_conflict`(409) | `Idempotency-Key` |
+| `GET /policies` / `POST /policies` | Policy 목록, 생성(template으로 draft 1개 포함) | `{ name, template: 'default' \| 'empty' }` | 목록은 page, 생성은 `201 CreatePolicyResponse { policy, initialVersion }` | `policy.name_conflict`, `policy.organization_policy_exists`(409) | `Idempotency-Key` |
 | `GET /policies/{policyId}/versions` | version 목록 | `cursor`, `limit` | page | `policy.not_found`(404) | 해당 없음 |
 | `POST /policies/{policyId}/versions` | base version에서 draft 생성 | `{ baseVersionId }` | `201 PolicyVersionResponse` | `policy.version_not_found`, `policy.draft_exists`(409) | `Idempotency-Key` |
 | `GET /policy-versions/{id}` | version 조회 | 없음 | `PolicyVersionResponse`, `ETag: contentHash` | `policy.version_not_found` | 해당 없음 |

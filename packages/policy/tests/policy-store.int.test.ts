@@ -7,6 +7,7 @@ import {
 } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import {
+  createPolicyModule,
   createPolicyRepository,
   DEFAULT_POLICY_DOCUMENT,
   EMPTY_POLICY_DOCUMENT,
@@ -50,15 +51,40 @@ async function createDefaultPolicy(name = uniqueName()) {
   return expectOk(await repository.createPolicy({ name, template: 'default' }));
 }
 
+// The legacy seed path stands in for an accepted version 1, which product code
+// reaches only by accepting the draft through review.
+async function seedAcceptedDefaultPolicy(name = uniqueName()) {
+  const { policy, version } = expectOk(
+    await repository.seedAcceptedPolicy({ name, document: DEFAULT_POLICY_DOCUMENT }),
+  );
+  return { policy, initialVersion: version };
+}
+
 describe('policy store', () => {
-  test('createPolicy seeds an accepted version 1 from the default template', async () => {
+  test('createPolicy creates a draft version 1 from the default template', async () => {
     const { policy, initialVersion } = await createDefaultPolicy();
 
     expect(initialVersion.policyId).toBe(policy.id);
     expect(initialVersion.versionNumber).toBe(1);
-    expect(initialVersion.status).toBe('accepted');
+    expect(initialVersion.status).toBe('draft');
     expect(initialVersion.baseVersionId).toBeNull();
     expect(initialVersion.document).toEqual(DEFAULT_POLICY_DOCUMENT);
+  });
+
+  test('the draft version 1 is editable and follows the draft transitions', async () => {
+    const { initialVersion } = await createDefaultPolicy();
+
+    const edited = expectOk(
+      await repository.updateDraftDocument(
+        initialVersion.id,
+        initialVersion.contentHash,
+        EMPTY_POLICY_DOCUMENT,
+      ),
+    );
+    expect(edited.document).toEqual(EMPTY_POLICY_DOCUMENT);
+    expect(expectOk(await repository.transitionVersion(edited.id, 'submit')).status).toBe(
+      'in_review',
+    );
   });
 
   test('createPolicy with the empty template stores an empty document', async () => {
@@ -68,6 +94,18 @@ describe('policy store', () => {
     expect(initialVersion.document).toEqual(EMPTY_POLICY_DOCUMENT);
   });
 
+  test('the module refuses a second Policy once the store holds one', async () => {
+    await seedAcceptedDefaultPolicy();
+
+    const error = expectErr(
+      await createPolicyModule(repository).createPolicy({
+        name: uniqueName(),
+        template: 'default',
+      }),
+    );
+    expect(error.code).toBe('policy.organization_policy_exists');
+  });
+
   test('createPolicy rejects a duplicate name', async () => {
     const name = uniqueName();
     await createDefaultPolicy(name);
@@ -75,9 +113,20 @@ describe('policy store', () => {
     expect(error.code).toBe('policy.name_conflict');
   });
 
-  test('baseline is the initial accepted version, then the most recent accepted', async () => {
+  test('a policy whose version 1 is still a draft has no baseline', async () => {
+    const { policy } = await createDefaultPolicy();
+
+    const error = expectErr(await repository.getBaseline(policy.id));
+    expect(error.code).toBe('policy.no_accepted_version');
+    expect(expectOk(await repository.hasAcceptedVersion(policy.id))).toBe(false);
+  });
+
+  test('baseline is the accepted version 1 once accepted, then the most recent accepted', async () => {
     const { policy, initialVersion } = await createDefaultPolicy();
+    expectOk(await repository.transitionVersion(initialVersion.id, 'submit'));
+    expectOk(await repository.transitionVersion(initialVersion.id, 'accept'));
     expect(expectOk(await repository.getBaseline(policy.id)).id).toBe(initialVersion.id);
+    expect(expectOk(await repository.hasAcceptedVersion(policy.id))).toBe(true);
 
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     expectOk(await repository.transitionVersion(draft.id, 'submit'));
@@ -88,8 +137,15 @@ describe('policy store', () => {
     expect(baseline.versionNumber).toBe(2);
   });
 
+  test('a legacy seeded accepted version 1 is the baseline', async () => {
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
+
+    expect(expectOk(await repository.getBaseline(policy.id)).id).toBe(initialVersion.id);
+    expect(expectOk(await repository.hasAcceptedVersion(policy.id))).toBe(true);
+  });
+
   test('createDraftVersion derives a draft from a base version', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
 
     expect(draft.status).toBe('draft');
@@ -100,7 +156,7 @@ describe('policy store', () => {
   });
 
   test('createDraftVersion rejects a second open draft', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     const error = expectErr(await repository.createDraftVersion(policy.id, initialVersion.id));
     expect(error.code).toBe('policy.draft_exists');
@@ -114,7 +170,7 @@ describe('policy store', () => {
   });
 
   test('updateDraftDocument replaces the document when If-Match matches', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
 
     const updated = expectOk(
@@ -126,7 +182,7 @@ describe('policy store', () => {
   });
 
   test('updateDraftDocument rejects a stale If-Match without changing the document', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
 
     const error = expectErr(
@@ -138,7 +194,7 @@ describe('policy store', () => {
 
   // I13: a Policy Version that is not draft is immutable.
   test('I13: updateDraftDocument cannot change a non-draft version', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
 
     const acceptedError = expectErr(
       await repository.updateDraftDocument(
@@ -163,7 +219,7 @@ describe('policy store', () => {
   });
 
   test('at most one version per policy is in review', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const first = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     expectOk(await repository.transitionVersion(first.id, 'submit'));
 
@@ -173,7 +229,7 @@ describe('policy store', () => {
   });
 
   test('withdrawing a version returns it to draft', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     expectOk(await repository.transitionVersion(draft.id, 'submit'));
     const withdrawn = expectOk(await repository.transitionVersion(draft.id, 'withdraw'));
@@ -181,7 +237,7 @@ describe('policy store', () => {
   });
 
   test('an invalid transition is rejected', async () => {
-    const { policy, initialVersion } = await createDefaultPolicy();
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
     const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
     const error = expectErr(await repository.transitionVersion(draft.id, 'accept'));
     expect(error.code).toBe('policy.transition_not_allowed');

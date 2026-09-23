@@ -6,12 +6,14 @@ import {
   createUlidGenerator,
   loadConfig,
 } from '../packages/platform/index.ts';
-import { createPolicyRepository } from '../packages/policy/index.ts';
+import { createPolicyModule, createPolicyRepository } from '../packages/policy/index.ts';
 import { validatePolicyDocument } from '../packages/policy/evaluate.ts';
 import { PolicyDocumentSchema } from '../packages/policy/schema.ts';
-import { recordSeedOnlyAcceptance } from '../packages/review/index.ts';
-import { ChangeReviewIdSchema } from '../packages/review/schema.ts';
 
+// Imports the snapshot and creates the organization Policy with the given
+// document as draft version 1. The adoption preview, review, and acceptance
+// are left to the user journey, so a database that already holds a Policy
+// is refused rather than reseeded.
 const USAGE = 'usage: pnpm seed:demo --snapshot <dir> --policy <file>';
 const ORG_DEFAULT_POLICY_NAME = 'org-default';
 const DEFAULT_SERVER_URL = 'http://localhost:8787';
@@ -105,31 +107,40 @@ async function main(): Promise<void> {
   }
 
   const document = loadPolicyDocument(policy);
-  const clock = createSystemClock();
-  const idGenerator = createUlidGenerator();
   const database = createDatabase(config);
-  const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
+  const policyModule = createPolicyModule(
+    createPolicyRepository({
+      db: database.db,
+      clock: createSystemClock(),
+      idGenerator: createUlidGenerator(),
+    }),
+  );
 
-  const seeded = await repository.seedAcceptedPolicy({ name: ORG_DEFAULT_POLICY_NAME, document });
-  if (!seeded.ok) {
-    console.error(seeded.error.message);
+  const created = await policyModule.createPolicy({
+    name: ORG_DEFAULT_POLICY_NAME,
+    template: 'empty',
+  });
+  if (!created.ok) {
+    console.error(created.error.message);
     await database.close();
     process.exit(1);
   }
-
-  if (seeded.value.created) {
-    await recordSeedOnlyAcceptance(database, {
-      changeReviewId: ChangeReviewIdSchema.parse(idGenerator.next('rev')),
-      contentHash: seeded.value.version.contentHash,
-      decidedAt: clock.now(),
-    });
+  const draft = await policyModule.updateDraftDocument(
+    created.value.initialVersion.id,
+    created.value.initialVersion.contentHash,
+    document,
+  );
+  if (!draft.ok) {
+    console.error(draft.error.message);
+    await database.close();
+    process.exit(1);
   }
 
   console.log(
     JSON.stringify(
       {
-        policyId: seeded.value.policy.id,
-        versionId: seeded.value.version.id,
+        policyId: created.value.policy.id,
+        draftVersionId: draft.value.id,
         import: {
           sessions: importSummary.sessions,
           acceptedCount: importSummary.acceptedCount,
