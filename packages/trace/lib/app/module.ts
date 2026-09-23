@@ -1,6 +1,7 @@
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import type { ClassifyToolCall } from '@authority/action/schema';
-import type { ParsedSession } from '../../schema.ts';
+import type { ActionForReplay, ActivityOverview, ParsedSession } from '../../schema.ts';
+import { buildActivityOverview } from '../domain/activity-overview.ts';
 import { importTrace } from './import-trace.ts';
 import type { ImportTraceResult } from './import-trace.ts';
 import { ingestObservations } from './ingest-observations.ts';
@@ -22,9 +23,13 @@ export interface TraceModule {
   importTrace(session: ParsedSession): Promise<Result<ImportTraceResult, AppError>>;
   ingestObservations(input: IngestObservationsInput): Promise<WriteCounts>;
   reclassifyActions(window: WindowQuery): Promise<ReclassifyActionsResult>;
+  /** The Activity Overview of the window's stored Actions; no Effect or Zone. */
+  getActivityOverview(window: WindowQuery): Promise<ActivityOverview>;
   readonly reader: ActionReader;
   readonly classifierVersion: string;
 }
+
+const OVERVIEW_BATCH_SIZE = 5_000;
 
 export function assembleTraceModule(deps: AssembleTraceModuleDeps): TraceModule {
   const { store, getClassify, clock, idGenerator, classifierVersion } = deps;
@@ -37,6 +42,16 @@ export function assembleTraceModule(deps: AssembleTraceModuleDeps): TraceModule 
     reclassifyActions: async (window) => {
       const classify = await getClassify();
       return reclassifyActions({ store, classify, clock, classifierVersion }, window);
+    },
+    getActivityOverview: async (window) => {
+      const actions: ActionForReplay[] = [];
+      for await (const batch of store.streamActions({
+        ...window,
+        batchSize: OVERVIEW_BATCH_SIZE,
+      })) {
+        actions.push(...batch);
+      }
+      return buildActivityOverview(actions);
     },
     reader: {
       getActions: (actionKeys) => store.getActions(actionKeys),

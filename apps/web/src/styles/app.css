@@ -44,14 +44,22 @@ input {
 }
 
 .layout-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #d1d5db;
   background: #ffffff;
+}
+
+.layout-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.layout-header-inner > button {
+  margin-left: auto;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -74,8 +82,10 @@ input {
 }
 
 .layout-main {
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
   padding: 1.5rem;
-  max-width: 56rem;
 }
 
 .page-title {
@@ -243,6 +253,23 @@ input {
   cursor: not-allowed;
 }
 
+.button-link {
+  display: inline-block;
+  justify-self: start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #1f2937;
+  border-radius: 0.375rem;
+  background: #111827;
+  color: #ffffff;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
 .json-editor {
   width: 100%;
   min-height: 20rem;
@@ -322,6 +349,7 @@ input {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #6b7280;
+  white-space: nowrap;
 }
 
 .data-table .num {

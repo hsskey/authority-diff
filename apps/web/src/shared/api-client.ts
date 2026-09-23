@@ -9,12 +9,30 @@ export type ApiClientError =
   | { kind: 'network'; message: string }
   | { kind: 'validation'; message: string };
 
+/** Plain Korean for the failures a screen can act on; other codes keep the server message. */
+const ERROR_MESSAGE: Readonly<Record<string, string>> = {
+  'auth.token_missing': '로그인이 필요합니다. token을 입력하세요.',
+  'auth.token_invalid': 'token이 올바르지 않습니다. 다시 로그인하세요.',
+  'review.not_open': '결정이 끝난 검토라 더 이상 바꿀 수 없습니다.',
+  'review.open_review_exists':
+    '이 정책에 진행 중인 검토가 이미 있습니다. 먼저 그 검토를 결정하세요.',
+  'review.gate_blocked': 'gate가 닫혀 있어 채택할 수 없습니다. blocker를 먼저 해결하세요.',
+  'policy.draft_exists': '이 정책에 열린 draft가 이미 있습니다.',
+  'policy.organization_policy_exists': '조직 정책이 이미 있습니다.',
+  'policy.version_not_draft': 'draft가 아닌 version은 편집할 수 없습니다.',
+  'policy.content_conflict': '다른 곳에서 먼저 저장된 문서입니다. 새로 고친 뒤 다시 저장하세요.',
+  'policy.transition_not_allowed': '이 version 상태에서는 검토를 만들 수 없습니다.',
+  'replay.classifier_version_mismatch':
+    '기간 안에 다른 classifier version으로 분류된 Action이 있습니다. reclassify 후 다시 시도하세요.',
+};
+
 /** A human-readable line for any API failure, for inline error surfaces. */
 export function describeApiError(error: ApiClientError): string {
   if (error.kind === 'network' || error.kind === 'validation') {
     return error.message;
   }
-  return `${error.status}: ${error.envelope.error.message}`;
+  const { code, message } = error.envelope.error;
+  return ERROR_MESSAGE[code] ?? `${error.status}: ${message}`;
 }
 
 interface CallOptions<Req> {
@@ -78,7 +96,7 @@ export async function callRoute<Res, Req>(
   try {
     response = await fetch(url, init);
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : 'network request failed';
+    const message = cause instanceof Error ? cause.message : '네트워크 요청이 실패했습니다';
     return err({ kind: 'network', message });
   }
 
@@ -90,7 +108,7 @@ export async function callRoute<Res, Req>(
     if (!envelope.success) {
       return err({
         kind: 'validation',
-        message: 'error response did not match the error envelope contract',
+        message: '오류 응답이 계약과 맞지 않습니다',
       });
     }
     return err({ kind: 'http', status: response.status, envelope: envelope.data });
@@ -98,7 +116,7 @@ export async function callRoute<Res, Req>(
 
   const parsed = route.response.safeParse(body);
   if (!parsed.success) {
-    return err({ kind: 'validation', message: 'response did not match the expected contract' });
+    return err({ kind: 'validation', message: '응답이 계약과 맞지 않습니다' });
   }
   return ok(parsed.data);
 }

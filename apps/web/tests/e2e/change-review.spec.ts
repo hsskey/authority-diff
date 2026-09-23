@@ -204,26 +204,42 @@ function samples(): unknown {
   };
 }
 
+const EMPTY_DOCUMENT = {
+  schemaVersion: 1,
+  environment: {
+    credentialPaths: [],
+    agentConfigPaths: [],
+    trustedRemotes: [],
+    publicRemotes: [],
+    protectedBranches: [],
+    productionMarkers: [],
+  },
+  rules: [],
+};
+
 function draftVersion(): unknown {
   return {
     id: CANDIDATE_VERSION_ID,
     policyId: POLICY_ID,
     versionNumber: 2,
     status: 'draft',
-    document: {
-      schemaVersion: 1,
-      environment: {
-        credentialPaths: [],
-        agentConfigPaths: [],
-        trustedRemotes: [],
-        publicRemotes: [],
-        protectedBranches: [],
-        productionMarkers: [],
-      },
-      rules: [],
-    },
+    document: EMPTY_DOCUMENT,
     contentHash: CONTENT_HASH,
     baseVersionId: BASELINE_VERSION_ID,
+    createdAt: TS,
+    updatedAt: TS,
+  };
+}
+
+function baselineVersion(): unknown {
+  return {
+    id: BASELINE_VERSION_ID,
+    policyId: POLICY_ID,
+    versionNumber: 1,
+    status: 'accepted',
+    document: EMPTY_DOCUMENT,
+    contentHash: 'a'.repeat(64),
+    baseVersionId: null,
     createdAt: TS,
     updatedAt: TS,
   };
@@ -288,8 +304,16 @@ async function installApi(route: Route, store: Store): Promise<void> {
     });
     return;
   }
+  if (method === 'GET' && pathname.endsWith('/change-reviews')) {
+    await respond({ items: [], nextCursor: null });
+    return;
+  }
   if (method === 'GET' && pathname.includes('/change-reviews/')) {
     await respond(buildReview(store));
+    return;
+  }
+  if (method === 'GET' && pathname.endsWith(`/policies/${POLICY_ID}/versions`)) {
+    await respond({ items: [baselineVersion(), draftVersion()], nextCursor: null });
     return;
   }
   if (method === 'GET' && pathname.includes('/policy-versions/')) {
@@ -311,7 +335,7 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
 
   // draft -> a change review is created from the draft policy version
   await page.goto(`/policies/${POLICY_ID}/versions/${CANDIDATE_VERSION_ID}`);
-  await page.getByRole('button', { name: 'Create Change Review' }).click();
+  await page.getByRole('button', { name: '변경 검토 만들기' }).click();
 
   // review -> the Change Review screen loads with the gate closed
   await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();

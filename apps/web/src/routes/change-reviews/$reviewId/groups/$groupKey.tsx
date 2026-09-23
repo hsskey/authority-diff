@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import type {
+  AdoptionGroupSamplesResponse,
   ChangeReviewResponse,
   DiffGroupSamplesResponse,
+  ReviewAdoptionGroupResponse,
   ReviewDiffGroupResponse,
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
@@ -10,20 +13,20 @@ import { callRoute, describeApiError } from '../../../../shared/api-client.ts';
 import { EmptyState } from '../../../../shared/components/EmptyState.tsx';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
-import { formatZoneTransition } from '../../../../features/change-review/format.ts';
+import { effectLabel, formatZoneTransition } from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
   component: DiffGroupPage,
 });
 
-type Sample = DiffGroupSamplesResponse['items'][number];
-type Decision = Sample['baselineDecision'];
+type DiffSample = DiffGroupSamplesResponse['items'][number];
+type AdoptionSample = AdoptionGroupSamplesResponse['items'][number];
+type Decision = DiffSample['baselineDecision'];
+type Rationales = DiffSample['baselineRuleRationales'];
 
-function DiffGroupPage() {
-  const { reviewId, groupKey } = Route.useParams();
-
-  const reviewQuery = useQuery({
+function useReview(reviewId: string) {
+  return useQuery({
     queryKey: ['change-review', reviewId],
     queryFn: async () => {
       const result = await callRoute(routes.getChangeReview, { params: { id: reviewId } });
@@ -33,7 +36,48 @@ function DiffGroupPage() {
       return result.value;
     },
   });
+}
 
+function DiffGroupPage() {
+  const { reviewId, groupKey } = Route.useParams();
+  const reviewQuery = useReview(reviewId);
+
+  if (reviewQuery.isPending) {
+    return (
+      <section>
+        <h1 className="page-title">Group</h1>
+        <LoadingState label="검토를 불러오는 중" />
+      </section>
+    );
+  }
+  if (reviewQuery.isError) {
+    return (
+      <section>
+        <h1 className="page-title">Group</h1>
+        <ErrorState
+          title="검토를 불러오지 못했습니다"
+          message={reviewQuery.error?.message ?? '알 수 없는 오류'}
+        />
+      </section>
+    );
+  }
+  const review = reviewQuery.data;
+  return review.kind === 'adoption' ? (
+    <AdoptionGroupPage reviewId={reviewId} groupKey={groupKey} review={review} />
+  ) : (
+    <ChangeGroupPage reviewId={reviewId} groupKey={groupKey} review={review} />
+  );
+}
+
+function ChangeGroupPage({
+  reviewId,
+  groupKey,
+  review,
+}: {
+  reviewId: string;
+  groupKey: string;
+  review: ChangeReviewResponse;
+}) {
   const groupsQuery = useQuery({
     queryKey: ['change-review-diff-groups', reviewId],
     queryFn: async () => {
@@ -48,7 +92,7 @@ function DiffGroupPage() {
     },
   });
 
-  const replayRunId = reviewQuery.data?.replaySummary.replayRunId ?? null;
+  const replayRunId = review.replaySummary.replayRunId;
   const samplesQuery = useQuery({
     queryKey: ['diff-group-samples', replayRunId, groupKey],
     enabled: replayRunId !== null,
@@ -69,34 +113,111 @@ function DiffGroupPage() {
   const group = groupsQuery.data?.find((candidate) => candidate.groupKey === groupKey) ?? null;
 
   return (
-    <section>
+    <section className="stack">
       <h1 className="page-title">Diff Group</h1>
-      {reviewQuery.isPending || groupsQuery.isPending ? (
-        <LoadingState label="Diff Group을 불러오는 중" />
-      ) : null}
-      {reviewQuery.isError ? (
+      {groupsQuery.isPending ? <LoadingState label="Diff Group을 불러오는 중" /> : null}
+      {groupsQuery.isError ? (
         <ErrorState
-          title="Change Review를 불러오지 못했습니다"
-          message={reviewQuery.error?.message ?? '알 수 없는 오류'}
+          title="Diff Group을 불러오지 못했습니다"
+          message={groupsQuery.error?.message ?? '알 수 없는 오류'}
         />
       ) : null}
-      {reviewQuery.isSuccess && groupsQuery.isSuccess && group === null ? (
+      {groupsQuery.isSuccess && group === null ? (
         <EmptyState
           title="Diff Group을 찾지 못했습니다"
           message={`이 Change Review에는 group ${groupKey}이 없습니다.`}
         />
       ) : null}
-      {group !== null && reviewQuery.data ? (
-        <GroupSignature reviewId={reviewId} review={reviewQuery.data} group={group} />
-      ) : null}
-      {group !== null && reviewQuery.isSuccess ? (
-        <SampleSection query={samplesQuery} replayRunId={replayRunId} />
+      {group !== null ? (
+        <>
+          <ChangeGroupSignature reviewId={reviewId} review={review} group={group} />
+          <SampleSection
+            query={samplesQuery}
+            replayRunId={replayRunId}
+            render={(sample) => <ChangeSampleCard key={sample.action.actionKey} sample={sample} />}
+          />
+        </>
       ) : null}
     </section>
   );
 }
 
-function GroupSignature({
+function AdoptionGroupPage({
+  reviewId,
+  groupKey,
+  review,
+}: {
+  reviewId: string;
+  groupKey: string;
+  review: ChangeReviewResponse;
+}) {
+  const groupsQuery = useQuery({
+    queryKey: ['change-review-adoption-groups', reviewId],
+    queryFn: async () => {
+      const result = await callRoute(routes.listReviewAdoptionGroups, {
+        params: { id: reviewId },
+        query: { limit: 200 },
+      });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      return result.value.items;
+    },
+  });
+
+  const replayRunId = review.replaySummary.replayRunId;
+  const samplesQuery = useQuery({
+    queryKey: ['adoption-group-samples', replayRunId, groupKey],
+    enabled: replayRunId !== null,
+    queryFn: async () => {
+      if (replayRunId === null) {
+        throw new Error('replay run이 아직 연결되지 않았습니다');
+      }
+      const result = await callRoute(routes.getAdoptionGroupSamples, {
+        params: { runId: replayRunId, groupKey },
+      });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      return result.value.items;
+    },
+  });
+
+  const group = groupsQuery.data?.find((candidate) => candidate.groupKey === groupKey) ?? null;
+
+  return (
+    <section className="stack">
+      <h1 className="page-title">Adoption Group</h1>
+      {groupsQuery.isPending ? <LoadingState label="Adoption Group을 불러오는 중" /> : null}
+      {groupsQuery.isError ? (
+        <ErrorState
+          title="Adoption Group을 불러오지 못했습니다"
+          message={groupsQuery.error?.message ?? '알 수 없는 오류'}
+        />
+      ) : null}
+      {groupsQuery.isSuccess && group === null ? (
+        <EmptyState
+          title="Adoption Group을 찾지 못했습니다"
+          message={`이 최초 도입 검토에는 group ${groupKey}이 없습니다.`}
+        />
+      ) : null}
+      {group !== null ? (
+        <>
+          <AdoptionGroupSignature reviewId={reviewId} review={review} group={group} />
+          <SampleSection
+            query={samplesQuery}
+            replayRunId={replayRunId}
+            render={(sample) => (
+              <AdoptionSampleCard key={sample.action.actionKey} sample={sample} />
+            )}
+          />
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function ChangeGroupSignature({
   reviewId,
   review,
   group,
@@ -110,7 +231,7 @@ function GroupSignature({
       <p className="state-message hint">{group.headline}</p>
       <dl className="meta-grid panel">
         <div>
-          <dt>Direction</dt>
+          <dt>방향</dt>
           <dd>
             {group.direction}{' '}
             <span className={`severity-badge severity-${group.severity}`}>{group.severity}</span>
@@ -126,7 +247,9 @@ function GroupSignature({
         </div>
         <div>
           <dt>Effect</dt>
-          <dd>{formatZoneTransition(group.fromEffect, group.toEffect)}</dd>
+          <dd>
+            {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
+          </dd>
         </div>
         <div>
           <dt>Program</dt>
@@ -144,25 +267,132 @@ function GroupSignature({
           <span className="section-title">판정</span>
           <VerdictSelect
             reviewId={reviewId}
+            kind="change"
             groupKey={group.groupKey}
             capability={group.capability}
             verdict={group.verdict}
+            disabled={review.status !== 'ready'}
           />
         </div>
       ) : null}
       <p className="state-message hint">
-        검토를 마치려면 <a href={`/change-reviews/${review.id}`}>Change Review로 돌아가세요</a>.
+        검토를 마치려면{' '}
+        <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+          Change Review로 돌아가세요
+        </Link>
+        .
       </p>
     </div>
   );
 }
 
-function SampleSection({
+function AdoptionGroupSignature({
+  reviewId,
+  review,
+  group,
+}: {
+  reviewId: string;
+  review: ChangeReviewResponse;
+  group: ReviewAdoptionGroupResponse;
+}) {
+  return (
+    <div className="stack">
+      <p className="state-message hint">{group.headline}</p>
+      <dl className="meta-grid panel">
+        <div>
+          <dt>Effect</dt>
+          <dd>
+            <span className={`effect-badge effect-${group.effect}`}>
+              {effectLabel(group.effect)}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt>Capability</dt>
+          <dd>{group.capability}</dd>
+        </div>
+        <div>
+          <dt>Zone</dt>
+          <dd>{group.zone}</dd>
+        </div>
+        <div>
+          <dt>Action / Session</dt>
+          <dd>
+            {group.actionCount} / {group.sessionCount}
+          </dd>
+        </div>
+        <div>
+          <dt>분석 불가 Action</dt>
+          <dd>{group.analyzabilityNoneCount}</dd>
+        </div>
+        <div>
+          <dt>기간</dt>
+          <dd>
+            {group.firstOccurredAt} → {group.lastOccurredAt}
+          </dd>
+        </div>
+      </dl>
+      <ProgramMix group={group} />
+      <div className="panel row-between">
+        <span className="section-title">판정</span>
+        <VerdictSelect
+          reviewId={reviewId}
+          kind="adoption"
+          groupKey={group.groupKey}
+          capability={group.capability}
+          verdict={group.verdict}
+          disabled={review.status !== 'ready'}
+        />
+      </div>
+      <p className="state-message hint">
+        검토를 마치려면{' '}
+        <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+          최초 도입 검토로 돌아가세요
+        </Link>
+        .
+      </p>
+    </div>
+  );
+}
+
+/** The programs mixed into one group: the signature carries none, so the mix is shown here. */
+function ProgramMix({ group }: { group: ReviewAdoptionGroupResponse }) {
+  return (
+    <table className="data-table">
+      <caption>
+        Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
+        {group.programSummary.length}개 표시
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Program</th>
+          <th scope="col" className="num">
+            Action
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {group.programSummary.map((entry) => (
+          <tr key={entry.program ?? '__none__'}>
+            <td className={entry.program === null ? 'hint' : 'mono'}>
+              {entry.program ?? '인식 안 됨'}
+            </td>
+            <td className="num">{entry.count}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function SampleSection<S extends { action: { actionKey: string } }>({
   query,
   replayRunId,
+  render,
 }: {
-  query: UseQueryResult<readonly Sample[], Error>;
+  query: UseQueryResult<readonly S[], Error>;
   replayRunId: string | null;
+  render: (sample: S) => ReactNode;
 }) {
   if (replayRunId === null) {
     return (
@@ -192,14 +422,12 @@ function SampleSection({
   return (
     <div className="stack">
       <h2 className="section-title">Sample ({query.data.length})</h2>
-      {query.data.map((sample) => (
-        <SampleCard key={sample.action.actionKey} sample={sample} />
-      ))}
+      {query.data.map(render)}
     </div>
   );
 }
 
-function SampleCard({ sample }: { sample: Sample }) {
+function ChangeSampleCard({ sample }: { sample: DiffSample }) {
   const { action } = sample;
   return (
     <div className="panel stack sample-card">
@@ -238,6 +466,37 @@ function SampleCard({ sample }: { sample: Sample }) {
   );
 }
 
+function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
+  const { action } = sample;
+  return (
+    <div className="panel stack sample-card">
+      <div>
+        <h3 className="section-title">도구 입력(가림 처리)</h3>
+        <pre className="redacted-input">{action.toolInputRedacted}</pre>
+      </div>
+      <div>
+        <h3 className="section-title">Operations ({action.operations.length})</h3>
+        <ul className="issue-list">
+          {action.operations.map((operation, position) => (
+            <li key={operation.index}>
+              #{operation.index} {operation.capability} ·{' '}
+              {zoneOf(sample.candidateDecision, operation.index)} ·{' '}
+              {sample.targetKeys[position] ?? 'unknown'}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="decision-pair">
+        <DecisionView
+          title="제안 정책 결정"
+          decision={sample.candidateDecision}
+          rationales={sample.candidateRuleRationales}
+        />
+      </div>
+    </div>
+  );
+}
+
 function zoneOf(decision: Decision, operationIndex: number): string {
   return (
     decision.operations.find((operation) => operation.operationIndex === operationIndex)?.zone ??
@@ -252,13 +511,15 @@ function DecisionView({
 }: {
   title: string;
   decision: Decision;
-  rationales: Sample['baselineRuleRationales'];
+  rationales: Rationales;
 }) {
   return (
     <div className="stack decision-view">
       <div className="row-between">
         <h4 className="section-title">{title}</h4>
-        <span className={`effect-badge effect-${decision.effect}`}>{decision.effect}</span>
+        <span className={`effect-badge effect-${decision.effect}`}>
+          {effectLabel(decision.effect)}
+        </span>
       </div>
       <table className="data-table">
         <thead>
@@ -276,9 +537,9 @@ function DecisionView({
               <td className="mono">#{operation.operationIndex}</td>
               <td>{operation.zone}</td>
               <td>{operation.reversibility}</td>
-              <td>
+              <td className="nowrap">
                 <span className={`effect-badge effect-${operation.effect}`}>
-                  {operation.effect}
+                  {effectLabel(operation.effect)}
                 </span>
               </td>
               <td>

@@ -1,21 +1,23 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ReviewDiffGroupResponse } from '@authority/contracts/schema';
+import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
 import { callRoute, describeApiError } from '../../shared/api-client.ts';
 import { VERDICT_OPTIONS, verdictLabel } from './format.ts';
 
 type Verdict = ReviewDiffGroupResponse['verdict'];
 
-/** Records one Widening group's Verdict. Both the Change Review and Diff Group
- * screens set a Verdict, so the control and its cache invalidation live here. */
+/** Records one group's Verdict. Both the review and group screens set a Verdict,
+ * so the control and its cache invalidation live here. */
 export function VerdictSelect({
   reviewId,
+  kind,
   groupKey,
   capability,
   verdict,
   disabled = false,
 }: {
   reviewId: string;
+  kind: ChangeReviewResponse['kind'];
   groupKey: string;
   capability: string;
   verdict: Verdict;
@@ -36,6 +38,7 @@ export function VerdictSelect({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['change-review', reviewId] });
       void queryClient.invalidateQueries({ queryKey: ['change-review-diff-groups', reviewId] });
+      void queryClient.invalidateQueries({ queryKey: ['change-review-adoption-groups', reviewId] });
     },
   });
 
@@ -54,11 +57,11 @@ export function VerdictSelect({
         }}
       >
         <option value="" disabled>
-          {verdictLabel(null)}
+          {verdictLabel(kind, null)}
         </option>
         {VERDICT_OPTIONS.map((option) => (
           <option key={option} value={option}>
-            {verdictLabel(option)}
+            {verdictLabel(kind, option)}
           </option>
         ))}
       </select>

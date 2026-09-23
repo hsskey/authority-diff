@@ -52,6 +52,7 @@ function makeRepository(
       return Promise.resolve(ok({ policy: existingPolicy, initialVersion: draftVersion }));
     },
     listPolicies: () => unconfigured(),
+    listVersions: () => unconfigured(),
     getVersion: () => unconfigured(),
     createDraftVersion: () => unconfigured(),
     updateDraftDocument: () => unconfigured(),

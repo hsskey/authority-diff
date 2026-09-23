@@ -39,12 +39,23 @@ export interface PolicyPage {
   readonly nextCursor: string | null;
 }
 
+export interface PolicyVersionPage {
+  readonly items: readonly PolicyVersion[];
+  readonly nextCursor: string | null;
+}
+
 export interface PolicyRepository {
   /** Creates a Policy whose version 1 is a draft built from the template. */
   createPolicy(
     input: CreatePolicyInput,
   ): Promise<Result<{ policy: Policy; initialVersion: PolicyVersion }, AppError>>;
   listPolicies(cursor: string | null, limit: number): Promise<Result<PolicyPage, AppError>>;
+  /** The Policy's versions in version order, oldest first; the cursor is the last version's versionNumber. */
+  listVersions(
+    policyId: PolicyId,
+    cursor: string | null,
+    limit: number,
+  ): Promise<Result<PolicyVersionPage, AppError>>;
   getVersion(id: PolicyVersionId): Promise<Result<PolicyVersion, AppError>>;
   createDraftVersion(
     policyId: PolicyId,
@@ -192,6 +203,41 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           .limit(limit + 1);
         const items = rows.slice(0, limit).map(toPolicy);
         const nextCursor = rows.length > limit ? (items.at(-1)?.id ?? null) : null;
+        return ok({ items, nextCursor });
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    async listVersions(policyId, cursor, limit) {
+      let after: number | null = null;
+      if (cursor !== null) {
+        if (!/^\d+$/.test(cursor)) {
+          return err({
+            code: 'validation.invalid_request',
+            message: `invalid policy versions cursor ${cursor}`,
+            isRetryable: false,
+            details: { cursor },
+            cause: null,
+          });
+        }
+        after = Number(cursor);
+      }
+      try {
+        const rows = await db
+          .select()
+          .from(policyVersions)
+          .where(
+            after === null
+              ? eq(policyVersions.policyId, policyId)
+              : and(eq(policyVersions.policyId, policyId), gt(policyVersions.versionNumber, after)),
+          )
+          .orderBy(asc(policyVersions.versionNumber))
+          .limit(limit + 1);
+        const items = rows.slice(0, limit).map(toVersion);
+        const last = items.at(-1);
+        const nextCursor =
+          rows.length > limit && last !== undefined ? String(last.versionNumber) : null;
         return ok({ items, nextCursor });
       } catch (cause) {
         return err(internal(cause));

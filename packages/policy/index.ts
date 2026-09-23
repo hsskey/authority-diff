@@ -2,6 +2,7 @@ export {
   createPolicyRepository,
   type CreatePolicyInput,
   type PolicyPage,
+  type PolicyVersionPage,
   type PolicyRepository,
   type PolicyRepositoryDeps,
   type SeedAcceptedPolicyInput,

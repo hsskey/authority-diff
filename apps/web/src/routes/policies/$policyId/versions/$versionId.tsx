@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
   UpdatePolicyVersionRequestSchema,
+  type ChangeReviewResponse,
   type PolicyVersionResponse,
   type ValidatePolicyVersionResponse,
 } from '@authority/contracts/schema';
@@ -10,6 +11,7 @@ import { routes } from '@authority/contracts/routes';
 import { callRoute, describeApiError, type ApiClientError } from '../../../../shared/api-client.ts';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
+import { effectLabel } from '../../../../features/change-review/format.ts';
 
 export const Route = createFileRoute('/policies/$policyId/versions/$versionId')({
   component: PolicyVersionPage,
@@ -17,6 +19,14 @@ export const Route = createFileRoute('/policies/$policyId/versions/$versionId')(
 
 type PolicyDocument = PolicyVersionResponse['document'];
 type PolicyRule = PolicyDocument['rules'][number];
+type VersionStatus = PolicyVersionResponse['status'];
+
+const STATUS_LABEL: Record<VersionStatus, string> = {
+  draft: 'draft',
+  in_review: '검토 중',
+  accepted: '채택됨',
+  rejected: '반려됨',
+};
 
 function PolicyVersionPage() {
   const { policyId, versionId } = Route.useParams();
@@ -34,11 +44,11 @@ function PolicyVersionPage() {
   return (
     <section>
       <h1 className="page-title">Policy Version</h1>
-      {versionQuery.isPending ? <LoadingState label="Loading the policy version" /> : null}
+      {versionQuery.isPending ? <LoadingState label="Policy Version을 불러오는 중" /> : null}
       {versionQuery.isError ? (
         <ErrorState
-          title="Could not load the policy version"
-          message={versionQuery.error?.message ?? 'An unexpected error occurred'}
+          title="Policy Version을 불러오지 못했습니다"
+          message={versionQuery.error?.message ?? '알 수 없는 오류'}
         />
       ) : null}
       {versionQuery.isSuccess ? (
@@ -57,13 +67,13 @@ function parseDraft(text: string): ParsedDraft {
   try {
     json = JSON.parse(text);
   } catch (cause) {
-    return { ok: false, message: cause instanceof Error ? cause.message : 'invalid JSON' };
+    return { ok: false, message: cause instanceof Error ? cause.message : 'JSON이 아닙니다' };
   }
   const parsed = UpdatePolicyVersionRequestSchema.safeParse({ document: json });
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     const path = first?.path.join('.') ?? 'document';
-    return { ok: false, message: `${path}: ${first?.message ?? 'invalid policy document'}` };
+    return { ok: false, message: `${path}: ${first?.message ?? '정책 문서가 올바르지 않습니다'}` };
   }
   return { ok: true, document: parsed.data.document };
 }
@@ -142,8 +152,10 @@ function PolicyVersionEditor({
 
       <div className="panel stack">
         <div className="row-between">
-          <h2 className="section-title">Document</h2>
-          <span className={`status-badge status-${version.status}`}>{version.status}</span>
+          <h2 className="section-title">정책 문서</h2>
+          <span className={`status-badge status-${version.status}`}>
+            {STATUS_LABEL[version.status]}
+          </span>
         </div>
         <textarea
           className="json-editor"
@@ -151,14 +163,14 @@ function PolicyVersionEditor({
           value={draftText}
           onChange={(event) => setDraftText(event.target.value)}
           readOnly={!isDraft}
-          aria-label="Policy document JSON"
+          aria-label="정책 문서 JSON"
         />
         {!isDraft ? (
           <p className="state-message hint">
-            Only a draft version can be edited. Create a draft to make changes.
+            draft version만 편집할 수 있습니다. 바꾸려면 이 version에서 draft를 만드세요.
           </p>
         ) : draft.ok ? (
-          <p className="state-message status-ok">Document is valid against the contract.</p>
+          <p className="state-message status-ok">문서가 계약과 맞습니다.</p>
         ) : (
           <p className="state-message status-error" role="alert">
             {draft.message}
@@ -174,38 +186,38 @@ function PolicyVersionEditor({
               }
             }}
           >
-            {save.isPending ? 'Saving…' : 'Save draft'}
+            {save.isPending ? '저장 중…' : 'draft 저장'}
           </button>
           <button
             type="button"
             disabled={validate.isPending || isDirty}
             onClick={() => validate.mutate()}
           >
-            {validate.isPending ? 'Validating…' : 'Validate'}
+            {validate.isPending ? '검증 중…' : '검증'}
           </button>
           <button
             type="button"
             disabled={createDraft.isPending}
             onClick={() => createDraft.mutate()}
           >
-            {createDraft.isPending ? 'Creating…' : 'Create draft from this version'}
+            {createDraft.isPending ? '만드는 중…' : '이 version에서 draft 만들기'}
           </button>
         </div>
         {isDirty ? (
           <p className="state-message hint">
-            Save the draft before validating; validation runs against the stored document.
+            검증은 저장된 문서를 대상으로 합니다. 검증 전에 draft를 저장하세요.
           </p>
         ) : null}
-        <MutationError label="Save failed" error={save.error} />
-        <MutationError label="Validation request failed" error={validate.error} />
-        <MutationError label="Create draft failed" error={createDraft.error} />
+        <MutationError label="저장 실패" error={save.error} />
+        <MutationError label="검증 요청 실패" error={validate.error} />
+        <MutationError label="draft 생성 실패" error={createDraft.error} />
       </div>
 
       {validation ? <ValidationResult result={validation} /> : null}
 
       <RuleTable rules={ruleSource.rules} />
 
-      <CreateChangeReview candidateVersionId={version.id} />
+      <CreateReview policyId={policyId} version={version} />
     </div>
   );
 }
@@ -222,7 +234,7 @@ function VersionMeta({ version }: { version: PolicyVersionResponse }) {
         <dd className="mono">{version.contentHash}</dd>
       </div>
       <div>
-        <dt>Updated</dt>
+        <dt>수정 시각</dt>
         <dd>{version.updatedAt}</dd>
       </div>
     </dl>
@@ -232,38 +244,44 @@ function VersionMeta({ version }: { version: PolicyVersionResponse }) {
 function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
   return (
     <div className="stack">
-      <h2 className="section-title">Rules ({rules.length})</h2>
+      <h2 className="section-title">Rule ({rules.length})</h2>
       {rules.length === 0 ? (
-        <p className="state-message hint">This document has no rules.</p>
+        <p className="state-message hint">
+          이 문서에는 Rule이 없습니다. Rule이 없으면 모든 Operation의 Effect는 확인 필요입니다.
+        </p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Rule ID</th>
-              <th scope="col">Capabilities</th>
-              <th scope="col">Zones</th>
-              <th scope="col">Reversibility</th>
-              <th scope="col">Analyzability</th>
-              <th scope="col">Effect</th>
-              <th scope="col">Rationale</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.map((rule) => (
-              <tr key={rule.ruleId}>
-                <td className="mono">{rule.ruleId}</td>
-                <td>{describeMatch(rule.match.capabilities)}</td>
-                <td>{describeMatch(rule.match.zones)}</td>
-                <td>{describeMatch(rule.match.reversibility)}</td>
-                <td>{describeMatch(rule.match.analyzability)}</td>
-                <td>
-                  <span className={`effect-badge effect-${rule.effect}`}>{rule.effect}</span>
-                </td>
-                <td>{rule.rationale}</td>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Rule ID</th>
+                <th scope="col">Capability</th>
+                <th scope="col">Zone</th>
+                <th scope="col">Reversibility</th>
+                <th scope="col">Analyzability</th>
+                <th scope="col">Effect</th>
+                <th scope="col">근거</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rules.map((rule) => (
+                <tr key={rule.ruleId}>
+                  <td className="mono">{rule.ruleId}</td>
+                  <td>{describeMatch(rule.match.capabilities)}</td>
+                  <td>{describeMatch(rule.match.zones)}</td>
+                  <td>{describeMatch(rule.match.reversibility)}</td>
+                  <td>{describeMatch(rule.match.analyzability)}</td>
+                  <td className="nowrap">
+                    <span className={`effect-badge effect-${rule.effect}`}>
+                      {effectLabel(rule.effect)}
+                    </span>
+                  </td>
+                  <td>{rule.rationale}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -271,7 +289,7 @@ function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
 
 function describeMatch(value: '*' | readonly string[] | null): string {
   if (value === '*' || value === null) {
-    return 'any';
+    return '모두';
   }
   return value.join(', ');
 }
@@ -280,33 +298,70 @@ function ValidationResult({ result }: { result: ValidatePolicyVersionResponse })
   return (
     <div className={`panel stack ${result.isValid ? 'status-ok' : 'status-error'}`}>
       <h2 className="section-title">
-        Validation: {result.isValid ? 'passed' : `${result.issues.length} issue(s)`}
+        검증: {result.isValid ? '통과' : `문제 ${result.issues.length}건`}
       </h2>
       {result.issues.length > 0 ? (
         <ul className="issue-list">
           {result.issues.map((issue, index) => (
             <li key={`${issue.code}-${issue.ruleId ?? 'document'}-${index}`}>
-              <span className="mono">{issue.ruleId ?? 'document'}</span> · {issue.code} —{' '}
+              <span className="mono">{issue.ruleId ?? 'document'}</span> · {issue.code} ·{' '}
               {issue.message}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="state-message">No static issues found in the saved draft.</p>
+        <p className="state-message">
+          저장된 draft에서 정적 문제를 찾지 못했습니다. 안전성 판단이 아니라 문서 검사 결과입니다.
+        </p>
       )}
     </div>
   );
 }
 
-function CreateChangeReview({ candidateVersionId }: { candidateVersionId: string }) {
+/** The review to create depends on the Policy: no accepted version means an adoption review. */
+function CreateReview({ policyId, version }: { policyId: string; version: PolicyVersionResponse }) {
   const navigate = useNavigate();
   const [window, setWindow] = useState(defaultWindow);
+
+  const versionsQuery = useQuery({
+    queryKey: ['policy-versions', policyId],
+    queryFn: async () => {
+      const result = await callRoute(routes.listPolicyVersions, {
+        params: { policyId },
+        query: { limit: 200 },
+      });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      return result.value.items;
+    },
+    select: (versions) => versions.some((entry) => entry.status === 'accepted'),
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ['policy-change-reviews', policyId],
+    queryFn: async () => {
+      const result = await callRoute(routes.listChangeReviews, {
+        query: { policyId, limit: 50 },
+      });
+      if (!result.ok) {
+        throw new Error(describeApiError(result.error));
+      }
+      return result.value.items;
+    },
+    select: (reviews): ChangeReviewResponse | null =>
+      reviews.find(
+        (review) =>
+          review.candidateVersionId === version.id &&
+          (review.status === 'computing' || review.status === 'ready'),
+      ) ?? null,
+  });
 
   const create = useMutation({
     mutationFn: async () => {
       const result = await callRoute(routes.createChangeReview, {
         body: {
-          candidateVersionId,
+          candidateVersionId: version.id,
           windowFrom: new Date(window.from).toISOString(),
           windowTo: new Date(window.to).toISOString(),
         },
@@ -321,15 +376,42 @@ function CreateChangeReview({ candidateVersionId }: { candidateVersionId: string
     },
   });
 
+  if (versionsQuery.isPending || reviewsQuery.isPending) {
+    return <LoadingState label="검토 상태를 확인하는 중" />;
+  }
+  if (versionsQuery.isError || reviewsQuery.isError) {
+    return (
+      <ErrorState
+        title="검토 상태를 불러오지 못했습니다"
+        message={versionsQuery.error?.message ?? reviewsQuery.error?.message ?? '알 수 없는 오류'}
+      />
+    );
+  }
+
+  const hasAccepted = versionsQuery.data;
+  const openReview = reviewsQuery.data;
+  const title = hasAccepted ? '변경 검토 만들기' : '최초 도입 검토 만들기';
+  const canCreate = version.status === 'draft' && openReview === null;
+
   return (
     <div className="panel stack">
-      <h2 className="section-title">Create Change Review</h2>
+      <h2 className="section-title">{title}</h2>
       <p className="state-message hint">
-        Replays this candidate against the accepted baseline over the window.
+        {hasAccepted
+          ? '이 candidate와 채택된 기준 version을 같은 기간의 과거 Action에 대입해 달라지는 Effect를 찾습니다.'
+          : '이 제안 정책을 과거 Action에 적용하면 각각 허용, 확인 필요, 차단 중 무엇이 되는지 계산합니다. 과거 runtime의 승인 여부는 복원하지 않습니다.'}
       </p>
+      {openReview !== null ? (
+        <p className="state-message">
+          이 version의 검토가 이미 진행 중입니다.{' '}
+          <Link to="/change-reviews/$reviewId" params={{ reviewId: openReview.id }}>
+            {hasAccepted ? '변경 검토 열기' : '최초 도입 검토 열기'}
+          </Link>
+        </p>
+      ) : null}
       <div className="window-inputs">
         <label>
-          From
+          시작
           <input
             type="datetime-local"
             value={window.from}
@@ -337,7 +419,7 @@ function CreateChangeReview({ candidateVersionId }: { candidateVersionId: string
           />
         </label>
         <label>
-          To
+          끝
           <input
             type="datetime-local"
             value={window.to}
@@ -346,11 +428,21 @@ function CreateChangeReview({ candidateVersionId }: { candidateVersionId: string
         </label>
       </div>
       <div className="actions">
-        <button type="button" disabled={create.isPending} onClick={() => create.mutate()}>
-          {create.isPending ? 'Creating…' : 'Create Change Review'}
+        <button
+          type="button"
+          disabled={create.isPending || !canCreate}
+          onClick={() => create.mutate()}
+        >
+          {create.isPending ? '만드는 중…' : title}
         </button>
       </div>
-      <MutationError label="Create Change Review failed" error={create.error} />
+      {version.status !== 'draft' && openReview === null ? (
+        <p className="state-message hint">
+          검토는 draft version에서만 만들 수 있습니다. 이 version은 {STATUS_LABEL[version.status]}{' '}
+          상태입니다.
+        </p>
+      ) : null}
+      <MutationError label={`${title} 실패`} error={create.error} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { err, ok } from '@authority/kernel';
-import type { AppError, Result } from '@authority/kernel';
+import { err, IsoTimestampSchema, ok } from '@authority/kernel';
+import type { AppError, Clock, Result } from '@authority/kernel';
 import { createSequentialIdGenerator } from '@authority/platform/testing';
 import type { TraceModule } from '@authority/trace';
 import { StoredAgentActionSchema } from '@authority/trace/schema';
-import type { StoredAgentAction } from '@authority/trace/schema';
+import type { ActivityOverview, StoredAgentAction } from '@authority/trace/schema';
 import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
 import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
 import { registerTraceRoutes } from '../../src/modules/trace.wiring.ts';
@@ -12,6 +12,9 @@ import type { AppEnv } from '../../src/http/env.ts';
 import { testConfig } from '../support/harness.ts';
 
 export const TOKEN = 'test-token';
+export const NOW = '2026-01-31T00:00:00.000Z';
+
+const fixedClock: Clock = { now: () => IsoTimestampSchema.parse(NOW) };
 
 const ACTION_KEY = 'a'.repeat(64);
 
@@ -46,6 +49,40 @@ export function sampleAction(overrides: Partial<StoredAgentAction> = {}): Stored
   });
 }
 
+export function emptyOverview(): ActivityOverview {
+  return {
+    sessionCount: 0,
+    actionCount: 0,
+    evaluableActionCount: 0,
+    capabilityCounts: {
+      read: 0,
+      write: 0,
+      delete: 0,
+      execute: 0,
+      install: 0,
+      fetch: 0,
+      send: 0,
+      commit: 0,
+      push: 0,
+      rewrite: 0,
+      deploy: 0,
+    },
+    targetKindCounts: {
+      workspace_path: 0,
+      other_path: 0,
+      vcs_remote: 0,
+      host: 0,
+      package: 0,
+      mcp: 0,
+      deploy_target: 0,
+      unknown: 0,
+    },
+    analyzability: { full: 0, partial: 0, none: 0 },
+    topPrograms: [],
+    topRemoteKeys: [],
+  };
+}
+
 export function makeModule(overrides: Partial<TraceModule> = {}): TraceModule {
   const unconfigured = <T>(): Promise<Result<T, AppError>> =>
     Promise.resolve(
@@ -62,6 +99,7 @@ export function makeModule(overrides: Partial<TraceModule> = {}): TraceModule {
     ingestObservations: () => Promise.resolve({ acceptedCount: 0, duplicateCount: 0 }),
     reclassifyActions: () =>
       Promise.resolve({ reclassifiedCount: 0, classifierVersion: 'test-classifier' }),
+    getActivityOverview: () => Promise.resolve(emptyOverview()),
     reader: {
       getActions: () => Promise.resolve([]),
       streamActions: () => ({
@@ -82,7 +120,7 @@ export function buildTraceApp(trace: TraceModule): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use('*', createRequestIdMiddleware(createSequentialIdGenerator()));
   app.use('/api/v1/*', createAuthMiddleware(testConfig()));
-  registerTraceRoutes(app, trace);
+  registerTraceRoutes(app, trace, fixedClock);
   return app;
 }
 

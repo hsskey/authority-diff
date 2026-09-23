@@ -42,8 +42,10 @@ export { renderAdoptionReport, renderReport } from './lib/domain/report.ts';
 export type {
   AssembleReviewModuleDeps,
   ChangeReviewView,
+  ChangeReviewsResult,
   CreateChangeReviewInput,
   DecideInput,
+  ListChangeReviewsInput,
   ListReviewAdoptionGroupsInput,
   ListReviewDiffGroupsInput,
   PolicyReviewRepository,

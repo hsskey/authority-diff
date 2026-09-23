@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { IsoTimestampSchema, Sha256Schema, prefixedId } from '@authority/kernel';
-import { OperationSchema, RuntimeSchema, ToolCallSchema } from '@authority/action/schema';
+import {
+  AnalyzabilitySchema,
+  CapabilitySchema,
+  OperationSchema,
+  RuntimeSchema,
+  ToolCallSchema,
+} from '@authority/action/schema';
 import type { Runtime } from '@authority/action/schema';
 
 export const ObservedOutcomeSchema = z.enum([
@@ -102,6 +108,63 @@ export type DeriveActionKey = (input: {
   readonly toolUseId: string | null;
   readonly sequence: number;
 }) => z.infer<typeof Sha256Schema>;
+
+const CountSchema = z.number().int().nonnegative();
+
+const CountedProgramSchema = z.object({
+  program: z.string(),
+  count: z.number().int().positive(),
+});
+
+const CountedRemoteKeySchema = z.object({
+  remoteKey: z.string(),
+  count: z.number().int().positive(),
+});
+
+/** A Target's kind as the Activity Overview counts it; a path splits by workspace membership. */
+export const TargetKindSchema = z.enum([
+  'workspace_path',
+  'other_path',
+  'vcs_remote',
+  'host',
+  'package',
+  'mcp',
+  'deploy_target',
+  'unknown',
+]);
+export type TargetKind = z.infer<typeof TargetKindSchema>;
+
+/**
+ * The Activity Overview of a window of imported activity, computed from stored
+ * Actions alone. It carries no Effect or Zone: those need a Policy Version and
+ * an Environment Profile, which the overview does not assume.
+ *
+ * `sessionCount` counts distinct Sessions with an Action in the window.
+ * `actionCount` counts stored Actions, so duplicates are already collapsed by
+ * Action Key. `evaluableActionCount` counts Actions with at least one Operation.
+ * `capabilityCounts` and `targetKindCounts` count Operations and carry every
+ * key, zero included. `analyzability` counts evaluable Actions by the worst
+ * analyzability of their Operations. `topPrograms` holds the twenty most
+ * frequent non-null Operation programs and `topRemoteKeys` the twenty most
+ * frequent VCS Remote Keys, each by descending count then ascending key.
+ */
+export const ActivityOverviewSchema = z.object({
+  sessionCount: z.number().int().nonnegative(),
+  actionCount: z.number().int().nonnegative(),
+  evaluableActionCount: z.number().int().nonnegative(),
+  capabilityCounts: z.record(CapabilitySchema, CountSchema),
+  targetKindCounts: z.record(TargetKindSchema, CountSchema),
+  analyzability: z.record(AnalyzabilitySchema, CountSchema),
+  topPrograms: z.array(CountedProgramSchema).max(20),
+  topRemoteKeys: z.array(CountedRemoteKeySchema).max(20),
+});
+export type ActivityOverview = z.infer<typeof ActivityOverviewSchema>;
+
+/**
+ * Folds the Actions of a window into an Activity Overview. Pure and
+ * deterministic: the same Actions in any order give the same overview.
+ */
+export type BuildActivityOverview = (actions: readonly ActionForReplay[]) => ActivityOverview;
 
 export const TraceImportIdSchema = prefixedId('imp', 'TraceImportId');
 export type TraceImportId = z.infer<typeof TraceImportIdSchema>;

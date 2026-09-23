@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import {
   ActionResponseSchema,
+  ActivityOverviewResponseSchema,
   AdoptionGroupSamplesResponseSchema,
   AuthorityMapResponseSchema,
   ChangeReviewReportResponseSchema,
@@ -17,9 +18,11 @@ import {
   ImportTraceRequestSchema,
   ImportTraceResponseSchema,
   ListAdoptionGroupsResponseSchema,
+  ListChangeReviewsResponseSchema,
   ListConformanceFindingsResponseSchema,
   ListDiffGroupsResponseSchema,
   ListPoliciesResponseSchema,
+  ListPolicyVersionsResponseSchema,
   ListReviewAdoptionGroupsResponseSchema,
   ListReviewDiffGroupsResponseSchema,
   PolicyVersionResponseSchema,
@@ -93,9 +96,11 @@ export const routes = {
     ReclassifyActionsResponseSchema,
   ),
   getAction: get(`${API}/actions/:actionKey`, ActionResponseSchema),
+  getActivityOverview: get(`${API}/activity-overview`, ActivityOverviewResponseSchema),
 
   listPolicies: get(`${API}/policies`, ListPoliciesResponseSchema),
   createPolicy: post(`${API}/policies`, CreatePolicyRequestSchema, CreatePolicyResponseSchema),
+  listPolicyVersions: get(`${API}/policies/:policyId/versions`, ListPolicyVersionsResponseSchema),
   createPolicyVersion: post(
     `${API}/policies/:policyId/versions`,
     CreatePolicyVersionRequestSchema,
@@ -143,6 +148,7 @@ export const routes = {
     CreateChangeReviewRequestSchema,
     ChangeReviewResponseSchema,
   ),
+  listChangeReviews: get(`${API}/change-reviews`, ListChangeReviewsResponseSchema),
   getChangeReview: get(`${API}/change-reviews/:id`, ChangeReviewResponseSchema),
   listReviewDiffGroups: get(
     `${API}/change-reviews/:id/diff-groups`,

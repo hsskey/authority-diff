@@ -3,6 +3,8 @@ import type { AppError, Clock, IdGenerator, Logger, TransactionRunner } from '@a
 import {
   CreatePolicyRequestSchema,
   CreatePolicyVersionRequestSchema,
+  ListPolicyVersionsQuerySchema,
+  ListPolicyVersionsResponseSchema,
   UpdatePolicyVersionRequestSchema,
 } from '@authority/contracts/schema';
 import { createPolicyModule, createPolicyRepository } from '@authority/policy';
@@ -72,6 +74,26 @@ export function registerPolicyRoutes(app: Hono<AppEnv>, policy: PolicyModule): v
       return respondError(c, result.error);
     }
     return c.json({ items: result.value.items, nextCursor: result.value.nextCursor });
+  });
+
+  app.get(`${API}/policies/:policyId/versions`, async (c) => {
+    const policyId = PolicyIdSchema.safeParse(c.req.param('policyId'));
+    if (!policyId.success) {
+      return respondError(c, invalidRequest('invalid policy id', {}));
+    }
+    const query = ListPolicyVersionsQuerySchema.safeParse(c.req.query());
+    if (!query.success) {
+      return respondError(c, invalidRequest('invalid list-versions query', query.error.format()));
+    }
+    const result = await policy.listVersions(
+      policyId.data,
+      query.data.cursor ?? null,
+      query.data.limit,
+    );
+    if (!result.ok) {
+      return respondError(c, result.error);
+    }
+    return c.json(ListPolicyVersionsResponseSchema.parse(result.value));
   });
 
   app.post(`${API}/policies/:policyId/versions`, async (c) => {

@@ -12,7 +12,7 @@ function LoginPage() {
 
   return (
     <section>
-      <h1 className="page-title">Sign in</h1>
+      <h1 className="page-title">로그인</h1>
       <form
         className="login-form panel"
         onSubmit={(event) => {
@@ -32,7 +32,7 @@ function LoginPage() {
             required
           />
         </label>
-        <button type="submit">Save token</button>
+        <button type="submit">token 저장</button>
       </form>
     </section>
   );
