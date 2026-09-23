@@ -52,4 +52,4 @@ On the official snapshot, every Gate 2 replay run reports total 34,940 Actions, 
 The share of changed Actions whose signature Operation has analyzability `none` is 0 on all eight official runs.
 That satisfies the replay usability check: diff groups are not filled with unanalyzable Actions.
 
-Transcript format, parser behavior, and duplicate handling are documented in `transcript-format.md` and `replay-corpus-snapshot.md`.
+Transcript format, parser behavior, and duplicate handling are documented in `transcript-format.md`.
