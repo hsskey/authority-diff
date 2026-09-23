@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { execPath } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -11,6 +12,7 @@ export const LEGACY_SESSION_END_COMMAND = 'authority hook session-end';
 const CLI_SRC_DIR = dirname(fileURLToPath(import.meta.url));
 
 const MAIN_ENTRY_RELATIVE = join('apps', 'cli', 'src', 'main.ts');
+const BUNDLE_ENTRY_RELATIVE = join('apps', 'cli', 'dist', 'authority.mjs');
 
 export function resolveRepoRoot(): string {
   return resolve(CLI_SRC_DIR, '../../..');
@@ -21,6 +23,23 @@ export function shellQuote(value: string): string {
     return value;
   }
   return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function resolveCoreHookCommand(event: HookCliEvent): string {
+  const repoRoot = resolveRepoRoot();
+  const node = shellQuote(execPath);
+  const bundle = join(repoRoot, BUNDLE_ENTRY_RELATIVE);
+  if (existsSync(bundle)) {
+    return [node, shellQuote(bundle), 'hook', event].join(' ');
+  }
+  const tsx = join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const main = join(repoRoot, MAIN_ENTRY_RELATIVE);
+  return [node, shellQuote(tsx), shellQuote(main), 'hook', event].join(' ');
+}
+
+export function wrapFailOpenShell(coreCommand: string): string {
+  const escaped = coreCommand.replace(/'/g, `'\\''`);
+  return `sh -c 'mkdir -p $HOME/.authority 2>/dev/null; ${escaped} 2>>$HOME/.authority/hook-errors.log || exit 0'`;
 }
 
 export function resolveHookCommand(
@@ -37,34 +56,30 @@ export function resolveHookCommand(
     }
   }
 
-  const repoRoot = resolveRepoRoot();
-  const node = execPath;
-  const tsx = join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
-  const main = join(repoRoot, MAIN_ENTRY_RELATIVE);
-  return [shellQuote(node), shellQuote(tsx), shellQuote(main), 'hook', event].join(' ');
+  return wrapFailOpenShell(resolveCoreHookCommand(event));
 }
 
-function referencesMainEntry(command: string): boolean {
-  return command.includes(MAIN_ENTRY_RELATIVE);
+function referencesHookEntry(command: string): boolean {
+  return command.includes(MAIN_ENTRY_RELATIVE) || command.includes(BUNDLE_ENTRY_RELATIVE);
 }
 
 export function isManagedPermissionRequestCommand(command: string): boolean {
   return (
     command === LEGACY_PERMISSION_REQUEST_COMMAND ||
-    (referencesMainEntry(command) && command.endsWith(' hook permission-request'))
+    (referencesHookEntry(command) && command.includes(' hook permission-request'))
   );
 }
 
 export function isManagedPreToolUseCommand(command: string): boolean {
   return (
     command === LEGACY_PRE_TOOL_USE_COMMAND ||
-    (referencesMainEntry(command) && command.endsWith(' hook pre-tool-use'))
+    (referencesHookEntry(command) && command.includes(' hook pre-tool-use'))
   );
 }
 
 export function isManagedSessionEndCommand(command: string): boolean {
   return (
     command === LEGACY_SESSION_END_COMMAND ||
-    (referencesMainEntry(command) && command.endsWith(' hook session-end'))
+    (referencesHookEntry(command) && command.includes(' hook session-end'))
   );
 }

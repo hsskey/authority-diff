@@ -21,6 +21,7 @@
     "dev:replay-local": "tsx tools/local-pipeline/replay-local.ts",
     "dev:policy-init": "tsx tools/local-pipeline/policy-init.ts",
     "authority": "tsx apps/cli/src/main.ts",
+    "build:cli": "tsup --config apps/cli/tsup.config.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:boundaries && pnpm lint:prove && pnpm test"
   },
   "devDependencies": {
@@ -32,6 +33,7 @@
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
     "oxlint-tsgolint": "^7.0.2002",
+    "tsup": "^8.5.0",
     "tsx": "^4.23.15",
     "turbo": "^2.11.2",
     "typescript": "7.0.2",

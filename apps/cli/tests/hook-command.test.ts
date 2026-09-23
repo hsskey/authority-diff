@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
@@ -9,23 +11,45 @@ import {
   LEGACY_SESSION_END_COMMAND,
   resolveHookCommand,
   resolveRepoRoot,
+  wrapFailOpenShell,
 } from '../src/hook-command.ts';
 
 describe('resolveHookCommand', () => {
-  test('builds an absolute command from the repo root', () => {
+  test('builds a shell-wrapped command from the repo root', () => {
     const repoRoot = resolveRepoRoot();
+    const bundle = join(repoRoot, 'apps', 'cli', 'dist', 'authority.mjs');
     const command = resolveHookCommand('permission-request');
+    expect(command).toMatch(/^sh -c '/);
+    expect(command).toContain('2>>$HOME/.authority/hook-errors.log || exit 0');
     expect(command).toContain('hook permission-request');
-    expect(command).toContain(join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs'));
-    expect(command).toContain(join(repoRoot, 'apps', 'cli', 'src', 'main.ts'));
+    if (existsSync(bundle)) {
+      expect(command).toContain(bundle);
+    } else {
+      expect(command).toContain(join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs'));
+      expect(command).toContain(join(repoRoot, 'apps', 'cli', 'src', 'main.ts'));
+    }
   });
 
-  test('builds an absolute pre-tool-use command from the repo root', () => {
+  test('builds a shell-wrapped pre-tool-use command from the repo root', () => {
     const repoRoot = resolveRepoRoot();
+    const bundle = join(repoRoot, 'apps', 'cli', 'dist', 'authority.mjs');
     const command = resolveHookCommand('pre-tool-use');
+    expect(command).toMatch(/^sh -c '/);
     expect(command).toContain('hook pre-tool-use');
-    expect(command).toContain(join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs'));
-    expect(command).toContain(join(repoRoot, 'apps', 'cli', 'src', 'main.ts'));
+    if (existsSync(bundle)) {
+      expect(command).toContain(bundle);
+    } else {
+      expect(command).toContain(join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs'));
+      expect(command).toContain(join(repoRoot, 'apps', 'cli', 'src', 'main.ts'));
+    }
+  });
+
+  test('wrapFailOpenShell exits 0 when the inner command fails to start', () => {
+    const command = wrapFailOpenShell('/nonexistent/node /nonexistent/entry hook pre-tool-use');
+    expect(command).toMatch(/^sh -c '/);
+    expect(command).toContain('|| exit 0');
+    const result = spawnSync(command, { shell: true, stdio: 'ignore' });
+    expect(result.status).toBe(0);
   });
 
   test('derives session-end and pre-tool-use from a permission-request override', () => {
