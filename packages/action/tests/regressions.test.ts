@@ -170,6 +170,41 @@ describe('gh remote resolution outside the session workspace', () => {
   });
 });
 
+describe('publish and push with a help or dry-run flag transmit nothing', () => {
+  test.each([
+    ['npm publish --dry-run', 'dry_run'],
+    ['pnpm publish --dry-run', 'dry_run'],
+    ['yarn publish --help', 'help'],
+    ['npm publish -h', 'help'],
+    ['docker push --dry-run ghcr.io/acme/app:1', 'dry_run'],
+    ['docker push --help', 'help'],
+    ['git push --dry-run origin main', 'dry_run'],
+    ['git push -n origin main', 'dry_run'],
+    ['git push --force --dry-run origin main', 'dry_run'],
+    ['git push --help', 'help'],
+    ['git push -h', 'help'],
+  ])('%s is a partial execute with the %s signal', (command, signal) => {
+    const ops = classify(bash(command));
+    expect(ops.map((o) => o.capability)).toEqual(['execute']);
+    expect(ops[0]?.analyzability).toBe('partial');
+    expect(ops[0]?.signals).toContain(signal);
+  });
+
+  test.each([
+    ['npm publish --tag next', 'push'],
+    ['docker push ghcr.io/acme/app:1', 'push'],
+    ['git push origin main', 'push'],
+    ['git push --force origin main', 'rewrite'],
+  ])('%s without such a flag keeps %s', (command, capability) => {
+    expect(classify(bash(command)).map((o) => o.capability)).toEqual([capability]);
+  });
+
+  test('a real push after a dry run in the same command is still a push', () => {
+    const ops = classify(bash('git push --dry-run origin main && git push origin main'));
+    expect(ops.map((o) => o.capability)).toEqual(['execute', 'push']);
+  });
+});
+
 describe('force-push refspec detection', () => {
   test('git push origin +main (colon-less force refspec) is rewrite', () => {
     const ops = classify(bash('git push origin +main'));

@@ -1056,6 +1056,42 @@
         }
       ],
       "expectedEffect": "ask"
+    },
+    {
+      "name": "publish-dry-run-then-real-publish",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "npm publish --dry-run && npm publish"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "package"
+        },
+        {
+          "capability": "push",
+          "targetKind": "package"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "push-help-then-force-push",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git push --help; git push --force origin main"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "vcs_remote"
+        },
+        {
+          "capability": "rewrite",
+          "targetKind": "vcs_remote"
+        }
+      ],
+      "expectedEffect": "deny"
     }
   ]
 }

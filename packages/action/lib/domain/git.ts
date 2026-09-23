@@ -4,14 +4,15 @@
  * Mapping (docs/design.md 13.2, 13.4 and the task rules): read subcommands are
  * `read`; add/commit/merge/stash/tag/checkout/branch are `commit`;
  * clone/fetch/pull are `fetch`; push is `push`; force pushes, `reset --hard`,
- * `branch -D`, and `clean` are `rewrite` or `delete`. A network subcommand
+ * `branch -D`, and `clean` are `rewrite` or `delete`; a push with a help or
+ * dry-run flag transmits nothing and is `execute`. A network subcommand
  * targets a `vcs_remote` whose Remote Key is resolved from an explicit URL, the
  * named remote, or the default `origin`. A named remote resolves through the
  * session `repoRemotes` only while git runs inside the session workspace.
  */
 import type { Capability, Target } from '../../schema.ts';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
-import { draft, type OperationDraft } from './draft.ts';
+import { draft, unlessNoEffect, type OperationDraft } from './draft.ts';
 import { dirOutsideWorkspace, normalizeRemote, pathTarget, resolvePath } from './targets.ts';
 import type { ShellWord } from '../shell/ast.ts';
 
@@ -145,7 +146,8 @@ export function classifyGit(cmd: NormalizedCommand): OperationDraft[] {
   }
   if (sub === 'push') {
     const forced = hasForceFlag(args) || hasPlusRefspec(rest);
-    return [remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest, dirMismatch)];
+    const op = remoteOp(forced ? 'rewrite' : 'push', gitCmd, sub, rest, dirMismatch);
+    return [unlessNoEffect(op, args, ['--dry-run', '-n'])];
   }
   if (sub === 'reset') {
     return [localOp(hasFlag(args, '--hard') ? 'rewrite' : 'commit', gitCmd)];
