@@ -2105,7 +2105,7 @@ Decision Provider의 출력은 미리 정한 선택지의 분포뿐이라, 입�
 | property | 정책 평가, classifier, replay의 불변식 | `packages/<pkg>/tests/*.prop.test.ts`(fast-check) | `pnpm test` |
 | contract | 같은 test suite를 port의 모든 adapter에 적용. runtime adapter는 실제 transcript fixture | `packages/<pkg>/tests/*.contract.test.ts` | `pnpm test`. 외부 API는 기록한 응답으로 재생. 실제 호출은 `pnpm test:live` |
 | integration | repository, job, HTTP 계약. Testcontainers PostgreSQL 16 | `packages/<pkg>/tests/*.int.test.ts`, `apps/server/tests/*.int.test.ts` | `pnpm test:int`, PR마다 |
-| E2E | 핵심 journey 1개와 실패 화면 2개 | `apps/web/e2e/*.e2e.ts`(Playwright) | `pnpm e2e`, PR마다 |
+| E2E | 핵심 journey 1개와 실패 화면 2개 | `apps/web/tests/e2e/*.spec.ts`(Playwright) | `pnpm test:e2e`, PR마다 |
 | policy regression | 기본 template에 대한 Precedent 집합과 label된 action 집합 | `tests/corpus/precedents.json`, `packages/policy/tests/template-regression.test.ts` | `pnpm test` |
 | evaluation | classifier benchmark, calibration | `tests/eval/*.eval.ts` | `pnpm eval`. 결과를 `docs/evidence/`에 저장. CI에서는 laundering rate만 검사 |
 
