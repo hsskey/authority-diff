@@ -68,7 +68,7 @@ export function VerdictSelect({
         ))}
       </select>
       {record.isError ? (
-        <span className="m-0 text-red-700" role="alert">
+        <span className="m-0 text-[#b91c1c]" role="alert">
           {record.error.message}
         </span>
       ) : null}

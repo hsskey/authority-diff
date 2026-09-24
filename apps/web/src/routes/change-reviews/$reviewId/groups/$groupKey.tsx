@@ -99,9 +99,9 @@ function SampleCard({ children }: { children: ReactNode }) {
 }
 
 const EFFECT_BADGE_TONE: Record<Effect, string> = {
-  allow: 'bg-emerald-700/12 text-emerald-700',
-  ask: 'bg-amber-700/12 text-amber-700',
-  deny: 'bg-red-700/12 text-red-700',
+  allow: 'bg-[#047857]/12 text-[#047857]',
+  ask: 'bg-[#b45309]/12 text-[#b45309]',
+  deny: 'bg-[#b91c1c]/12 text-[#b91c1c]',
 };
 
 function EffectBadge({ effect, children }: { effect: Effect; children: ReactNode }) {
@@ -122,7 +122,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
     <span
       className={cx(
         'inline-block rounded-full border border-current px-2 py-[0.1rem] text-[0.75rem] font-semibold',
-        severity === 'critical' ? 'text-red-700' : 'text-[#6b7280]',
+        severity === 'critical' ? 'text-[#b91c1c]' : 'text-[#6b7280]',
       )}
     >
       {severity}
