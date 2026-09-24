@@ -20,7 +20,7 @@ test.each([
 test.each([
   ['unknown', 'unknown'],
   ['origin', 'origin (unresolved)'],
-  ['upstream', 'named remote (unresolved)'],
+  ['upstream', 'named-remote-01 (unresolved)'],
   ['github.com/other/repo', 'repo-02'],
   ['github.com/new/repo', 'repo-03'],
   ['/Users/someone/project', 'local-path-01'],
@@ -28,6 +28,15 @@ test.each([
   ['internal.host', 'host-01'],
 ])('target %s is shown as %s', (key, label) => {
   expect(makeMasks().target(key)).toBe(label);
+});
+
+test('two named remotes get two labels', () => {
+  const masks = makeMasks();
+  masks.target('upstream');
+
+  const label = masks.target('fork');
+
+  expect(label).toBe('named-remote-02 (unresolved)');
 });
 
 test('a newly labelled name is written to the legend', () => {
