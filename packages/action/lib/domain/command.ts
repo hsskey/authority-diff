@@ -50,7 +50,7 @@ export function hasFlag(args: readonly ShellWord[], ...flags: readonly string[])
 export function isCommandLookup(args: readonly ShellWord[]): boolean {
   for (const arg of args) {
     const text = arg.text;
-    if (text === '--') break;
+    if (!text.startsWith('-') || text.length === 1 || text === '--') break;
     if (/^-[pvV]*[vV][pvV]*$/.test(text)) return true;
   }
   return false;
