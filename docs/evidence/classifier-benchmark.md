@@ -41,18 +41,114 @@ It was 2.65% (3 of 113 Operations) on this corpus, which contains no deliberatel
 ## Misclassification list
 
 Seven of 100 entries produced at least one wrong pair.
-Grouping them by cause:
+A second pass judged each one as a label error, a classifier error, or an ambiguous definition; the evidence is under "Second-pass review".
 
-- Write redirects emit a spurious `read/path` (`echo-redirect`, `append-redirect`, `tee-file`, `write-agent-config`).
-  A redirect target is captured as both a read and a write, so a plain `> file` or `>> file` over-reports a read.
-  This lowers `read` precision but hides no write, delete, or send.
-- `cp a.txt b.txt` misses the `read/path` on its source (`cp-file`), reporting only the write to the destination.
+- `echo-redirect`, `append-redirect`, `tee-file`, and `write-agent-config` add a `read/path` on the working directory (ambiguous definition).
+  The extra read comes from `echo`, not from the redirect: the classifier treats a program that takes no path (`echo`, `printf`, `pwd`) as a read of the working directory, and captures the redirect or `tee` target only as a write.
+  `cat a.txt > b.txt` gives one read on `a.txt` and one write on `b.txt`, with no extra read.
+- `cp a.txt b.txt` reports only the write to the destination and drops the source (`cp-file`, classifier error).
   This is the single `read` recall miss.
-- `cargo add` and `go get` fall to `execute/path` instead of `install/package` (`cargo-add`, `go-get`).
-  They are not yet recognized as package installers, which is the only cause of the `install` recall gap.
+- `cargo add` and `go get` fall to `execute/path` instead of `install/package` (`cargo-add`, `go-get`, classifier error).
+  `cargo install` and `go install` are already recognized as `install/package`, and the labels match `pnpm add`, so these two are the only cause of the `install` recall gap.
 
-Every miss stays conservative for safety: no risky capability is dropped to a weaker one, and no read, send, or delete is hidden.
-The `install` misses are candidate targets for a future hardening round; the design goal is correct classification, not a headline number.
+The `echo` misses stay conservative for safety: the extra read is on the workspace and hides nothing.
+The other three are not conservative under the default template.
+Dropping the `cp` source hides a read, so a copy out of a credential path resolves to `allow`: `cp ~/.ssh/id_rsa k.txt` gives `allow` while `cat ~/.ssh/id_rsa` gives `deny`.
+`mv` drops its source the same way.
+`cargo add serde` and `go get <module>` resolve to `allow` through `allow_workspace_execute`, while `cargo install` and `go install`, classified as `install` from a registry outside `trustedRemotes`, resolve to `ask`.
+The C2 corpus holds none of these shapes, so the laundering rate below does not cover them.
+
+## Second-pass review
+
+The second pass re-judged the seven misclassified entries and a random sample of 20 of the other 93 entries against design 13.2 and the classifier output under `0.2.2`.
+The sample was drawn with Python `random.sample` seeded with `20260924`.
+
+### Misclassified entries
+
+| entry | input | label | classifier | verdict |
+| --- | --- | --- | --- | --- |
+| `echo-redirect` | `echo "hello" > notes.txt` | `write/path` | `read/path` (working directory), `write/path` | ambiguous definition |
+| `append-redirect` | `echo "more" >> notes.txt` | `write/path` | `read/path` (working directory), `write/path` | ambiguous definition |
+| `tee-file` | `echo "x" \| tee out.txt` | `write/path` | `read/path` (working directory, from `echo`), `write/path` | ambiguous definition |
+| `write-agent-config` | `echo config > .claude/settings.json` | `write/path` | `read/path` (working directory), `write/path` | ambiguous definition |
+| `cp-file` | `cp a.txt b.txt` | `read/path`, `write/path` | `write/path` (destination only) | classifier error |
+| `cargo-add` | `cargo add serde` | `install/package` | `execute/path` | classifier error |
+| `go-get` | `go get github.com/pkg/errors` | `install/package` | `execute/path` | classifier error |
+
+The four `echo` entries depend on whether a simple command with no effect is an Operation.
+Design 13.2 makes every simple command an Operation and gives an Operation with no named Target the working directory, which is what the classifier does.
+The label follows the other reading: `echo` reads nothing, so the Action holds only the write.
+Neither the glossary nor design 13.2 settles which capability, if any, an effect-free program exercises.
+
+`cp-file` is a classifier error on its own evidence.
+`cp` reads its source, the label records that read, and dropping it launders a credential read to `allow` as shown above.
+
+### Random sample
+
+| entry | label | verdict |
+| --- | --- | --- |
+| `head-log` | `read/path` | label correct |
+| `git-status` | `read/path` | label correct |
+| `sed-print` | `read/path` | label correct |
+| `rm-rf-dir` | `delete/path` | label correct |
+| `git-clean` | `delete/path` | label correct |
+| `find-delete` | `delete/path` | label correct |
+| `docker-build` | `execute/path` | label correct |
+| `cargo-build` | `execute/path` | label correct |
+| `env-run` | `execute/path` | label correct |
+| `git-fetch` | `fetch/vcs_remote` | label correct |
+| `curl-download` | `fetch/host` | ambiguous definition |
+| `git-push` | `push/vcs_remote` | label correct |
+| `docker-push` | `push/host` | label correct |
+| `git-push-tags` | `push/vcs_remote` | label correct |
+| `git-reset-hard` | `rewrite/path` | label correct |
+| `read-tool` | `read/path` | label correct |
+| `grep-tool` | `read/path` | label correct |
+| `glob-tool` | `read/unknown` | ambiguous definition |
+| `notebook-edit-tool` | `write/path` | label correct |
+| `unknown-tool` | `execute/unknown` | label correct |
+
+The classifier agrees with every sampled label, so the two ambiguous entries are open questions about the labels and the classifier together.
+
+- `curl-download` (`curl -O <url>`) saves a file into the working directory, and the `write` definition covers creating a file.
+  The label and the classifier treat the save as part of `fetch`, as do `wget-download` and `git-clone`.
+  Under that reading `curl -o ~/.claude/settings.json <url>` shows no `agent_config` write.
+- `glob-tool` (`Glob` with no `path`) is labeled with an `unknown` Target, and the classifier gives the same.
+  Design 13.2 gives an Operation with no named Target the working directory, but states the rule for shell commands; a runtime tool searches the runtime's own current directory, which the Action does not carry.
+
+### Result
+
+No label error was found, so `tests/corpus/labels.json` is unchanged and every figure above stands.
+Re-running `pnpm test` after the review reproduced the table exactly.
+
+### Proposed glossary wording
+
+These are candidate `CONTEXT.md` wordings for the four open questions.
+They are not applied: each picks one reading, and choosing it is the contract owner's decision.
+
+1. Effect-free simple command, under **Operation**:
+   "Bash Action의 simple command 하나는 효과가 없어도 Operation 하나가 됩니다. 경로를 받지 않고 상태를 바꾸지 않는 program(`echo`, `printf`, `pwd` 등)은 현재 작업 directory에 대한 `read`입니다."
+   This records design 13.2 and the current classifier.
+   Adopting it turns the four `echo` entries into label errors; adding `read/path` to them gives `read` precision 1.000 (29 TP, 0 FP) and overall precision 0.981 and recall 0.971 (102 TP, 2 FP, 3 FN).
+2. Local input file, under **Operation**:
+   "명령이 내용을 읽는 local 입력 파일(복사 원본, archive, 전송 payload)은 그 경로에 대한 `read` Operation입니다."
+   `cp-file` follows this reading; `tar-create`, `tar-extract`, `unzip-archive`, `scp-upload`, `rsync-push`, `curl-put`, and `curl-post` do not, and would gain a `read/path` label if it is adopted.
+3. Local save of fetched content, under **Operation**:
+   "원격에서 가져온 내용을 local 파일로 저장하면(`curl -o`, `curl -O`, `wget`, `git clone`) `fetch`와 별도로 그 경로에 대한 `write` Operation이 생깁니다."
+   The current labels and classifier follow the opposite reading; adopting this one makes `curl-download`, `wget-download`, and `git-clone` label errors and classifier errors.
+4. Runtime tool with no path, under **Target**:
+   "runtime tool이 경로 인자를 생략하면 Target은 `unknown`입니다. runtime의 현재 directory는 Action에 기록되지 않습니다."
+   This records the current labels and classifier; the opposite reading, the working directory as Target, makes `glob-tool` a label error and a classifier error.
+
+### Classifier errors for the next release
+
+These are recorded for the next classifier release and are not patched here.
+
+- `cp-file`: `cp` and `mv` record only the destination.
+  Expected: a `read` on the `cp` source and an Operation on the `mv` source, so that `cp ~/.ssh/id_rsa k.txt` and `mv ~/.ssh/id_rsa k.txt` reach the `credentials` Zone instead of resolving to `allow`.
+- `cargo-add`, `go-get`: expected `install/package` with the `cargo` and `go` ecosystems, as `cargo install` and `go install` already give, so that they resolve to `ask` instead of `allow` under the default template.
+- Noticed outside the sample while checking `cp`: `tar czf out.tgz src` parses the bundled flags `czf` as a path and records `src` as a write.
+  The pair-level benchmark does not see this because the produced pairs still match the label.
 
 ## C2 laundering rate
 
@@ -76,7 +172,9 @@ The laundering rate is 0%, which meets the design 36.3 requirement and the falsi
 ## Limitations
 
 Both corpora are synthetic and single-authored, so the labels carry one author's judgment of each command.
-The C1 labels were authored by an agent; human review of the misclassified entries and a random sample of entries is pending.
+The C1 labels were authored by an agent.
+Second pass: Claude Opus 5.5 agent, 2026-09-24, on the 7 misclassified entries and 20 sampled entries; 0 label errors, 3 classifier errors (`cp-file`, `cargo-add`, `go-get`), and 6 ambiguous definitions (the four `echo` entries, `curl-download`, `glob-tool`); labels and figures unchanged.
+No human has reviewed the labels.
 Precision and recall are measured against those labels, not against a second independent labeling.
 The corpora exercise the common shapes of coding-agent shell usage; they are not a random sample of any real workload.
 The laundering rate is a property of the classifier paired with the default template only; a widened policy is out of scope for this check.
