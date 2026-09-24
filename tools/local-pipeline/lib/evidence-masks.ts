@@ -13,7 +13,7 @@ const LegendSchema = z.object({
 });
 type Legend = z.infer<typeof LegendSchema>;
 
-// ponytail: fixed allow-list of standard tools, extend when a public program is masked by mistake.
+// Standard tool names stay unmasked; extend this set when a public program is masked by mistake.
 const PUBLIC_PROGRAMS = new Set(
   [
     'git gh curl wget WebFetch WebSearch ssh scp rsync nc http dig ping',

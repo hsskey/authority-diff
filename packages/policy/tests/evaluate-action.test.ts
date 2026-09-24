@@ -95,14 +95,13 @@ describe('evaluateAction', () => {
   test('the Action Effect is the most restrictive Operation Effect', () => {
     const decision = evaluateAction(
       [
-        makeOperation({ index: 1, capability: 'write', target: pathTarget('~/ws/a.ts', true) }), // allow
-        makeOperation({ index: 3, capability: 'read', target: pathTarget('~/.ssh/id_rsa', false) }), // deny
-        makeOperation({ index: 7, capability: 'read', target: pathTarget('~/.aws/creds', false) }), // deny
+        makeOperation({ index: 1, capability: 'write', target: pathTarget('~/ws/a.ts', true) }),
+        makeOperation({ index: 3, capability: 'read', target: pathTarget('~/.ssh/id_rsa', false) }),
+        makeOperation({ index: 7, capability: 'read', target: pathTarget('~/.aws/creds', false) }),
       ],
       DEFAULT_POLICY_DOCUMENT,
     );
     expect(decision?.effect).toBe('deny');
-    // The smallest index among Operations carrying the Action Effect.
     expect(decision?.decidingOperationIndex).toBe(3);
   });
 

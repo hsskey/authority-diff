@@ -1,15 +1,7 @@
 import type { Capability } from '@authority/action/schema';
 import type { Reversibility, Zone } from '../../schema.ts';
 
-// Reversibility derived from Capability and resolved Zone.
-// Source of truth: docs/design.md section 13.4. Each entry below is one cell of
-// that table; `everyZone(x)` fills a row whose design value is "all", then the
-// listed zones override the exceptions.
-//
-// The design table specifies send/push only for the remote and protected zones.
-// The local zones (workspace, host, credentials, agent_config) are not reachable
-// for a send/push through classification, so they default to the conservative
-// `irreversible` here; no default template Rule reads send/push reversibility.
+// Local send/push zones are unreachable through classification, so they default to irreversible; the design table only specifies remote and protected (docs/design.md 13.4).
 
 function everyZone(reversibility: Reversibility): Record<Zone, Reversibility> {
   return {

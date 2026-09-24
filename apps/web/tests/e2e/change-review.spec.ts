@@ -346,11 +346,9 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   });
   await page.route('**/api/v1/**', (route) => installApi(route, store));
 
-  // draft -> a change review is created from the draft policy version
   await page.goto(`/policies/${POLICY_ID}/versions/${CANDIDATE_VERSION_ID}`);
   await page.getByRole('button', { name: '변경 검토 만들기' }).click();
 
-  // review -> the Change Review screen loads with the gate closed
   await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByText('평가한 action')).toBeVisible();
   await expect(page.getByTestId('trace-sources')).toHaveText(
@@ -358,7 +356,6 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   );
   await expect(page.getByRole('button', { name: '정책 변경 수락' })).toBeDisabled();
 
-  // the group detail shows the redacted input, operations, and both decisions
   await page.getByRole('link', { name: '보기' }).first().click();
   await expect(page.getByRole('heading', { name: 'Diff Group', level: 1 })).toBeVisible();
   await expect(page.getByText('bash ~/scripts/run.sh')).toBeVisible();
@@ -377,17 +374,14 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await page.getByText('기술 세부').first().click();
   await expect(page.getByText('baseline_rule')).toBeVisible();
 
-  // verdict -> record the widening group as expected
   await page
     .getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정')
     .selectOption('expected');
 
-  // back on the review the gate is now open
   await page.getByRole('link', { name: '변경 검토로 돌아가세요' }).click();
   await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
-  // accept -> the decision is recorded
   await page.getByLabel('검토자 이름').fill('reviewer-e2e');
   const accept = page.getByRole('button', { name: '정책 변경 수락' });
   await expect(accept).toBeEnabled();
@@ -395,7 +389,6 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await expect(page.getByRole('heading', { name: '결정 기록' })).toBeVisible();
   await expect(page.getByText('reviewer-e2e')).toBeVisible();
 
-  // report -> the server's Evidence Report is saved byte for byte
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '보고서 다운로드' }).click();
   const download = await downloadPromise;

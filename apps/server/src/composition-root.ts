@@ -15,9 +15,6 @@ export interface ModuleWiringDeps extends PolicyWiringDeps {
   readonly database: Database;
 }
 
-// Shared dependencies every module wires against. Each module reads the subset
-// it needs (policy uses db, clock, ids); logger and transactionRunner are here
-// for the modules that need them.
 export function buildServerDeps(config: Config): ModuleWiringDeps {
   const database = createDatabase(config);
   return {
@@ -30,7 +27,6 @@ export function buildServerDeps(config: Config): ModuleWiringDeps {
   };
 }
 
-// One line per module. Later milestones add their own wiring call here.
 export function composeModules(app: Hono<AppEnv>, config: Config): TraceModule {
   const deps = buildServerDeps(config);
   wirePolicy(app, deps);

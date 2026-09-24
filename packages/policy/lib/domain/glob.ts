@@ -1,12 +1,4 @@
-// Whole-value glob matcher for Environment Profile patterns.
-//
-// Syntax (packages/policy/schema.ts ResolveZone TSDoc): `**` matches any string
-// including `/`; `*` matches any string except `/`; `?` matches one character
-// except `/`; every other character is literal; the whole value must match.
-//
-// Implemented directly by translating a pattern to an anchored RegExp. No glob
-// library is used; RegExp is a language builtin, so lib/domain stays pure and a
-// compiled pattern can be reused across many values (see createEvaluator).
+// Translate a whole-value glob to an anchored RegExp so lib/domain stays free of a glob library and a compiled pattern can be reused (see createEvaluator).
 
 const REGEXP_META: ReadonlySet<string> = new Set([
   '.',

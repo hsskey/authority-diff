@@ -9,8 +9,6 @@ import type { ActionForReplay, ObservedOutcome } from '@authority/trace/schema';
 import { DiffResultSchema, type DiffResult } from '@authority/replay/schema';
 import { computeDiffWith, deriveTargetKey } from '../diff.ts';
 
-// --- builders (Arrange helpers, no assertion logic) --------------------------
-
 type Evaluate = (operations: readonly Operation[]) => Decision | null;
 
 interface Case {
@@ -172,8 +170,6 @@ function hashedProjection(result: DiffResult) {
     changedActions: result.changedActions,
   };
 }
-
-// --- tests -------------------------------------------------------------------
 
 describe('deriveTargetKey', () => {
   test.each<[string, Target, string]>([

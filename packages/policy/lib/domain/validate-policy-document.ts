@@ -1,9 +1,6 @@
 import type { PolicyIssue, ValidatePolicyDocument } from '../../schema.ts';
 
-// Structural checks beyond what PolicyDocumentSchema enforces.
-// Issue codes: duplicate_rule_id, invalid_pattern, invalid_production_marker.
-// (An empty glob or production-marker string is invalid_pattern; a non-empty but
-// unparseable production marker is invalid_production_marker.)
+// Empty glob or production-marker strings are invalid_pattern; a non-empty unparseable production marker is invalid_production_marker.
 
 const GLOB_FIELDS = [
   'credentialPaths',

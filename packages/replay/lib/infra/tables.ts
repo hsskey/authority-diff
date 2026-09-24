@@ -20,8 +20,7 @@ import type {
 } from '../../schema.ts';
 import type { StoredRunStats } from '../app/ports.ts';
 
-// docs/design.md 25장. IsoTimestamp 문자열을 그대로 보존하려고 시각은 text로 저장한다.
-// ISO-Z UTC 문자열은 사전순 정렬이 시간순과 같다.
+// Store IsoTimestamp as text: timestamptz rewrites the brand format; ISO-Z UTC sorts as time (docs/design.md chapter 25).
 export const replayRuns = pgTable(
   'replay_runs',
   {
