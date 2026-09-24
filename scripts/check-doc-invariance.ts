@@ -19,6 +19,14 @@ const NUMBER_RE = /\d{1,3}(?:,\d{3})+|\d+/g;
 const TABLE_ROW_RE = /^\s*\|.*\|\s*$/;
 const TABLE_SEP_RE = /^\s*\|?\s*:?-{3,}/;
 
+export function compareNumericTokens(left: string, right: string): number {
+  const collated = left.localeCompare(right, 'en', { numeric: true });
+  if (collated !== 0) {
+    return collated;
+  }
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export function extractDocShape(markdown: string): DocShape {
   const lines = markdown.split('\n');
   const headings: string[] = [];
@@ -52,7 +60,7 @@ export function extractDocShape(markdown: string): DocShape {
 
   return {
     headings,
-    numbers: [...numbers].sort((left, right) => left.localeCompare(right, 'en', { numeric: true })),
+    numbers: [...numbers].sort(compareNumericTokens),
     tableRowCounts,
   };
 }

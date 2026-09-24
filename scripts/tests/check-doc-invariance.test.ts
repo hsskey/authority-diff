@@ -64,6 +64,15 @@ describe('compareDocShapes', () => {
     });
   });
 
+  it('accepts a structure-preserving reorder of leading-zero and plain-digit tokens', () => {
+    const original = '# Title\n\nSee ADR-0009 and item 9, then ADR-0011 and value 11.\n';
+    const reordered = '# Title\n\nSee item 9 and ADR-0009, then value 11 and ADR-0011.\n';
+
+    expect(
+      compareDocShapes(extractDocShape(original), extractDocShape(reordered), 'docs/design.md'),
+    ).toEqual({ ok: true });
+  });
+
   it('rejects a missing numbered heading', () => {
     const after = english.replace('### 1.1 Detail\n', '');
     const result = compareDocShapes(

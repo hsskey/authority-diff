@@ -114,7 +114,7 @@ The basis of first-adoption review is ADR-0010; measurement is `docs/evidence/ad
 5. See the needs-confirmation group table and the deny group table.
    Each group shows one plain-language sentence, program makeup (Program Summary), top targets, and counts.
    An Adoption Group is in `[effect, capability, zone]` units so it equals one judgement the Policy made, and there is no severity.
-6. Record `expected` (intended restriction (의도한 제한)), `investigate` (hold (보류)), `unexpected` (policy needs a fix (정책 수정 필요)) per group.
+6. Record `expected` (intended restriction), `investigate` (hold), `unexpected` (policy needs a fix) per group.
    Every ask and deny group is in scope, and if any is not `expected` the adopt button stays locked.
 7. When all are `expected`, press <!-- ko-product-output -->"최초 정책 채택".
    Version 1 becomes `accepted` and a Decision Record with a null baseline hash remains.
@@ -146,7 +146,7 @@ The basis of first-adoption review is ADR-0010; measurement is `docs/evidence/ad
 > This record leaves the fact that the policy change was reviewed against the past records above.
 > Authority Diff did not deploy or enforce the policy, and did not measure whether the runtime behaves according to this policy.
 
-Terms are "Accept Policy Change (정책 변경 수락)" and "Reject Policy Change (정책 변경 반려)", and in first-adoption review "adopt first policy (최초 정책 채택)" and "reject first policy (최초 정책 반려)".
+Terms are "Accept Policy Change" and "Reject Policy Change", and in first-adoption review "adopt first policy" and "reject first policy".
 "Approve Review" reads as approving the review itself, and "Mark Reviewed" does not distinguish accept from reject.
 Policy Version status is `draft -> in_review -> accepted | rejected`; withdrawal is `in_review -> draft`.
 The first version also starts as `draft`, and `accepted` arises only from a review decision.
@@ -391,9 +391,9 @@ Result grade (not a pass criterion):
 
 | grade | condition |
 | --- | --- |
-| strong (강) | unexpected Widening not on the expected list was found in the real record |
-| medium (중) | Widening in the real record could be reviewed but all was in the expected range |
-| weak (약) | the critical Widening scene is demonstrated only with a synthetic fixture |
+| strong | unexpected Widening not on the expected list was found in the real record |
+| medium | Widening in the real record could be reviewed but all was in the expected range |
+| weak | the critical Widening scene is demonstrated only with a synthetic fixture |
 
 Evidence documents and the README write only the matching grade above, and do not use wording stronger than the grade.
 Do not assert a grade before measurement; write only this table.
@@ -482,11 +482,11 @@ It is not completion of Target Architecture.
 5. Each Widening group has `headline`, target summary, samples, and a Verdict can be recorded.
 6. It is not accepted while a Widening group remains unjudged (I7).
 7. Accept or reject remains on `review_decisions` with a hash, and the Evidence report contains chapter 5's fixed wording.
-8. The demo shows the critical Widening scene of the `github.com/**` mistake. If it appears in the real record, use that; if not, demonstrate with a separate danger fixture labeled `synthetic` and do not mix it into the same review as the real record. The screen and Evidence report show that scene's provenance (real record or `synthetic`). Whether unexpected widening existed in the real record, and the result grade (strong/medium/weak (강/중/약), chapter 11 core-journey verification criteria), are not product fields; they are written in the evidence documents (`docs/evidence/v1-metrics.md`) and the README, and wording stronger than the grade is not used.
+8. The demo shows the critical Widening scene of the `github.com/**` mistake. If it appears in the real record, use that; if not, demonstrate with a separate danger fixture labeled `synthetic` and do not mix it into the same review as the real record. The screen and Evidence report show that scene's provenance (real record or `synthetic`). Whether unexpected widening existed in the real record, and the result grade (strong/medium/weak, chapter 11 core-journey verification criteria), are not product fields; they are written in the evidence documents (`docs/evidence/v1-metrics.md`) and the README, and wording stronger than the grade is not used.
 9. `pnpm check` (typecheck, lint, boundary rules, unit and property tests, laundering rate 0) and `pnpm test:e2e` pass in CI.
 10. `docs/evidence` has real-record measurement, the diff and expected list, the classifier benchmark (C1 100 entries), and the verification-metrics table.
 11. The README states limits.
-    One person's record, a single runtime, approximate remote resolution, that match with runtime behavior was not measured, whether the demo used a synthetic fixture, whether unexpected widening existed in the real record, the result grade (strong/medium/weak (강/중/약), chapter 11 core-journey verification criteria), and chapter 13's list.
+    One person's record, a single runtime, approximate remote resolution, that match with runtime behavior was not measured, whether the demo used a synthetic fixture, whether unexpected widening existed in the real record, the result grade (strong/medium/weak, chapter 11 core-journey verification criteria), and chapter 13's list.
 
 V1 verification metrics (instead of a North Star):
 

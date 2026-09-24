@@ -440,8 +440,8 @@ Auxiliary routes: `/trace-imports` (import history), `/audit` (audit events and 
   the organization lead reads only this screen's top summary and critical groups and decides.
 - If Review Kind is `adoption` (first-adoption review), there is no baseline so there is no transition matrix and no severity.
   the top summary is evaluated action count and allow/ask/deny counts and shares, and below that the needs-confirmation group table and deny group table (Adoption Group: capability, zone, program composition, action count, session count, verdict).
-  Verdict labels are intended restriction (의도한 제한) / hold (보류) / policy needs a fix (정책 수정 필요), blockers are `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`, and the primary action is <!-- ko-product-output -->"최초 정책 채택".
-  After adoption, show the sentence <!-- ko-product-output -->"채택은 검토 기록이며 runtime 반영은 Authority Diff 밖" and do not say applied (적용됨) or active (활성).
+  Verdict labels are intended restriction / hold / policy needs a fix, blockers are `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`, and the primary action is <!-- ko-product-output -->"최초 정책 채택".
+  After adoption, show the sentence <!-- ko-product-output -->"채택은 검토 기록이며 runtime 반영은 Authority Diff 밖" and do not say applied or active.
 
 ### 12.4 Diff Group Detail
 
