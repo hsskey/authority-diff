@@ -44,8 +44,7 @@ const VALUE_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 
 export function classifyBash(parse: ShellParse, call: ToolCall): OperationDraft[] {
   const ops: OperationDraft[] = [];
-  // ponytail: cwd is tracked linearly across the flattened command list; a `cd`
-  // buried inside a substitution can leak forward, which is acceptable for V1.
+  // cwd is tracked linearly across the flattened command list; a `cd` buried inside a substitution can leak forward, which is acceptable for V1.
   let cwd = call.workspaceRoot;
 
   for (const command of parse.commands) {

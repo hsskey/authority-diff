@@ -1,10 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The Activity Shape page (/) reads the imported-activity overview and the
-// Policy list, then GET /api/v1/authority-map once a version is accepted. Each
-// test stubs those routes so the empty, populated, and error screens render
-// without a backend. The routes are the named seam; the UI, router, and query
-// layer are real.
+// `/` reads the imported-activity overview and the Policy list, then GET /api/v1/authority-map once a version is accepted. API routes are stubbed; the UI, router, and query layer are real.
 
 const AUTHORITY_MAP = '**/api/v1/authority-map';
 const SUFFIX = '0123456789ABCDEFGHJKMNPQRS';

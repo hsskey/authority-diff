@@ -74,7 +74,6 @@ export const HealthzResponseSchema = z.object({
 });
 export type HealthzResponse = z.infer<typeof HealthzResponseSchema>;
 
-// POST /trace-imports
 export const ImportTraceRequestSchema = ParsedSessionSchema.extend({
   toolCalls: ParsedSessionSchema.shape.toolCalls.max(1000),
 });
@@ -88,7 +87,6 @@ export const ImportTraceResponseSchema = z.object({
 });
 export type ImportTraceResponse = z.infer<typeof ImportTraceResponseSchema>;
 
-// POST /runtime-observations
 export const RuntimeObservationInputSchema = RuntimeObservationSchema.omit({
   observationKey: true,
   actionKey: true,
@@ -111,7 +109,6 @@ export type CreateRuntimeObservationsResponse = z.infer<
   typeof CreateRuntimeObservationsResponseSchema
 >;
 
-// GET /actions, GET /actions/{actionKey}
 export const ListActionsQuerySchema = z.object({
   windowFrom: IsoTimestampSchema.optional(),
   windowTo: IsoTimestampSchema.optional(),
@@ -136,10 +133,7 @@ export type ActionResponse = z.infer<typeof ActionResponseSchema>;
 export const ListActionsResponseSchema = pageOf(ActionResponseSchema);
 export type ListActionsResponse = z.infer<typeof ListActionsResponseSchema>;
 
-// POST /actions/reclassify
-// Added in the trace-storage change: `authority reclassify` is a CLI that calls
-// this endpoint, not a server-side job. It re-runs the current classifier over
-// the Actions in the window whose stored classifier version is stale.
+/** Re-runs the current classifier over Actions in the window whose stored classifier version is stale. The CLI calls this endpoint; it is not a server-side job. */
 export const ReclassifyActionsRequestSchema = z.object({
   windowFrom: IsoTimestampSchema,
   windowTo: IsoTimestampSchema,
@@ -152,10 +146,7 @@ export const ReclassifyActionsResponseSchema = z.object({
 });
 export type ReclassifyActionsResponse = z.infer<typeof ReclassifyActionsResponseSchema>;
 
-// GET /activity-overview
-// The overview of the Actions imported in the last `windowDays` days, read
-// from stored activity alone: no Policy Version, so no Effect or Zone. The
-// response carries the window the server resolved.
+/** Actions imported in the last `windowDays` days, from stored activity alone: no Policy Version, so no Effect or Zone. */
 export const ActivityOverviewQuerySchema = z.object({
   windowDays: z.coerce.number().int().min(1).max(365).default(30),
 });
@@ -168,7 +159,6 @@ export const ActivityOverviewResponseSchema = ActivityOverviewSchema.extend({
 });
 export type ActivityOverviewResponse = z.infer<typeof ActivityOverviewResponseSchema>;
 
-// GET /policies, POST /policies
 export const PolicyResponseSchema = PolicySchema;
 export type PolicyResponse = z.infer<typeof PolicyResponseSchema>;
 
@@ -181,7 +171,6 @@ export const CreatePolicyRequestSchema = z.object({
 });
 export type CreatePolicyRequest = z.infer<typeof CreatePolicyRequestSchema>;
 
-// POST /policies/{id}/versions, GET/PUT /policy-versions/{id}
 export const CreatePolicyVersionRequestSchema = z.object({
   baseVersionId: PolicyVersionIdSchema,
 });
@@ -190,16 +179,14 @@ export type CreatePolicyVersionRequest = z.infer<typeof CreatePolicyVersionReque
 export const PolicyVersionResponseSchema = PolicyVersionSchema;
 export type PolicyVersionResponse = z.infer<typeof PolicyVersionResponseSchema>;
 
-/** POST /policies answers with the Policy and its draft version 1. */
+/** POST /policies returns the Policy with draft version 1 so the client can open the editor without a second fetch. */
 export const CreatePolicyResponseSchema = z.object({
   policy: PolicyResponseSchema,
   initialVersion: PolicyVersionResponseSchema,
 });
 export type CreatePolicyResponse = z.infer<typeof CreatePolicyResponseSchema>;
 
-// GET /policies/{policyId}/versions
-// Every version of the Policy in version order, oldest first. The cursor is the
-// last returned version's versionNumber as a decimal string.
+/** Every version of the Policy, oldest first. The cursor is the last returned versionNumber as a decimal string. */
 export const ListPolicyVersionsQuerySchema = z.object({
   cursor: CursorSchema.optional(),
   limit: LimitSchema,
@@ -214,17 +201,13 @@ export const UpdatePolicyVersionRequestSchema = z.object({
 });
 export type UpdatePolicyVersionRequest = z.infer<typeof UpdatePolicyVersionRequestSchema>;
 
-// POST /policy-versions/{id}/validations
 export const ValidatePolicyVersionResponseSchema = z.object({
   isValid: z.boolean(),
   issues: z.array(PolicyIssueSchema),
 });
 export type ValidatePolicyVersionResponse = z.infer<typeof ValidatePolicyVersionResponseSchema>;
 
-// POST /replay-runs, GET /replay-runs/{id}
-// Without `kind` the request is a `version_diff` run. A `conformance` run has
-// no baseline version: its baseline is the observed_runtime Decision Source.
-// An `adoption` run has no baseline either: it applies the candidate alone.
+/** Omit `kind` for `version_diff`. `conformance` baselines on observed_runtime; `adoption` applies the candidate with no baseline. */
 export const CreateReplayRunRequestSchema = z.union([
   z.object({
     kind: z.literal('version_diff').default('version_diff'),
@@ -251,7 +234,6 @@ export type CreateReplayRunRequest = z.infer<typeof CreateReplayRunRequestSchema
 export const ReplayRunResponseSchema = ReplayRunSchema;
 export type ReplayRunResponse = z.infer<typeof ReplayRunResponseSchema>;
 
-// GET /replay-runs/{id}/diff-groups
 export const ListDiffGroupsQuerySchema = z.object({
   direction: DiffGroupSchema.shape.direction.optional(),
   severity: DiffGroupSchema.shape.severity.optional(),
@@ -266,9 +248,7 @@ export type DiffGroupResponse = z.infer<typeof DiffGroupResponseSchema>;
 export const ListDiffGroupsResponseSchema = pageOf(DiffGroupResponseSchema);
 export type ListDiffGroupsResponse = z.infer<typeof ListDiffGroupsResponseSchema>;
 
-// GET /diff-groups/{runId}/{groupKey}/samples
-// `targetKeys[i]` is the Target key of `action.operations[i]`. The rationale
-// maps are keyed by ruleId and cover the rules that decided an Operation.
+/** `targetKeys[i]` matches `action.operations[i]`. Rationale maps are keyed by the ruleId that decided an Operation. */
 export const DiffGroupSampleSchema = z.object({
   action: StoredAgentActionSchema,
   targetKeys: z.array(z.string()),
@@ -284,8 +264,7 @@ export const DiffGroupSamplesResponseSchema = z.object({
 });
 export type DiffGroupSamplesResponse = z.infer<typeof DiffGroupSamplesResponseSchema>;
 
-// GET /replay-runs/{id}/adoption-groups
-// Groups come in review order: deny before ask, then actionCount descending.
+/** Adoption Groups in review order: deny before ask, then actionCount descending. */
 export const ListAdoptionGroupsQuerySchema = z.object({
   effect: AdoptionEffectSchema.optional(),
   cursor: CursorSchema.optional(),
@@ -299,9 +278,7 @@ export type AdoptionGroupResponse = z.infer<typeof AdoptionGroupResponseSchema>;
 export const ListAdoptionGroupsResponseSchema = pageOf(AdoptionGroupResponseSchema);
 export type ListAdoptionGroupsResponse = z.infer<typeof ListAdoptionGroupsResponseSchema>;
 
-// GET /adoption-groups/{runId}/{groupKey}/samples
-// The diff sample shape with the candidate side only: an adoption run has no
-// baseline Decision.
+/** Diff sample shape with the candidate side only: an adoption run has no baseline Decision. */
 export const AdoptionGroupSampleSchema = z.object({
   action: StoredAgentActionSchema,
   targetKeys: z.array(z.string()),
@@ -315,10 +292,7 @@ export const AdoptionGroupSamplesResponseSchema = z.object({
 });
 export type AdoptionGroupSamplesResponse = z.infer<typeof AdoptionGroupSamplesResponseSchema>;
 
-// GET /authority-map
-// The map is the most recent completed run for the accepted baseline; its
-// period is carried by the run's windowFrom/windowTo, so the request takes no
-// query parameters. The cell and analyzability shapes are replay's.
+/** Most recent completed run for the accepted baseline; the run's window is the period, so the request has no query parameters. */
 export { AnalyzabilityCountsSchema, AuthorityMapCellSchema };
 export type { AnalyzabilityCounts, AuthorityMapCell } from '@authority/replay/schema';
 
@@ -336,25 +310,17 @@ export const AuthorityMapResponseSchema = z.object({
 });
 export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 
-// GET /conformance-findings
-// The findings of the most recent completed conformance run; the run carries
-// the candidate version and window, so the request takes no query parameters.
-// unpairedPermissionRequests counts the run's permission_requests that no
-// pre_tool_use matched, so they could not reach any Action's Disposition.
-// byPermissionMode is the run's Action and finding counts per runtime
-// permission mode; the modes in UNGUARDED_PERMISSION_MODES never prompt.
+/** Findings of the latest completed conformance run (the run carries version and window). unpairedPermissionRequests could not join a Disposition; UNGUARDED_PERMISSION_MODES never prompt. */
 export { PermissionModeCountSchema, UNGUARDED_PERMISSION_MODES };
 export type { PermissionModeCount } from '@authority/replay/schema';
 
-// status and note default so a listing payload from before acknowledgement
-// still parses; the server always writes both after this contract.
+/** `status` and `note` default so a listing payload from before acknowledgement still parses. */
 export const ConformanceFindingResponseSchema = ConformanceFindingViewSchema.extend({
   status: ConformanceFindingStatusSchema.default('open'),
   note: z.string().default(''),
 });
 export type ConformanceFindingResponse = z.infer<typeof ConformanceFindingResponseSchema>;
 
-// PUT /conformance-findings/{id}
 export const AcknowledgeConformanceFindingRequestSchema = z.object({
   status: z.literal('acknowledged'),
   note: z.string(),
@@ -363,7 +329,7 @@ export type AcknowledgeConformanceFindingRequest = z.infer<
   typeof AcknowledgeConformanceFindingRequestSchema
 >;
 
-// POST /conformance-findings/{id}/policy-drafts. `effect` is required.
+/** `effect` is required: the finding kind does not imply an Effect. */
 export const CreatePolicyDraftFromFindingRequestSchema = z.object({
   effect: EffectSchema,
 });
@@ -386,10 +352,7 @@ export const ListConformanceFindingsResponseSchema = z.object({
 });
 export type ListConformanceFindingsResponse = z.infer<typeof ListConformanceFindingsResponseSchema>;
 
-// POST /change-reviews, GET /change-reviews/{id}
-// The request carries no review kind: the server derives `change` when the
-// Policy has an accepted version to compare against and `adoption` when it has
-// none, so the candidate is the first version to adopt.
+/** The request carries no review kind: the server derives `change` vs `adoption` from whether the Policy already has an accepted version. */
 export const CreateChangeReviewRequestSchema = z.object({
   candidateVersionId: PolicyVersionIdSchema,
   windowFrom: IsoTimestampSchema,
@@ -405,8 +368,7 @@ export const ReplaySummarySchema = z.object({
 });
 export type ReplaySummary = z.infer<typeof ReplaySummarySchema>;
 
-// traceSources counts the review window's Actions by the source of their Trace
-// Import, so the screen can say whether it rests on real or synthetic records.
+/** `traceSources` counts the window's Actions by Trace Import source so the screen can say whether it rests on real or synthetic records. */
 export const ChangeReviewResponseSchema = ChangeReviewSchema.extend({
   replaySummary: ReplaySummarySchema,
   gate: GateSchema,
@@ -414,9 +376,7 @@ export const ChangeReviewResponseSchema = ChangeReviewSchema.extend({
 });
 export type ChangeReviewResponse = z.infer<typeof ChangeReviewResponseSchema>;
 
-// GET /change-reviews?policyId=
-// The Policy's Change Reviews of either kind, newest first, so the web can
-// find the open adoption review of a draft without an accepted version.
+/** The Policy's reviews of either kind, newest first, so the web can find an open adoption review when no version is accepted yet. */
 export const ListChangeReviewsQuerySchema = z.object({
   policyId: PolicyIdSchema,
   cursor: CursorSchema.optional(),
@@ -427,7 +387,6 @@ export type ListChangeReviewsQuery = z.infer<typeof ListChangeReviewsQuerySchema
 export const ListChangeReviewsResponseSchema = pageOf(ChangeReviewResponseSchema);
 export type ListChangeReviewsResponse = z.infer<typeof ListChangeReviewsResponseSchema>;
 
-// GET /change-reviews/{id}/diff-groups
 export const ReviewDiffGroupResponseSchema = DiffGroupSchema.extend({
   verdict: VerdictSchema.nullable(),
 });
@@ -445,9 +404,7 @@ export type ListReviewDiffGroupsQuery = z.infer<typeof ListReviewDiffGroupsQuery
 export const ListReviewDiffGroupsResponseSchema = pageOf(ReviewDiffGroupResponseSchema);
 export type ListReviewDiffGroupsResponse = z.infer<typeof ListReviewDiffGroupsResponseSchema>;
 
-// GET /change-reviews/{id}/adoption-groups
-// An adoption review's Adoption Groups in the run's review order, each with the
-// review's Verdict; an empty page for a change review.
+/** An adoption review's Adoption Groups in the run's review order, each with the review's Verdict; empty for a change review. */
 export const ReviewAdoptionGroupResponseSchema = AdoptionGroupSchema.extend({
   verdict: VerdictSchema.nullable(),
 });
@@ -466,7 +423,6 @@ export type ListReviewAdoptionGroupsResponse = z.infer<
   typeof ListReviewAdoptionGroupsResponseSchema
 >;
 
-// PUT /change-reviews/{id}/verdicts/{groupKey}
 export const RecordVerdictRequestSchema = z.object({
   verdict: VerdictSchema,
   note: z.string(),
@@ -481,7 +437,6 @@ export const VerdictResponseSchema = z.object({
 });
 export type VerdictResponse = z.infer<typeof VerdictResponseSchema>;
 
-// POST /change-reviews/{id}/decisions
 export const CreateDecisionRequestSchema = z.object({
   decision: z.enum(['accept', 'reject']),
   note: z.string(),
@@ -489,5 +444,4 @@ export const CreateDecisionRequestSchema = z.object({
 });
 export type CreateDecisionRequest = z.infer<typeof CreateDecisionRequestSchema>;
 
-// GET /change-reviews/{id}/report (text/markdown)
 export const ChangeReviewReportResponseSchema = z.string();

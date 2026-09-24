@@ -29,8 +29,7 @@ export function registerActionsRoutes(app: Hono<AppEnv>, trace: TraceModule): vo
     if (action === undefined) {
       return respondError(c, traceActionNotFound());
     }
-    // `decision` is present only when the request supplies a policyVersionId;
-    // policy evaluation lands in the policy milestone, so it is null here.
+    // This list/get path does not take a policyVersionId, so decision is always null.
     return c.json(ActionResponseSchema.parse({ ...action, decision: null }));
   });
 }

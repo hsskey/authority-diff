@@ -2,9 +2,7 @@ import { sql } from 'drizzle-orm';
 import { integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { PolicyDocument } from '../../schema.ts';
 
-// docs/design.md 25장. Timestamp는 IsoTimestamp 문자열(밀리초 3자리, `Z`)을 그대로
-// 보존하려고 text로 저장한다. timestamptz는 postgres가 다른 표기로 되돌려주어 브랜드
-// 형식이 깨진다. ISO-Z UTC 문자열은 사전순 정렬이 시간순과 같다.
+// Store IsoTimestamp as text: timestamptz rewrites the brand format; ISO-Z UTC sorts as time (docs/design.md chapter 25).
 export const policies = pgTable(
   'policies',
   {

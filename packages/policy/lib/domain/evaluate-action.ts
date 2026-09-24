@@ -12,9 +12,6 @@ import type {
 import { type CompiledEnvironment, compileEnvironment, resolveZoneWith } from './resolve-zone.ts';
 import { reversibilityFor } from './reversibility.ts';
 
-// Rule-order-independent evaluation. Source of truth: packages/policy/schema.ts
-// EvaluateAction TSDoc and docs/design.md section 13.5.
-
 const EFFECT_RANK: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
 
 function ruleMatches(
@@ -40,7 +37,7 @@ function ruleMatches(
   return true;
 }
 
-// Effects use deny > ask > allow; no matching Rule yields the default ask.
+// No matching Rule yields ask; among matches, deny beats ask beats allow.
 function resolveEffect(matched: readonly PolicyRule[]): Effect {
   if (matched.some((rule) => rule.effect === 'deny')) {
     return 'deny';
@@ -54,8 +51,7 @@ function resolveEffect(matched: readonly PolicyRule[]): Effect {
   return 'ask';
 }
 
-// The first matched ruleId (ascending UTF-16 code-unit order) whose Effect is
-// the resolved Effect; null when the default ask has no matching Rule.
+// First matched ruleId in UTF-16 order among rules that carry the resolved Effect; null when the default ask has no match.
 function decidingRuleId(matched: readonly PolicyRule[], effect: Effect): string | null {
   const candidates = matched
     .filter((rule) => rule.effect === effect)
@@ -93,7 +89,6 @@ function mostRestrictiveEffect(decisions: readonly OperationDecision[]): Effect 
   );
 }
 
-// The smallest Operation index among Operations carrying the Action's Effect.
 function decidingOperationIndex(decisions: readonly OperationDecision[], effect: Effect): number {
   return decisions
     .filter((decision) => decision.effect === effect)

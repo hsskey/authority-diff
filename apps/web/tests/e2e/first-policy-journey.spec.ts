@@ -610,20 +610,17 @@ test('an organization goes from no policy to an accepted first policy, a change 
   });
   await page.route('**/api/v1/**', (route) => serve(route, store));
 
-  // 2. the overview of imported activity with no Policy yet
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '가져온 활동 개요 (최근 30일)' })).toBeVisible();
   await expect(page.getByText('340', { exact: true })).toBeVisible();
   await expect(page.getByText('synthetic-org')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: '아직 조직 정책이 없습니다' })).toBeVisible();
 
-  // 3. the first Policy: draft version 1 from the default template
   await page.getByRole('button', { name: '첫 조직 정책 만들기' }).click();
   await expect(page.getByRole('heading', { name: 'Policy Version', level: 1 })).toBeVisible();
   await expect(page.getByText('draft', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '최초 도입 검토 만들기' })).toBeVisible();
 
-  // 4. the adoption preview: what the proposed policy would do to past Actions
   await page.getByRole('button', { name: '최초 도입 검토 만들기' }).click();
   await expect(page.getByRole('heading', { name: '최초 도입 검토', level: 1 })).toBeVisible();
   const effects = page.getByTestId('adoption-effects');
@@ -641,7 +638,6 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await expect(page.getByTestId('adoption-preview')).toContainText('250');
   await page.getByRole('link', { name: '최초 도입 검토 계속하기' }).click();
 
-  // 5. the ask and deny groups, with the program mix inside the group
   await expect(page.getByRole('heading', { name: '확인 필요 group (1)' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '차단 group (1)' })).toBeVisible();
   await expect(page.getByText('판정하지 않은 group 2개').first()).toBeVisible();
@@ -662,14 +658,12 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await page.getByText('기술 세부').first().click();
   await expect(page.getByText('deny_credentials_access')).toBeVisible();
 
-  // 6. every group intended, so the gate opens
   await page.getByLabel('read · credentials · 차단 판정').selectOption('expected');
   await page.getByRole('link', { name: '최초 도입 검토로 돌아가세요' }).click();
   await expect(page.getByText('판정하지 않은 group 1개').first()).toBeVisible();
   await page.getByLabel('execute · host · 확인 필요 판정').selectOption('expected');
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
-  // 7. the first Policy is adopted: version 1 becomes accepted, nothing is enforced
   await page.getByLabel('검토자 이름').fill('reviewer-e2e');
   await page.getByRole('button', { name: '최초 정책 채택' }).click();
   await expect(page.getByRole('heading', { name: '결정 기록' })).toBeVisible();
@@ -682,13 +676,11 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await expect(page.getByTestId('map-effects')).toContainText('250');
   await expectNoEnforcementWording(page);
 
-  // 8. a version 2 draft from the accepted version 1
   await page.getByRole('link', { name: '채택된 version 보기' }).click();
   await expect(page.getByText('채택됨', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '이 version에서 draft 만들기' }).click();
   await expect(page.getByText('#2', { exact: true })).toBeVisible();
 
-  // 9. a change review compares version 2 against the accepted baseline
   await page.getByRole('button', { name: '변경 검토 만들기' }).click();
   await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Widening group (1)' })).toBeVisible();
@@ -698,7 +690,6 @@ test('an organization goes from no policy to an accepted first policy, a change 
     .selectOption('expected');
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
-  // 10. conformance compares runtime observations with the accepted Policy
   await page.goto('/conformance');
   const finding = page.getByRole('row').filter({ hasText: 'under_asked' });
   await expect(finding).toContainText('push');

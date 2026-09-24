@@ -109,7 +109,7 @@ const send =
 const post = send('POST');
 const put = send('PUT');
 
-// ponytail: the journey's slice of the V1 HTTP surface; tools may import contract schemas but not the route table.
+// Local copies of the V1 HTTP routes: tools may import contract schemas but not the route table.
 const routes = {
   listPolicies: get(`${API}/policies`, ListPoliciesResponseSchema),
   createPolicy: post(`${API}/policies`, CreatePolicyRequestSchema, CreatePolicyResponseSchema),
@@ -397,7 +397,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
   const { localAdoption, reviewWindow } = input;
   const window = { windowFrom: reviewWindow.from, windowTo: reviewWindow.to };
 
-  // 1 import
   const imported: ImportSummary = ImportSummarySchema.parse(
     JSON.parse(cli(['import', input.snapshotDir])),
   );
@@ -418,7 +417,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `${fmt(imported.sessions)} sessions, ${fmt(imported.acceptedCount)} accepted, ${fmt(imported.duplicateCount)} duplicates, ${fmt(imported.failedSessions)} failed`,
   });
 
-  // 2 overview, no Policy
   const policies = await api.call(routes.listPolicies, { query: { limit: 200 } });
   check(policies.items.length === 0, 'a fresh volume holds no Policy');
   const overview = await api.call(routes.getActivityOverview, { query: { windowDays: 365 } });
@@ -443,7 +441,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `no Policy; Action ${fmt(overview.actionCount)}, evaluable ${fmt(overview.evaluableActionCount)}; analyzability ${fmt(full)} / ${fmt(partial)} / ${fmt(none)}`,
   });
 
-  // 3 first Policy
   const created = await api.call(routes.createPolicy, {
     body: { name: 'org-default', template: 'default' },
   });
@@ -459,7 +456,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `draft version 1 from the default template replaced with policy A (content hash \`${shortHash(savedA.contentHash)}\`), validation passed`,
   });
 
-  // 4 adoption preview
   const adoptionReview = await waitForReview(
     api,
     (await api.call(routes.createChangeReview, { body: { candidateVersionId: v1.id, ...window } }))
@@ -512,7 +508,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `kind \`adoption\`, no baseline; evaluated ${fmt(localAdoption.stats.evaluatedActions)}; allow ${fmt(allow)}, ask ${fmt(ask)}, deny ${fmt(deny)}; ${fmt(adoptionGroups.length - denyGroups)} ask and ${fmt(denyGroups)} deny groups; stats and group keys equal the local computation; resultHash \`${shortHash(adoptionResultHash)}\` on two runs`,
   });
 
-  // 5 group detail
   const detailed = [
     adoptionGroups.find((group) => group.effect === 'deny'),
     adoptionGroups.find((group) => group.effect === 'ask'),
@@ -539,7 +534,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
         .join(' and ') + ' return a Headline and samples',
   });
 
-  // 6 verdicts
   const [lastGroup, ...others] = [...adoptionGroups].reverse();
   await judgeAll(
     api,
@@ -565,7 +559,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `${fmt(adoptionGroups.length)} groups set to \`expected\`; \`adoption_unreviewed\` blocks the gate until the last one, then the gate opens`,
   });
 
-  // 7 adopt
   const adopted = await api.call(routes.decideChangeReview, {
     params: { id: adoptionReview.id },
     body: { decision: 'accept', note: '', reviewerName: REVIEWER },
@@ -581,7 +574,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: 'review `accepted`, version 1 `accepted`',
   });
 
-  // 8 report
   const report = await api.call(routes.getChangeReviewReport, {
     params: { id: adoptionReview.id },
   });
@@ -593,7 +585,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `adoption Evidence Report carries resultHash \`${shortHash(adoptionResultHash)}\``,
   });
 
-  // 9 conformance
   const spoolTarget = join(scratchHome, '.authority', 'spool');
   mkdirSync(spoolTarget, { recursive: true });
   for (const name of readdirSync(input.spoolDir).filter((file) => file.endsWith('.jsonl'))) {
@@ -630,7 +621,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `${fmt(flushed.sentFiles)} spool copies sent; conformance run for version 1 completed with ${fmt(conformance.items.length)} findings, resultHash \`${shortHash(conformanceRun.resultHash ?? '')}\``,
   });
 
-  // 10 change review B'
   const v2 = await api.call(routes.createPolicyVersion, {
     params: { policyId: created.policy.id },
     body: { baseVersionId: v1.id },
@@ -668,7 +658,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `draft version 2 with B' (\`${shortHash(savedBp.contentHash)}\`), kind \`change\`, baseline version 1; changed ${fmt(reviewBp.replaySummary.stats?.changedActions ?? 0)}, Widening group ${fmt(groupsBp.length)}; resultHash \`${shortHash(input.localBp.resultHash)}\` equals the local Gate 2 run`,
   });
 
-  // 11 unexpected, reject, B, accept
   await judgeAll(
     api,
     reviewBp.id,
@@ -736,7 +725,6 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     result: `${fmt(groupsBp.length - unexpected.length)} groups \`expected\`, ${fmt(unexpected.length)} \`unexpected\` → \`widening_unexpected\` blocks and accept is refused; rejected; draft version 3 with B (\`${shortHash(savedB.contentHash)}\`): changed ${fmt(reviewB.replaySummary.stats?.changedActions ?? 0)}, Widening group ${fmt(groupsB.length)}, resultHash \`${shortHash(input.localB.resultHash)}\` equals the local Gate 2 run; all \`expected\` → accepted`,
   });
 
-  // 12 audit
   const audit = AuditSchema.parse(JSON.parse(cli(['verify-audit'])));
   check(
     audit.isIntact && audit.checkedCount === 3,

@@ -155,7 +155,6 @@ export const routes = {
     PolicyVersionResponseSchema,
   ),
 
-  // The change-review routes carry the frozen contract DTOs; their server wiring is added later.
   createChangeReview: post(
     `${API}/change-reviews`,
     CreateChangeReviewRequestSchema,

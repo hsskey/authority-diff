@@ -30,10 +30,7 @@ function withCap(ops: readonly Operation[], capability: string): Operation | und
 }
 
 describe('capability rule table', () => {
-  // Each row is one literal case for a rule-table entry: command, expected
-  // primary capability, and expected target kind.
   const rows: ReadonlyArray<readonly [string, string, string]> = [
-    // read
     ['cat notes.txt', 'read', 'path'],
     ['ls src', 'read', 'path'],
     ['grep TODO src/app.ts', 'read', 'path'],
@@ -43,7 +40,6 @@ describe('capability rule table', () => {
     ['base64 -d payload.txt', 'read', 'path'],
     ['git status', 'read', 'path'],
     ['git log --oneline', 'read', 'path'],
-    // write
     ['mv a.txt b.txt', 'write', 'path'],
     ['cp src.txt dest.txt', 'write', 'path'],
     ['tee out.txt', 'write', 'path'],
@@ -51,12 +47,10 @@ describe('capability rule table', () => {
     ['mkdir dist', 'write', 'path'],
     ['chmod 600 secret.pem', 'write', 'path'],
     ['sed -i s/a/b/ config.yaml', 'write', 'path'],
-    // delete
     ['rm old.txt', 'delete', 'path'],
     ['rmdir empty', 'delete', 'path'],
     ['git clean -fd', 'delete', 'path'],
     ['git rm tracked.txt', 'delete', 'path'],
-    // execute runners
     ['pnpm test', 'execute', 'path'],
     ['npm run build', 'execute', 'path'],
     ['yarn lint', 'execute', 'path'],
@@ -72,46 +66,37 @@ describe('capability rule table', () => {
     ['turbo run typecheck', 'execute', 'path'],
     ['eslint .', 'execute', 'path'],
     ['oxlint --type-aware', 'execute', 'path'],
-    // execute inline (opaque)
     ['python3 -c "print(1)"', 'execute', 'unknown'],
     ['node -e "console.log(1)"', 'execute', 'unknown'],
     ['ssh host uptime', 'execute', 'unknown'],
-    // install
     ['pnpm add lodash', 'install', 'package'],
     ['npm install', 'install', 'package'],
     ['pip install requests', 'install', 'package'],
     ['cargo install ripgrep', 'install', 'package'],
-    // fetch
     ['curl https://example.com/data.json', 'fetch', 'host'],
     ['wget https://example.com/file.tar.gz', 'fetch', 'host'],
     ['git clone https://github.com/acme/toolkit.git', 'fetch', 'vcs_remote'],
     ['git pull origin main', 'fetch', 'vcs_remote'],
     ['scp user@host.example.com:/tmp/file.txt .', 'fetch', 'host'],
-    // send
     ['curl -d @body.json https://api.example.com/x', 'send', 'host'],
     ['curl -X POST https://api.example.com/x', 'send', 'host'],
     ['scp file.txt user@host.example.com:/tmp/', 'send', 'host'],
-    // commit
     ['git add .', 'commit', 'path'],
     ['git commit -m msg', 'commit', 'path'],
     ['git merge feature', 'commit', 'path'],
     ['git checkout main', 'commit', 'path'],
     ['git tag v1.0.0', 'commit', 'path'],
-    // push
     ['git push origin main', 'push', 'vcs_remote'],
     ['docker push registry.example.com/app:1', 'push', 'host'],
     ['npm publish', 'push', 'package'],
-    // rewrite
     ['git push --force origin main', 'rewrite', 'vcs_remote'],
     ['git push -f origin main', 'rewrite', 'vcs_remote'],
     ['git reset --hard HEAD~1', 'rewrite', 'path'],
     ['git branch -D stale', 'rewrite', 'path'],
-    // deploy
     ['kubectl apply -f d.yaml', 'deploy', 'path'],
     ['terraform apply', 'deploy', 'path'],
     ['helm upgrade app chart', 'deploy', 'path'],
     ['vercel', 'deploy', 'path'],
-    // gh
     ['gh pr view 3', 'fetch', 'vcs_remote'],
     ['gh run view 9', 'fetch', 'vcs_remote'],
     ['gh pr create --title x', 'send', 'vcs_remote'],

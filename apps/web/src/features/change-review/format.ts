@@ -59,7 +59,6 @@ export function blockerLabel(code: GateBlocker['code'], count: number): string {
   return BLOCKER_LABEL[code](count);
 }
 
-/** critical group을 먼저, 같은 severity 안에서는 action 수가 많은 순으로 정렬한다. */
 const SEVERITY_RANK: Record<Severity, number> = { critical: 0, normal: 1 };
 
 export function bySeverityThenImpact(

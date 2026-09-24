@@ -1,13 +1,6 @@
 import type { PolicyDocument } from '../../schema.ts';
 
-// The default Policy template. Source of truth: docs/design.md Appendix A, with
-// the Mandate Exception concept removed for schemaVersion 1 (ADR-0009). The
-// Environment Profile is populated with generic, editable defaults so the
-// template is functional out of the box. No real or private Environment Profile
-// is embedded; an organization replaces these with its own facts.
-//
-// Path patterns follow the absolute-path Target contract; the relative notation
-// in design 13.3 is a pending docs fix.
+// Default template from docs/design.md Appendix A, minus Mandate Exception (ADR-0009). Paths are absolute; generic environment facts are placeholders.
 
 export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
   schemaVersion: 1,

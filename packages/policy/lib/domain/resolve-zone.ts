@@ -2,10 +2,6 @@ import type { Capability, Operation, Target } from '@authority/action/schema';
 import type { EnvironmentProfile, ResolveZone, Zone } from '../../schema.ts';
 import { compileGlob, matchesAny } from './glob.ts';
 
-// Zone resolution. Source of truth: packages/policy/schema.ts ResolveZone TSDoc,
-// which the design table (13.3) informs. The first matching condition wins, in
-// the exact order the TSDoc lists.
-
 const LOCAL_CAPABILITIES: ReadonlySet<Capability> = new Set([
   'read',
   'write',
@@ -28,8 +24,7 @@ function tryCompileRegExp(source: string): RegExp | null {
   try {
     return new RegExp(source);
   } catch {
-    // ValidatePolicyDocument reports an invalid production marker; evaluation
-    // treats it as matching nothing rather than failing.
+    // Invalid markers are reported at validation time; evaluation treats them as matching nothing.
     return null;
   }
 }
@@ -88,7 +83,6 @@ function remoteValue(target: Target): string | null {
 export function resolveZoneWith(operation: Operation, environment: CompiledEnvironment): Zone {
   const { target, capability } = operation;
 
-  // 1 credentials, 2 agent_config: a path matches the respective list.
   if (target.kind === 'path') {
     if (matchesAny(environment.credentialPaths, target.path)) {
       return 'credentials';
@@ -98,8 +92,6 @@ export function resolveZoneWith(operation: Operation, environment: CompiledEnvir
     }
   }
 
-  // 3 protected: a vcs_remote branch matches protectedBranches, or a deploy
-  //   Operation fragment matches productionMarkers.
   if (
     target.kind === 'vcs_remote' &&
     target.branch !== null &&
@@ -111,17 +103,14 @@ export function resolveZoneWith(operation: Operation, environment: CompiledEnvir
     return 'protected';
   }
 
-  // 4 workspace, 5 host: paths inside vs outside the workspace.
   if (target.kind === 'path') {
     return target.isInsideWorkspace ? 'workspace' : 'host';
   }
 
-  // 5 host: an unknown target with a local capability.
   if (target.kind === 'unknown' && LOCAL_CAPABILITIES.has(capability)) {
     return 'host';
   }
 
-  // 6 public_remote, 7 trusted_remote: match the remote comparison value.
   const value = remoteValue(target);
   if (value !== null) {
     if (matchesAny(environment.publicRemotes, value)) {
@@ -132,7 +121,6 @@ export function resolveZoneWith(operation: Operation, environment: CompiledEnvir
     }
   }
 
-  // 8 unknown_remote: every remaining target.
   return 'unknown_remote';
 }
 

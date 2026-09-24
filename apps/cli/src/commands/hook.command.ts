@@ -81,8 +81,7 @@ function readStdin(): string {
   return readFileSync(0, 'utf8');
 }
 
-// Fail-open core: read stdin, parse, append one spool record. Never throws, never exits.
-// Split out from runHook so I9 (exit 0 on malformed/closed/empty stdin) is testable in-process.
+// Fail-open and split from runHook so I9 (exit 0 on malformed/closed/empty stdin) is testable in-process.
 export function spoolFromStdin(event: HookEvent, readInput: () => string = readStdin): void {
   try {
     const raw = readInput();
@@ -102,7 +101,7 @@ export function spoolFromStdin(event: HookEvent, readInput: () => string = readS
 
     appendSpoolRecord(record, new Date(record.timestamp));
   } catch {
-    // fail-open: no stdout
+    // Fail-open: swallow parse/IO errors with no stdout.
   }
 }
 

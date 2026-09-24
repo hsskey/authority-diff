@@ -9,8 +9,6 @@ import type { ActionForReplay } from '@authority/trace/schema';
 import { AdoptionResultSchema, type AdoptionResult } from '@authority/replay/schema';
 import { computeAdoptionWith } from '../diff.ts';
 
-// --- builders (Arrange helpers, no assertion logic) --------------------------
-
 type Evaluate = (operations: readonly Operation[]) => Decision | null;
 
 interface Case {
@@ -164,8 +162,6 @@ function hashedProjection(result: AdoptionResult) {
     assignments: result.assignments,
   };
 }
-
-// --- tests -------------------------------------------------------------------
 
 describe('stats', () => {
   test('counts totals, exclusions, Action Effects, analyzability, and the authority-map cells', () => {
@@ -426,19 +422,14 @@ describe('headline', () => {
 
 describe('ordering and determinism', () => {
   const reviewCases = (): Case[] => [
-    // ask, 3 actions, 1 session
     askPush(1, 'git', 's1'),
     askPush(2, 'git', 's1'),
     askPush(3, 'git', 's1'),
-    // ask, 2 actions, 2 sessions
     singleCase(key(4), at(4), 'read', hostPath, 'ask', 'host', { sessionExternalId: 's1' }),
     singleCase(key(5), at(5), 'read', hostPath, 'ask', 'host', { sessionExternalId: 's2' }),
-    // ask, 2 actions, 1 session
     singleCase(key(6), at(6), 'write', hostPath, 'ask', 'host', { sessionExternalId: 's1' }),
     singleCase(key(7), at(7), 'write', hostPath, 'ask', 'host', { sessionExternalId: 's1' }),
-    // deny, 1 action
     singleCase(key(8), at(8), 'read', credentialPath, 'deny', 'credentials'),
-    // allow
     singleCase(key(9), at(9), 'write', workspacePath, 'allow', 'workspace'),
   ];
 
