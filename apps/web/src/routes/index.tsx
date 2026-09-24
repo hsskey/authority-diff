@@ -133,7 +133,7 @@ function ActivityShapePage() {
 
   return (
     <section className="grid gap-5">
-      <h1 className="m-0 mb-4 text-2xl">활동 분포</h1>
+      <h1 className="m-0 mb-4 text-2xl leading-normal">활동 분포</h1>
       {overviewQuery.isPending ? <LoadingState label="가져온 활동을 집계하는 중" /> : null}
       {overviewQuery.isError ? (
         <ErrorState

@@ -32,7 +32,7 @@ export function SectionTitle({
   as: Tag = 'h2',
   ...props
 }: ComponentProps<'h2'> & { as?: 'h2' | 'h3' }) {
-  return <Tag className="m-0 text-lg" {...props} />;
+  return <Tag className="m-0 text-lg leading-normal" {...props} />;
 }
 
 export function Hint({ className, ...props }: ComponentProps<'p'>) {
@@ -49,7 +49,7 @@ export function MetaGrid({ className, ...props }: ComponentProps<'dl'>) {
       className={cx(
         PANEL,
         'm-0 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4',
-        '[&_dd]:m-0 [&_dd]:mt-1 [&_dt]:text-xs [&_dt]:uppercase [&_dt]:tracking-[0.04em] [&_dt]:text-muted',
+        '[&_dd]:m-0 [&_dd]:mt-1 [&_dt]:text-xs [&_dt]:leading-normal [&_dt]:uppercase [&_dt]:tracking-[0.04em] [&_dt]:text-muted',
         className,
       )}
       {...props}
@@ -87,7 +87,7 @@ export function EffectTile({
   return (
     <div className={cx(PANEL, 'grid gap-[0.15rem] text-center', EFFECT_TONE[effect])}>
       <span className="text-[0.7rem] uppercase tracking-wider text-muted">{label}</span>
-      <span className="text-2xl font-semibold tabular-nums">{count}</span>
+      <span className="text-2xl font-semibold leading-normal tabular-nums">{count}</span>
       <span className="text-[0.8rem] text-muted">{percent}</span>
     </div>
   );
@@ -97,7 +97,7 @@ export function EffectBadge({ effect, children }: { effect: Effect; children: Re
   return (
     <span
       className={cx(
-        'inline-block rounded-full px-2 py-[0.1rem] text-xs font-semibold',
+        'inline-block rounded-full px-2 py-[0.1rem] text-xs font-semibold leading-normal',
         EFFECT_BADGE_TONE[effect],
       )}
     >
@@ -129,7 +129,7 @@ export function Th({
     <th
       className={cx(
         CELL_BOX,
-        'whitespace-nowrap text-xs uppercase tracking-[0.04em] text-muted',
+        'whitespace-nowrap text-xs leading-normal uppercase tracking-[0.04em] text-muted',
         numeric ? 'text-right tabular-nums' : 'text-left',
         className,
       )}
