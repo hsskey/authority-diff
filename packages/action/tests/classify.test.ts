@@ -234,6 +234,19 @@ describe('tool routing', () => {
     expect(ops).toEqual([]);
   });
 
+  test('truncated StructuredOutput input adds one opaque Operation', () => {
+    const ops = classify(
+      call({
+        toolName: 'StructuredOutput',
+        toolInputRedacted: '{"summary":',
+        isInputTruncated: true,
+      }),
+    );
+    expect(ops.map((o) => [o.capability, o.target.kind, o.analyzability, o.signals])).toEqual([
+      ['execute', 'unknown', 'none', ['input_truncated']],
+    ]);
+  });
+
   test('Agent is not a control tool and yields an opaque Operation', () => {
     expect(CONTROL_TOOL_NAMES).not.toContain('Agent');
     const ops = classify(call({ toolName: 'Agent', toolInputRedacted: '{"prompt":"x"}' }));

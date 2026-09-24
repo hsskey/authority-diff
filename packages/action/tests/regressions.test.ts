@@ -689,6 +689,7 @@ describe('copies read their sources', () => {
       ['fetch box.example.com', 'write /work/repo/logs'],
     ],
     ['scp a.example.com:/x b.example.com:/y', ['fetch a.example.com', 'send b.example.com']],
+    ['sftp box.example.com:/tmp', ['send box.example.com']],
   ])('%s yields %j', (command, expected) => {
     const ops = classify(bash(command)).map(
       (o) =>
