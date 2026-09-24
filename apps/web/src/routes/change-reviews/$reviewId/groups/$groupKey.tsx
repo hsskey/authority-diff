@@ -122,7 +122,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
     <span
       className={cx(
         'inline-block rounded-full border border-current px-2 py-[0.1rem] text-[0.75rem] font-semibold',
-        severity === 'critical' ? 'text-red-700' : 'text-muted',
+        severity === 'critical' ? 'text-red-700' : 'text-[#6b7280]',
       )}
     >
       {severity}
@@ -159,7 +159,7 @@ function DecisionPair({ children }: { children: ReactNode }) {
 function MetaField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-[0.75rem] tracking-[0.04em] text-muted uppercase">{label}</dt>
+      <dt className="text-[0.75rem] tracking-[0.04em] text-[#6b7280] uppercase">{label}</dt>
       <dd className="mx-0 mt-1 mb-0">{children}</dd>
     </div>
   );
@@ -170,7 +170,7 @@ function TableHeadCell({ children, numeric = false }: { children: ReactNode; num
     <th
       scope="col"
       className={cx(
-        'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-[0.75rem] tracking-[0.04em] text-muted uppercase whitespace-nowrap dark:border-gray-700',
+        'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-[0.75rem] tracking-[0.04em] text-[#6b7280] uppercase whitespace-nowrap dark:border-gray-700',
         numeric && 'text-right tabular-nums',
       )}
     >
@@ -510,7 +510,7 @@ function ProgramMix({ group }: { group: ReviewAdoptionGroupResponse }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[0.9rem]">
-        <caption className="pb-2 text-left text-[0.85rem] text-muted">
+        <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">
           Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
           {group.programSummary.length}개 표시
         </caption>
@@ -671,7 +671,7 @@ function DecisionView({
       </RowBetween>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[0.9rem]">
-          <caption className="pb-2 text-left text-[0.85rem] text-muted">Operation별 결정</caption>
+          <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">Operation별 결정</caption>
           <thead>
             <tr>
               <TableHeadCell>Op</TableHeadCell>
