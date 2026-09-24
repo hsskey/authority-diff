@@ -29,22 +29,24 @@ function render(backlog: Backlog, maskProgram: (name: string) => string): string
     `Evaluated Actions ${backlog.evaluatedActions.toLocaleString('en-US')}, \`none\` Actions ${backlog.noneActions.toLocaleString('en-US')}; Operations ${backlog.operations.toLocaleString('en-US')}, \`none\` Operations ${backlog.noneOperations.toLocaleString('en-US')}.`,
     '',
     table(
-      ['signal', '`none` Operations', '`none` Actions', 'sole-cause Actions'],
-      backlog.noneSignals.map((row) => [
-        `\`${row.key}\``,
-        row.noneOperations,
+      ['signal', '`none` Actions', 'Actions leaving `none`'],
+      backlog.noneSignals.map((row) => [`\`${row.key}\``, row.noneActions, row.soleActions]),
+    ),
+    '',
+    table(
+      ['program', '`none` Actions', 'Actions leaving `none`'],
+      backlog.unrecognizedPrograms.map((row) => [
+        `\`${row.key === '' ? '(empty name)' : maskProgram(row.key)}\``,
         row.noneActions,
         row.soleActions,
       ]),
     ),
     '',
     table(
-      ['program', 'Operations', '`none` Operations', '`none` share', 'sole-cause Actions'],
-      backlog.programs.map((row) => [
-        `\`${row.key === '' ? '(empty name)' : maskProgram(row.key)}\``,
-        row.operations,
-        row.noneOperations,
-        pct(row.noneOperations, row.operations),
+      ['harness tool', '`none` Actions', 'Actions leaving `none`'],
+      backlog.harnessTools.map((row) => [
+        `\`${maskProgram(row.key)}\``,
+        row.noneActions,
         row.soleActions,
       ]),
     ),
