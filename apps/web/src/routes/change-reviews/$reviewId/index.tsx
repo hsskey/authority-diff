@@ -76,9 +76,9 @@ const EFFECT_TONE: Record<Effect, string> = {
 
 const MONO = 'break-all font-mono text-[0.85em]';
 const BADGE =
-  'inline-block rounded-full border border-current px-[0.6rem] py-[0.15rem] text-xs font-semibold';
+  'inline-block rounded-full border border-current px-[0.6rem] py-[0.15rem] text-[0.75rem] font-semibold';
 const SEVERITY_BADGE =
-  'inline-block rounded-full border border-current px-2 py-[0.1rem] text-xs font-semibold';
+  'inline-block rounded-full border border-current px-2 py-[0.1rem] text-[0.75rem] font-semibold';
 const PRIMARY_BUTTON =
   'cursor-pointer rounded-md border border-gray-800 bg-gray-900 px-[0.9rem] py-2 text-white disabled:cursor-not-allowed disabled:opacity-50';
 const SECONDARY_BUTTON =
@@ -90,7 +90,7 @@ const FIELD_INPUT =
   'rounded-md border border-gray-300 bg-white px-[0.6rem] py-[0.4rem] text-inherit dark:border-gray-600 dark:bg-gray-900';
 const ISSUE_LIST = 'm-0 grid gap-[0.35rem] pl-5 text-[0.9rem]';
 const META_GRID = 'm-0 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4';
-const META_TERM = 'text-xs uppercase tracking-[0.04em] text-muted';
+const META_TERM = 'text-[0.75rem] uppercase tracking-[0.04em] text-muted';
 const META_VALUE = 'mx-0 mt-1 mb-0';
 const SUMMARY_LINES =
   'm-0 grid gap-[0.4rem] rounded-lg border border-border bg-panel py-4 pr-5 pl-10 text-base';
@@ -143,7 +143,7 @@ function PanelMessage({
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <h2 className="m-0 text-lg" id={id}>
+    <h2 className="m-0 text-[1.125rem]" id={id}>
       {children}
     </h2>
   );
@@ -188,8 +188,8 @@ function HeaderCell({
 }) {
   const base =
     scope === 'row'
-      ? 'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-xs font-semibold tracking-normal dark:border-gray-700'
-      : 'whitespace-nowrap border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-xs uppercase tracking-[0.04em] text-muted dark:border-gray-700';
+      ? 'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-[0.75rem] font-semibold tracking-normal dark:border-gray-700'
+      : 'whitespace-nowrap border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-[0.75rem] uppercase tracking-[0.04em] text-muted dark:border-gray-700';
   return (
     <th scope={scope} className={numeric ? `${base} text-right tabular-nums` : base}>
       {children}
@@ -290,7 +290,7 @@ function ChangeReviewPage() {
 
   return (
     <section>
-      <h1 className="m-0 mb-4 text-2xl">{kind === undefined ? '검토' : PAGE_TITLE[kind]}</h1>
+      <h1 className="m-0 mb-4 text-[1.5rem]">{kind === undefined ? '검토' : PAGE_TITLE[kind]}</h1>
       {isPending ? <LoadingState label="검토를 불러오는 중" /> : null}
       {reviewQuery.isError ? (
         <ErrorState
@@ -539,7 +539,7 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
             <span className="text-[0.7rem] tracking-[0.05em] text-muted uppercase">
               {effectLabel(effect)}
             </span>
-            <span className="text-2xl font-semibold tabular-nums">{effectCounts[effect]}</span>
+            <span className="text-[1.5rem] font-semibold tabular-nums">{effectCounts[effect]}</span>
             <span className="text-[0.8rem] text-muted">
               {formatShare(effectCounts[effect], evaluatedActions)}
             </span>
