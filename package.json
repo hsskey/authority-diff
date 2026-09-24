@@ -19,6 +19,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev:measure": "tsx tools/local-pipeline/measure.ts",
+    "dev:backlog": "tsx tools/local-pipeline/backlog.ts",
     "dev:replay-local": "tsx tools/local-pipeline/replay-local.ts",
     "dev:policy-init": "tsx tools/local-pipeline/policy-init.ts",
     "evidence:remeasure": "tsx tools/local-pipeline/remeasure.ts",
