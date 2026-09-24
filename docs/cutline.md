@@ -136,6 +136,8 @@ journey는 "import → 활동 파악 → 첫 정책(draft) → 도입 preview �
 14. `unexpected`가 나왔으므로 반려하고 draft를 고쳐 새 review를 만들고 전부 `expected`가 된 뒤 "정책 변경 수락"을 누릅니다.
 15. Evidence report를 내려받습니다.
     두 version의 `contentHash`, 기간, 분석한 Action 수와 `none` 비율, transition 표, Action Effect가 그대로일 때의 operation-level widening 표, group과 Verdict, 검토자와 시각, Decision Record의 audit chain sequence와 hash, 보고서 생성 시점 audit chain tail의 sequence와 hash, 그리고 아래 고정 문구가 들어갑니다.
+    이와 별개로 보고서에는 가장 최근 완료된 conformance run의 permission mode별 Action·finding 집계가 그 run의 id, Policy Version, 기간, 그리고 guard 없이 실행될 수 있는 mode의 Action 합계와 함께 들어가고, 완료된 conformance run이 없으면 그 사실을 적습니다.
+    이 집계는 관측된 permission mode 분포이지 runtime이 candidate를 따르는지에 대한 판단은 아니며, 그 판단은 `/conformance` 화면 몫으로 남습니다.
 16. hook 관측(`install-hooks`, `spool-flush`)이 쌓이면 conformance 화면(`/conformance`)에서 Disposition과 accepted version의 Effect가 어긋난 finding을 봅니다.
     이 화면만이 runtime이 실제로 어떻게 동작했는지를 말합니다.
 
