@@ -3,9 +3,10 @@
 This is the script for recording the V1 journey as a screen demo.
 It follows the twelve steps of the scripted fresh-volume journey in `docs/evidence/adoption-preview.md`, one screen per step and one spoken line per screen.
 
-Live figures are written as `[evidence reference]`.
-Each one names the measured block that carries it, and is filled from that block after `pnpm evidence:remeasure` has rewritten the evidence for the current classifier.
-Do not fill a placeholder from memory, from an older evidence version, or from what a rehearsal showed on screen.
+Live figures are from classifier 0.2.3 on corpus snapshot transcripts-2026-09-23-1036, measured 2026-09-24.
+Each one names the measured block in `docs/evidence/adoption-preview.md` that carries it.
+After `pnpm evidence:remeasure` rewrites the evidence for another classifier, refill every figure from its block.
+Do not take a figure from memory, from an older evidence version, or from what a rehearsal showed on screen.
 Screen labels are quoted as the web app renders them.
 
 ## What the demo claims
@@ -18,18 +19,18 @@ Keep every spoken line inside the grade in `docs/evidence/v1-metrics.md`.
 
 | step | screen | spoken line | figures to highlight |
 | --- | --- | --- | --- |
-| 1 import | terminal, `pnpm authority import` | "We load one person's recorded Claude Code transcripts; secrets are redacted and every tool call is classified into Operations." | sessions, accepted Actions, duplicates, failed: `[evidence reference]` (`remeasure:adoption-journey`, step 1) |
-| 2 overview, no Policy | `/` | "Before any Policy exists, this is only what the Agents did: which Capabilities, which targets, and how much we could not analyze." | Action and evaluable Action counts, analyzability full / partial / none: `[evidence reference]` (`remeasure:adoption-journey`, step 2); "아직 조직 정책이 없습니다" |
-| 3 first Policy | version editor | "The first Policy starts from the default template; we declare our environment and validate it." | "검증: 통과"; content hash of policy A: `[evidence reference]` (`remeasure:adoption-journey`, step 3) |
-| 4 adoption preview | review | "Applied to the past with no baseline, this Policy would allow this share, ask for this share, and deny these few." | evaluated, 허용, 확인 필요, 차단 counts and shares, ask and deny group counts: `[evidence reference]` (`remeasure:adoption-result`); "기준 VERSION 없음 (최초 도입)" |
-| 5 group detail | one deny group, one ask group | "Each group is one judgement the Policy makes; the headline says it in a sentence, and commands stay in the sample panel." | the two Headlines and their Action counts, distinct programs in the largest ask group: `[evidence reference]` (`remeasure:adoption-groups`) |
-| 6 verdicts | review, verdict selects | "Nothing is adopted until every group has a Verdict; the blocker counts down as we judge." | "판정하지 않은 group N개" counting down, then "Gate: 열림"; group total: `[evidence reference]` (`remeasure:adoption-result`) |
+| 1 import | terminal, `pnpm authority import` | "We load one person's recorded Claude Code transcripts; secrets are redacted and every tool call is classified into Operations." | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed (`remeasure:adoption-journey`, step 1) |
+| 2 overview, no Policy | `/` | "Before any Policy exists, this is only what the Agents did: which Capabilities, which targets, and how much we could not analyze." | Action 34,940, evaluable 34,490; analyzability full / partial / none 17,972 / 6,610 / 9,908 (`remeasure:adoption-journey`, step 2); "아직 조직 정책이 없습니다" |
+| 3 first Policy | version editor | "The first Policy starts from the default template; we declare our environment and validate it." | "검증: 통과"; content hash of policy A `f96ed41d…beb8` (`remeasure:adoption-journey`, step 3) |
+| 4 adoption preview | review | "Applied to the past with no baseline, this Policy would allow this share, ask for this share, and deny these few." | evaluated 34,490; 허용 15,242 (44.2%), 확인 필요 19,228 (55.7%), 차단 20 (0.06%, rendered `0.1%`); 22 ask and 2 deny groups (`remeasure:adoption-result`); "기준 VERSION 없음 (최초 도입)" |
+| 5 group detail | one deny group, one ask group | "Each group is one judgement the Policy makes; the headline says it in a sentence, and commands stay in the sample panel." | the Headlines of `deny · read · credentials` (13 Actions) and `ask · execute · host` (8,048 Actions), the largest ask group with 133 distinct programs (`remeasure:adoption-groups`) |
+| 6 verdicts | review, verdict selects | "Nothing is adopted until every group has a Verdict; the blocker counts down as we judge." | "판정하지 않은 group N개" counting down, then "Gate: 열림"; 24 groups (`remeasure:adoption-result`) |
 | 7 adopt | review, then `/` | "Adopting is a review record, not a deployment; applying it to the runtime happens outside Authority Diff." | "채택됨", "채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다.", "채택된 정책: version #1" |
-| 8 report | downloaded Evidence Report | "The report carries the hashes, so anyone can re-run the replay and get the same result." | adoption resultHash: `[evidence reference]` (`remeasure:adoption-determinism`); the notice that figures do not recover past runtime approvals |
-| 9 conformance | `/conformance` | "This is the only screen about what the runtime actually did, compared with the Policy we adopted." | finding count and conformance resultHash: `[evidence reference]` (`remeasure:adoption-journey`, step 9); violation and under_asked rows |
-| 10 change review | version 2, review | "Now a change: allow fetches from unknown remotes, and, by mistake, trust every GitHub repository with one host-wide pattern." | 넓어진 Actions, Widening group count, resultHash: `[evidence reference]` (`remeasure:adoption-journey`, step 10); the groups whose Zone moves `unknown_remote → trusted_remote`, marked critical |
-| 11 unexpected, reject, fix, accept | review, version 3 | "Trusting another owner's repository was not what we meant, so the Gate blocks; we reject, drop the host-wide pattern, and accept the change without it." | "Gate: blocker 1건", disabled accept, "반려됨"; version 3 changed Actions, Widening group count, resultHash: `[evidence reference]` (`remeasure:adoption-journey`, step 11); "채택됨" |
-| 12 audit | terminal, then `/` | "Every decision is in a hash chain, and the chain verifies intact." | `verify-audit` `isIntact` and `checkedCount`: `[evidence reference]` (`remeasure:adoption-journey`, step 12); "채택된 정책: version #3" with its Effect distribution |
+| 8 report | downloaded Evidence Report | "The report carries the hashes, so anyone can re-run the replay and get the same result." | adoption resultHash `8ae52329dd61bdb900f61075fd75c4eb66232fa3ff370245df6b1baec752a444` (`remeasure:adoption-determinism`); the notice that figures do not recover past runtime approvals |
+| 9 conformance | `/conformance` | "This is the only screen about what the runtime actually did, compared with the Policy we adopted." | 92 findings, conformance resultHash `7710c06c…8689` (`remeasure:adoption-journey`, step 9); violation and under_asked rows |
+| 10 change review | version 2, review | "Now a change: allow fetches from unknown remotes, and, by mistake, trust every GitHub repository with one host-wide pattern." | 139 넓어진 Actions, 7 Widening groups, resultHash `3082d2a4…1598` (`remeasure:adoption-journey`, step 10); the groups whose Zone moves `unknown_remote → trusted_remote`, marked critical |
+| 11 unexpected, reject, fix, accept | review, version 3 | "Trusting another owner's repository was not what we meant, so the Gate blocks; we reject, drop the host-wide pattern, and accept the change without it." | "Gate: blocker 1건", disabled accept, "반려됨"; version 3 changed 139 Actions, 5 Widening groups, resultHash `2c4577fa…a8d9` (`remeasure:adoption-journey`, step 11); "채택됨" |
+| 12 audit | terminal, then `/` | "Every decision is in a hash chain, and the chain verifies intact." | `verify-audit` `isIntact` true, `checkedCount` 3 (`remeasure:adoption-journey`, step 12); "채택된 정책: version #3" with its Effect distribution |
 
 Close on step 12.
 Do not add a line about enforcement, blocked attacks, or a person's review time.
@@ -85,7 +86,7 @@ They are the same files `.local/evidence-remeasure.json` names for `pnpm evidenc
    docker compose start
    ```
 
-Check the import summary against step 1's `[evidence reference]` before recording on; a different count means a different snapshot or classifier.
+Check the import summary against step 1's figures before recording on; a different count means a different snapshot or classifier.
 
 ## Recording order
 
