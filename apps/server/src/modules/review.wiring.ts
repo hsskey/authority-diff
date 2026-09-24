@@ -11,6 +11,7 @@ import type { PolicyReviewRepository, ReviewModule } from '@authority/review';
 import type { TraceModule } from '@authority/trace';
 import type { AppEnv } from '../http/env.ts';
 import { registerChangeReviewsRoutes } from '../http/routes/change-reviews.routes.ts';
+import { registerConformanceFindingDraftRoutes } from '../http/routes/conformance-findings.routes.ts';
 
 type PolicyRepository = ReturnType<typeof createPolicyRepository>;
 
@@ -60,6 +61,10 @@ function makePolicyReviewRepository(repository: PolicyRepository): PolicyReviewR
       const result = await repository.transitionVersion(id, 'submit');
       return result.ok ? ok(undefined) : err(result.error);
     },
+    createDraftVersion: (policyId, baseVersionId) =>
+      repository.createDraftVersion(policyId, baseVersionId),
+    updateDraftDocument: (id, ifMatch, document) =>
+      repository.updateDraftDocument(id, ifMatch, document),
   };
 }
 
@@ -97,4 +102,5 @@ export function registerReviewModule(app: Hono<AppEnv>, deps: RegisterReviewModu
   });
 
   registerChangeReviewsRoutes(app, review);
+  registerConformanceFindingDraftRoutes(app, review);
 }

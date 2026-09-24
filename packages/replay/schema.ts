@@ -333,6 +333,9 @@ export type Disposition = z.infer<typeof DispositionSchema>;
 export const ConformanceFindingKindSchema = z.enum(['violation', 'under_asked', 'over_asked']);
 export type ConformanceFindingKind = z.infer<typeof ConformanceFindingKindSchema>;
 
+export const ConformanceFindingStatusSchema = z.enum(['open', 'acknowledged']);
+export type ConformanceFindingStatus = z.infer<typeof ConformanceFindingStatusSchema>;
+
 const replayRunShape = {
   candidateVersionId: PolicyVersionIdSchema,
   windowFrom: IsoTimestampSchema,
@@ -417,8 +420,18 @@ export const ConformanceFindingSchema = z.object({
 });
 export type ConformanceFinding = z.infer<typeof ConformanceFindingSchema>;
 
+/**
+ * A computed Conformance Finding plus acknowledgement state. Status and note
+ * are stored on the run's row and are not part of `resultHash`.
+ */
+export const ConformanceFindingViewSchema = ConformanceFindingSchema.extend({
+  status: ConformanceFindingStatusSchema,
+  note: z.string(),
+});
+export type ConformanceFindingView = z.infer<typeof ConformanceFindingViewSchema>;
+
 /** The stored Conformance Finding is the computed finding tied to its run. */
-export const StoredConformanceFindingSchema = ConformanceFindingSchema.extend({
+export const StoredConformanceFindingSchema = ConformanceFindingViewSchema.extend({
   replayRunId: ReplayRunIdSchema,
 });
 export type StoredConformanceFinding = z.infer<typeof StoredConformanceFindingSchema>;

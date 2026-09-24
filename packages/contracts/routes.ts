@@ -1,13 +1,16 @@
 import type { z } from 'zod';
 import {
+  AcknowledgeConformanceFindingRequestSchema,
   ActionResponseSchema,
   ActivityOverviewResponseSchema,
   AdoptionGroupSamplesResponseSchema,
   AuthorityMapResponseSchema,
   ChangeReviewReportResponseSchema,
   ChangeReviewResponseSchema,
+  ConformanceFindingResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
+  CreatePolicyDraftFromFindingRequestSchema,
   CreatePolicyRequestSchema,
   CreatePolicyResponseSchema,
   CreatePolicyVersionRequestSchema,
@@ -140,6 +143,16 @@ export const routes = {
   listConformanceFindings: get(
     `${API}/conformance-findings`,
     ListConformanceFindingsResponseSchema,
+  ),
+  acknowledgeConformanceFinding: put(
+    `${API}/conformance-findings/:id`,
+    AcknowledgeConformanceFindingRequestSchema,
+    ConformanceFindingResponseSchema,
+  ),
+  createPolicyDraftFromFinding: post(
+    `${API}/conformance-findings/:id/policy-drafts`,
+    CreatePolicyDraftFromFindingRequestSchema,
+    PolicyVersionResponseSchema,
   ),
 
   // The change-review routes carry the frozen contract DTOs; their server wiring is added later.

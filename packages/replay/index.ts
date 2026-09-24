@@ -46,4 +46,4 @@ export type {
   RequestReplayOutput,
 } from './lib/app/module.ts';
 export type { PolicyReader, PolicyVersionView, ReplayStore } from './lib/app/ports.ts';
-export type { AnalyzabilityCounts, AuthorityMapCell } from './schema.ts';
+export type { AnalyzabilityCounts, AuthorityMapCell, ConformanceFindingView } from './schema.ts';

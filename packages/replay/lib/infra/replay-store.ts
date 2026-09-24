@@ -4,11 +4,11 @@ import type { IsoTimestamp } from '@authority/kernel';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import {
-  ConformanceFindingSchema,
+  ConformanceFindingViewSchema,
   ReplayRunSchema,
   StoredAdoptionGroupSchema,
   StoredDiffGroupSchema,
-  type ConformanceFinding,
+  type ConformanceFindingView,
   type ReplayRun,
   type ReplayRunId,
   type StoredAdoptionAssignment,
@@ -46,6 +46,11 @@ type AdoptionAssignmentRow = typeof replayAdoptionAssignments.$inferSelect;
 
 function toRun(row: RunRow): ReplayRun {
   return ReplayRunSchema.parse(row);
+}
+
+function toFinding(row: FindingRow): ConformanceFindingView {
+  const { replayRunId: _replayRunId, ...finding } = row;
+  return ConformanceFindingViewSchema.parse(finding);
 }
 
 function toGroup(row: GroupRow): StoredDiffGroup {
@@ -178,6 +183,8 @@ function findingInsertValues(finding: StoredConformanceFinding): FindingRow {
     firstOccurredAt: finding.firstOccurredAt,
     lastOccurredAt: finding.lastOccurredAt,
     sampleActionKeys: [...finding.sampleActionKeys],
+    status: finding.status,
+    note: finding.note,
   };
 }
 
@@ -406,15 +413,48 @@ export function createReplayStore(database: Database): ReplayStore {
       };
     },
 
-    async listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]> {
+    async listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFindingView[]> {
       const rows = await db
         .select()
         .from(conformanceFindings)
         .where(eq(conformanceFindings.replayRunId, id))
         .orderBy(asc(conformanceFindings.findingKey));
-      return rows.map(({ replayRunId: _replayRunId, ...finding }) =>
-        ConformanceFindingSchema.parse(finding),
-      );
+      return rows.map(toFinding);
+    },
+
+    async getConformanceFinding(
+      id: ReplayRunId,
+      findingKey: string,
+    ): Promise<ConformanceFindingView | null> {
+      const [row] = await db
+        .select()
+        .from(conformanceFindings)
+        .where(
+          and(
+            eq(conformanceFindings.replayRunId, id),
+            eq(conformanceFindings.findingKey, findingKey),
+          ),
+        )
+        .limit(1);
+      return row === undefined ? null : toFinding(row);
+    },
+
+    async acknowledgeConformanceFinding(
+      id: ReplayRunId,
+      findingKey: string,
+      note: string,
+    ): Promise<ConformanceFindingView | null> {
+      const [row] = await db
+        .update(conformanceFindings)
+        .set({ status: 'acknowledged', note })
+        .where(
+          and(
+            eq(conformanceFindings.replayRunId, id),
+            eq(conformanceFindings.findingKey, findingKey),
+          ),
+        )
+        .returning();
+      return row === undefined ? null : toFinding(row);
     },
   };
 }

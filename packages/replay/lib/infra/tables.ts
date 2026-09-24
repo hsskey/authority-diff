@@ -112,8 +112,13 @@ export const conformanceFindings = pgTable(
     firstOccurredAt: text('first_occurred_at').notNull(),
     lastOccurredAt: text('last_occurred_at').notNull(),
     sampleActionKeys: jsonb('sample_action_keys').$type<string[]>().notNull(),
+    status: text('status').$type<'open' | 'acknowledged'>().notNull().default('open'),
+    note: text('note').notNull().default(''),
   },
-  (t) => [primaryKey({ columns: [t.replayRunId, t.findingKey] })],
+  (t) => [
+    primaryKey({ columns: [t.replayRunId, t.findingKey] }),
+    check('ck_conformance_findings__status', sql`${t.status} in ('open', 'acknowledged')`),
+  ],
 );
 
 export const replayAdoptionGroups = pgTable(

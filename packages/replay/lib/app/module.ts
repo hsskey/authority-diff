@@ -15,7 +15,7 @@ import type {
   AdoptionGroup,
   AnalyzabilityCounts,
   AuthorityMapCell,
-  ConformanceFinding,
+  ConformanceFindingView,
   DiffGroup,
   PermissionModeCount,
   ReplayRun,
@@ -82,7 +82,7 @@ export interface ConformanceFindingsView {
     readonly unpairedPermissionRequests: number;
     readonly byPermissionMode: readonly PermissionModeCount[];
   } | null;
-  readonly items: readonly ConformanceFinding[];
+  readonly items: readonly ConformanceFindingView[];
 }
 
 /**
@@ -151,6 +151,15 @@ export interface ReplayModule {
     input: RequestAdoptionReplayInput,
   ): Promise<Result<RequestReplayOutput, AppError>>;
   listConformanceFindings(): Promise<ConformanceFindingsView>;
+  getConformanceFinding(
+    findingKey: string,
+  ): Promise<
+    Result<{ finding: ConformanceFindingView; policyVersionId: PolicyVersionId }, AppError>
+  >;
+  acknowledgeConformanceFinding(
+    findingKey: string,
+    note: string,
+  ): Promise<Result<ConformanceFindingView, AppError>>;
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
   listDiffGroups(
     id: ReplayRunId,
@@ -226,6 +235,16 @@ function groupNotFound(id: ReplayRunId, groupKey: string): AppError {
     message: `no diff group ${groupKey} in run ${id}`,
     isRetryable: false,
     details: { replayRunId: id, groupKey },
+    cause: null,
+  };
+}
+
+function findingNotFound(findingKey: string): AppError {
+  return {
+    code: 'replay.finding_not_found',
+    message: 'no Conformance Finding for the given finding key',
+    isRetryable: false,
+    details: { findingKey },
     cause: null,
   };
 }
@@ -449,7 +468,12 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
             },
             groups: [],
             changedActions: [],
-            findings: result.findings.map((finding) => ({ ...finding, replayRunId: run.id })),
+            findings: result.findings.map((finding) => ({
+              ...finding,
+              replayRunId: run.id,
+              status: 'open' as const,
+              note: '',
+            })),
             adoptionGroups: [],
             adoptionAssignments: [],
           };
@@ -521,6 +545,30 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         },
         items: await store.listConformanceFindings(run.replayRunId),
       };
+    },
+
+    async getConformanceFinding(findingKey) {
+      const run = await store.findLatestConformanceRun();
+      if (run === null) {
+        return err(findingNotFound(findingKey));
+      }
+      const finding = await store.getConformanceFinding(run.replayRunId, findingKey);
+      if (finding === null) {
+        return err(findingNotFound(findingKey));
+      }
+      return ok({ finding, policyVersionId: run.candidateVersionId });
+    },
+
+    async acknowledgeConformanceFinding(findingKey, note) {
+      const run = await store.findLatestConformanceRun();
+      if (run === null) {
+        return err(findingNotFound(findingKey));
+      }
+      const finding = await store.acknowledgeConformanceFinding(run.replayRunId, findingKey, note);
+      if (finding === null) {
+        return err(findingNotFound(findingKey));
+      }
+      return ok(finding);
     },
 
     getRun(id) {
