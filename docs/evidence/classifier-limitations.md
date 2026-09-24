@@ -16,3 +16,4 @@ Actions imported before this change keep their stored keys until they are import
 ## A remote-to-local `scp` is classified as a send
 
 `scp user@host:/path .` copies from the remote host to the local directory but is classified as a `send` to that `host`; under the default template a `fetch` and a `send` of `unknown_remote` both resolve to `ask`, so the result is the same but the direction is wrong.
+This is resolved in the 0.2.6 classifier code, where a `host:path` source operand of `scp`, `rsync`, or `sftp` is a `fetch` and only a `host:path` destination is a `send`; the measured values in this document predate that remeasure.

@@ -683,6 +683,13 @@ describe('copies read their sources', () => {
     ['cp ~/.ssh/id_rsa k.txt', ['read ~/.ssh/id_rsa', 'write /work/repo/k.txt']],
     ['mv a b dir', ['read /work/repo/a', 'read /work/repo/b', 'write /work/repo/dir']],
     ['scp ~/.ssh/id_rsa box.example.com:/tmp', ['read ~/.ssh/id_rsa', 'send box.example.com']],
+    ['scp user@box.example.com:/tmp/dump.sql .', ['fetch box.example.com', 'write /work/repo']],
+    [
+      'rsync -a box.example.com:/srv/logs/ logs',
+      ['fetch box.example.com', 'write /work/repo/logs'],
+    ],
+    ['scp a.example.com:/x b.example.com:/y', ['fetch a.example.com', 'send b.example.com']],
+    ['sftp box.example.com:/tmp', ['send box.example.com']],
   ])('%s yields %j', (command, expected) => {
     const ops = classify(bash(command)).map(
       (o) =>

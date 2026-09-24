@@ -86,6 +86,7 @@ describe('capability rule table', () => {
     ['wget https://example.com/file.tar.gz', 'fetch', 'host'],
     ['git clone https://github.com/acme/toolkit.git', 'fetch', 'vcs_remote'],
     ['git pull origin main', 'fetch', 'vcs_remote'],
+    ['scp user@host.example.com:/tmp/file.txt .', 'fetch', 'host'],
     // send
     ['curl -d @body.json https://api.example.com/x', 'send', 'host'],
     ['curl -X POST https://api.example.com/x', 'send', 'host'],
@@ -225,6 +226,27 @@ describe('tool routing', () => {
     }
   });
 
+  test('StructuredOutput is a tool-table entry with zero Operations, not a control tool', () => {
+    const ops = classify(
+      call({ toolName: 'StructuredOutput', toolInputRedacted: '{"summary":"x"}' }),
+    );
+    expect(CONTROL_TOOL_NAMES).not.toContain('StructuredOutput');
+    expect(ops).toEqual([]);
+  });
+
+  test('truncated StructuredOutput input adds one opaque Operation', () => {
+    const ops = classify(
+      call({
+        toolName: 'StructuredOutput',
+        toolInputRedacted: '{"summary":',
+        isInputTruncated: true,
+      }),
+    );
+    expect(ops.map((o) => [o.capability, o.target.kind, o.analyzability, o.signals])).toEqual([
+      ['execute', 'unknown', 'none', ['input_truncated']],
+    ]);
+  });
+
   test('Agent is not a control tool and yields an opaque Operation', () => {
     expect(CONTROL_TOOL_NAMES).not.toContain('Agent');
     const ops = classify(call({ toolName: 'Agent', toolInputRedacted: '{"prompt":"x"}' }));
@@ -337,6 +359,6 @@ describe('truncation and fragment cap', () => {
   });
 });
 
-test('classifier version is 0.2.5', () => {
-  expect(CLASSIFIER_VERSION).toBe('0.2.5');
+test('classifier version is 0.2.6', () => {
+  expect(CLASSIFIER_VERSION).toBe('0.2.6');
 });
