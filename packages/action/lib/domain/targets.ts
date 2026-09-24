@@ -20,15 +20,21 @@ export interface ResolvedPath {
  *
  * Absolute paths are kept; a leading `~` marks the home directory and is kept as
  * `~`; a relative path is joined onto `cwd` when known. `isInsideWorkspace` is
- * true when the resolved absolute path is under `workspaceRoot`, or when a
- * relative path is resolved against a cwd that is itself inside the workspace.
+ * true when the resolved path is under `workspaceRoot` in the same form: the
+ * parser records a home-directory root as `~/...` and folds the Session home in
+ * the input to `~`, so a `~/...` path compares against a `~/...` root.
  */
 export function resolvePath(
   rawPath: string,
   cwd: string | null,
   workspaceRoot: string | null,
 ): ResolvedPath {
-  if (rawPath.startsWith('~')) return { path: rawPath, isInsideWorkspace: false };
+  if (rawPath.startsWith('~')) {
+    const path = normalizeSegments(rawPath);
+    return path.startsWith('~')
+      ? { path, isInsideWorkspace: isUnder(path, workspaceRoot) }
+      : { path: rawPath, isInsideWorkspace: false };
+  }
   if (rawPath.startsWith('/')) {
     const path = normalizeSegments(rawPath);
     return { path, isInsideWorkspace: isUnder(path, workspaceRoot) };

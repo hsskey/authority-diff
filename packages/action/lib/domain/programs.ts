@@ -152,7 +152,6 @@ const WRITERS: ReadonlySet<string> = new Set([
   'bzip2',
 ]);
 const DELETERS: ReadonlySet<string> = new Set(['rm', 'rmdir', 'unlink', 'shred']);
-const DEST_LAST: ReadonlySet<string> = new Set(['mv', 'cp', 'ln']);
 
 const INTERPRETERS: ReadonlySet<string> = new Set([
   'python',
@@ -281,7 +280,7 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (INSTALLERS.has(p)) return installerOps(cmd, INSTALLERS.get(p) ?? 'other');
   if (p === 'find') return findOps(cmd);
   if (p === 'curl' || p === 'wget' || p === 'http' || p === 'https') return httpOps(cmd);
-  if (p === 'scp' || p === 'rsync' || p === 'sftp') return copyOps(cmd);
+  if (p === 'scp' || p === 'rsync' || p === 'sftp') return copyOps(cmd, true);
   if (p === 'ssh' || p === 'nc' || p === 'ncat' || p === 'telnet') return remoteExecOps(cmd);
   if (p === 'docker' || p === 'podman') return dockerOps(cmd);
   if (p === 'kubectl' || p === 'oc') return kubectlOps(cmd);
@@ -299,8 +298,8 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (p === 'mktemp') return [runnerDraft('write', cmd, 'partial')];
   if (p === 'sed') return sedOps(cmd);
   if (NO_FILE_READERS.has(p)) return [runnerDraft('read', cmd, 'full')];
-  if (WRITERS.has(p))
-    return fileOps(cmd, 'write', { patternFirst: false, destLast: DEST_LAST.has(p) });
+  if (p === 'cp' || p === 'mv') return copyOps(cmd, false);
+  if (WRITERS.has(p)) return fileOps(cmd, 'write', { patternFirst: false, destLast: p === 'ln' });
   if (DELETERS.has(p)) return fileOps(cmd, 'delete', { patternFirst: false, destLast: false });
   if (FILE_READERS.has(p) || PATTERN_FIRST.has(p)) {
     return fileOps(cmd, 'read', { patternFirst: PATTERN_FIRST.has(p), destLast: false });
@@ -380,7 +379,8 @@ function runnerWithSubcommand(cmd: NormalizedCommand): OperationDraft[] {
 
 function cargoGoOps(cmd: NormalizedCommand): OperationDraft[] {
   const sub = nonFlagArgs(cmd.args)[0]?.text ?? '';
-  if (sub === 'install')
+  const adds = cmd.program === 'go' ? 'get' : 'add';
+  if (sub === 'install' || sub === adds)
     return [installDraft(cmd, cmd.program === 'go' ? 'go' : 'cargo', nonFlagArgs(cmd.args)[1])];
   if (sub === 'publish') return [publishDraft(cmd, cmd.program === 'go' ? 'go' : 'cargo')];
   return [runnerDraft('execute', cmd, 'partial')];
@@ -441,20 +441,30 @@ function postMethod(args: readonly ShellWord[]): boolean {
   return false;
 }
 
-function copyOps(cmd: NormalizedCommand): OperationDraft[] {
-  const remote = nonFlagArgs(cmd.args).find(
-    (w) => /^[^/\s]+@?[^/\s]*:/.test(w.text) && !w.text.startsWith('/'),
-  );
+/**
+ * A copy reads every local source operand, then writes the last operand or,
+ * for scp/rsync/sftp with a `host:path` operand, sends to that host.
+ */
+function copyOps(cmd: NormalizedCommand, allowsRemote: boolean): OperationDraft[] {
+  const operands = nonFlagArgs(cmd.args);
+  const isRemote = (w: ShellWord): boolean =>
+    allowsRemote && /^[^/\s]+@?[^/\s]*:/.test(w.text) && !w.text.startsWith('/');
+  const reads = operands
+    .slice(0, -1)
+    .filter((w) => !isRemote(w))
+    .map((w) => fileDraft(cmd, 'read', w));
+  const remote = operands.find(isRemote);
   if (remote !== undefined) {
     const host = hostFromRemoteSpec(remote.text);
     const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
     return [
+      ...reads,
       draft('send', target, host === null ? 'partial' : 'full', cmd.program, cmd.raw, [
         'remote_copy',
       ]),
     ];
   }
-  return fileOps(cmd, 'write', { patternFirst: false, destLast: true });
+  return [...reads, ...fileOps(cmd, 'write', { patternFirst: false, destLast: true })];
 }
 
 /** Host of a `user@host:path` or `host:path` scp/rsync operand. */
@@ -597,15 +607,19 @@ function fileOps(
     const analyzability: Analyzability = capability === 'read' ? 'full' : 'partial';
     return [draft(capability, pathTarget(resolved), analyzability, cmd.program, cmd.raw)];
   }
-  return files.map((file) => {
-    if (file.hasExpansion) {
-      return draft(capability, unknownTarget(), 'partial', cmd.program, cmd.raw, [
-        'target_variable',
-      ]);
-    }
-    const resolved = resolvePath(file.text, cmd.cwd, cmd.workspaceRoot);
-    return draft(capability, pathTarget(resolved), 'full', cmd.program, cmd.raw);
-  });
+  return files.map((file) => fileDraft(cmd, capability, file));
+}
+
+function fileDraft(
+  cmd: NormalizedCommand,
+  capability: Capability,
+  file: ShellWord,
+): OperationDraft {
+  if (file.hasExpansion) {
+    return draft(capability, unknownTarget(), 'partial', cmd.program, cmd.raw, ['target_variable']);
+  }
+  const resolved = resolvePath(file.text, cmd.cwd, cmd.workspaceRoot);
+  return draft(capability, pathTarget(resolved), 'full', cmd.program, cmd.raw);
 }
 
 function runnerDraft(

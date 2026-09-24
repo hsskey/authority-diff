@@ -34,7 +34,4 @@ On the snapshot this moved 302 `git` and `gh` Operations from an unresolved remo
 Two cases stay unresolved by design: a directory that comes from a shell expansion (99 Operations), and a `cd` into another repository (50 Operations).
 One recorded Session had a workspace root below its repository root, so a `cd` to the repository root left the workspace; that single Action stays unresolved because the classifier has no repository root to compare against.
 
-Path Targets still compare the two forms literally.
-An absolute home path under a `~/...` workspace root is classified outside the workspace, which places its Operation in the `host` Zone.
-On the snapshot, 53,205 path Operations fall in this case (43,374 Bash reads, 3,591 Bash executes, 2,289 tool reads, 1,479 tool writes, 1,366 commits, 916 Bash writes, 175 deletes, 15 rewrites, 1 fetch).
-Changing that comparison moves most of the `host` Zone `under_asked` volume in `docs/evidence/conformance.md` into `workspace`; it is left for a separate classifier change.
+Path Targets compare the same form since classifier 0.2.3: the parser folds the Session home in the tool input to `~`, and a `~/...` path under a `~/...` workspace root is inside the workspace (`docs/evidence/classifier-hardening-3.md`).
