@@ -5,11 +5,19 @@ import {
   ErrorEnvelopeSchema,
   ListPoliciesResponseSchema,
   ListPolicyVersionsResponseSchema,
+  PolicyActivationResponseSchema,
   PolicyVersionResponseSchema,
   ValidatePolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
 import { DEFAULT_POLICY_DOCUMENT } from '@authority/policy';
-import { authed, buildPolicyApp, makeModule, samplePolicy, sampleVersion } from './support.ts';
+import {
+  authed,
+  buildPolicyApp,
+  makeModule,
+  sampleActivation,
+  samplePolicy,
+  sampleVersion,
+} from './support.ts';
 
 const POLICY_ID = `pol_${'A'.repeat(26)}`;
 const VERSION_ID = `pver_${'B'.repeat(26)}`;
@@ -249,6 +257,61 @@ describe('POST /api/v1/policy-versions/:id/validations', () => {
     );
     expect(res.status).toBe(200);
     expect(ValidatePolicyVersionResponseSchema.parse(await res.json()).isValid).toBe(true);
+  });
+});
+
+describe('POST /api/v1/policy-versions/:id/activations', () => {
+  const body = { reason: 'applied to managed settings', actorName: 'operator' };
+
+  test('passes the declaration to the module and returns 201', async () => {
+    let received: unknown = null;
+    const app = buildPolicyApp(
+      makeModule({
+        declareActivation: (id, input) => {
+          received = { id, input };
+          return Promise.resolve(ok(sampleActivation()));
+        },
+      }),
+    );
+    const res = await app.request(
+      `/api/v1/policy-versions/${VERSION_ID}/activations`,
+      authed({ method: 'POST', body: JSON.stringify(body) }),
+    );
+    expect(res.status).toBe(201);
+    expect(received).toEqual({ id: VERSION_ID, input: body });
+    expect(PolicyActivationResponseSchema.parse(await res.json())).toEqual(sampleActivation());
+  });
+
+  test.each([
+    ['policy.version_not_found', 404],
+    ['policy.version_not_accepted', 409],
+  ] as const)('maps %s to %d', async (code, status) => {
+    const app = buildPolicyApp(
+      makeModule({ declareActivation: () => Promise.resolve(policyError(code)) }),
+    );
+    const res = await app.request(
+      `/api/v1/policy-versions/${VERSION_ID}/activations`,
+      authed({ method: 'POST', body: JSON.stringify(body) }),
+    );
+    expect(res.status).toBe(status);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(code);
+  });
+
+  test.each([
+    ['a missing reason', { actorName: 'operator' }],
+    ['an empty actor name', { reason: 'applied', actorName: '' }],
+    ['a rollback kind', { ...body, kind: 'rollback' }],
+    ['a change review link', { ...body, changeReviewId: null }],
+  ])('rejects %s with 422', async (_label, request) => {
+    const app = buildPolicyApp(makeModule());
+    const res = await app.request(
+      `/api/v1/policy-versions/${VERSION_ID}/activations`,
+      authed({ method: 'POST', body: JSON.stringify(request) }),
+    );
+    expect(res.status).toBe(422);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(
+      'validation.invalid_request',
+    );
   });
 });
 

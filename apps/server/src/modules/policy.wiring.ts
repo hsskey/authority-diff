@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 import type { AppError, Clock, IdGenerator, Logger, TransactionRunner } from '@authority/kernel';
 import {
+  CreatePolicyActivationRequestSchema,
   CreatePolicyRequestSchema,
   CreatePolicyVersionRequestSchema,
   ListPolicyVersionsQuerySchema,
@@ -171,6 +172,25 @@ export function registerPolicyRoutes(app: Hono<AppEnv>, policy: PolicyModule): v
       return respondError(c, result.error);
     }
     return c.json(result.value);
+  });
+
+  app.post(`${API}/policy-versions/:id/activations`, async (c) => {
+    const id = PolicyVersionIdSchema.safeParse(c.req.param('id'));
+    if (!id.success) {
+      return respondError(c, invalidRequest('invalid version id', {}));
+    }
+    const parsed = CreatePolicyActivationRequestSchema.safeParse(await readJson(c));
+    if (!parsed.success) {
+      return respondError(
+        c,
+        invalidRequest('invalid create-activation request', parsed.error.format()),
+      );
+    }
+    const result = await policy.declareActivation(id.data, parsed.data);
+    if (!result.ok) {
+      return respondError(c, result.error);
+    }
+    return c.json(result.value, 201);
   });
 }
 

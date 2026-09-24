@@ -4,8 +4,12 @@ import type { AppError, Result } from '@authority/kernel';
 import { createSequentialIdGenerator } from '@authority/platform/testing';
 import { DEFAULT_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyModule } from '@authority/policy';
-import { PolicySchema, PolicyVersionSchema } from '@authority/policy/schema';
-import type { Policy, PolicyVersion } from '@authority/policy/schema';
+import {
+  PolicyActivationSchema,
+  PolicySchema,
+  PolicyVersionSchema,
+} from '@authority/policy/schema';
+import type { Policy, PolicyActivation, PolicyVersion } from '@authority/policy/schema';
 import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
 import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
 import { registerPolicyRoutes } from '../../src/modules/policy.wiring.ts';
@@ -41,6 +45,17 @@ export function sampleVersion(overrides: Partial<PolicyVersion> = {}): PolicyVer
   });
 }
 
+export function sampleActivation(overrides: Partial<PolicyActivation> = {}): PolicyActivation {
+  return PolicyActivationSchema.parse({
+    id: `pact_${'C'.repeat(26)}`,
+    policyVersionId: VERSION_ID,
+    reason: 'applied to managed settings',
+    actorName: 'operator',
+    createdAt: '2026-01-02T00:00:00.000Z',
+    ...overrides,
+  });
+}
+
 // A fake so the route mapping is tested without a database; each test overrides
 // the one method it exercises. Unconfigured methods fail loudly.
 export function makeModule(overrides: Partial<PolicyModule> = {}): PolicyModule {
@@ -64,6 +79,7 @@ export function makeModule(overrides: Partial<PolicyModule> = {}): PolicyModule 
     transitionVersion: () => unconfigured(),
     getBaseline: () => unconfigured(),
     hasAcceptedVersion: () => unconfigured(),
+    declareActivation: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     validateVersion: () => unconfigured(),
     ...overrides,

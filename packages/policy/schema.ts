@@ -163,3 +163,21 @@ export const PolicyVersionSchema = z.object({
   updatedAt: IsoTimestampSchema,
 });
 export type PolicyVersion = z.infer<typeof PolicyVersionSchema>;
+
+export const PolicyActivationIdSchema = prefixedId('pact', 'PolicyActivationId');
+export type PolicyActivationId = z.infer<typeof PolicyActivationIdSchema>;
+
+/**
+ * A recorded declaration that an operator applied an accepted Policy Version
+ * outside Authority Diff. It is append-only and changes nothing else: the
+ * version's status, replay, conformance, and evaluation ignore it, and nothing
+ * reads it as the active or enforced version.
+ */
+export const PolicyActivationSchema = z.object({
+  id: PolicyActivationIdSchema,
+  policyVersionId: PolicyVersionIdSchema,
+  reason: z.string().min(1),
+  actorName: z.string().min(1),
+  createdAt: IsoTimestampSchema,
+});
+export type PolicyActivation = z.infer<typeof PolicyActivationSchema>;

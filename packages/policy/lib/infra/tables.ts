@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { PolicyDocument } from '../../schema.ts';
 
 // docs/design.md 25장. Timestamp는 IsoTimestamp 문자열(밀리초 3자리, `Z`)을 그대로
@@ -34,4 +34,18 @@ export const policyVersions = pgTable(
       .on(t.policyId)
       .where(sql`${t.status} = 'in_review'`),
   ],
+);
+
+export const policyActivations = pgTable(
+  'policy_activations',
+  {
+    id: text('id').primaryKey(),
+    policyVersionId: text('policy_version_id')
+      .notNull()
+      .references(() => policyVersions.id),
+    reason: text('reason').notNull(),
+    actorName: text('actor_name').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('idx_policy_activations__policy_version_id').on(t.policyVersionId)],
 );
