@@ -453,7 +453,7 @@ If an agent starts making code on this list, stop it.
 - [ ] `packages/audit`, `audit_events` table, `/audit` screen. Audit hash chain, trigger, `verify-audit` command were implemented on `review_decisions` (chapter 17).
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event name system.
 - [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
-- [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`. The append-only `policy_activations` table and `POST /policy-versions/{id}/activations` were implemented in reduced, declaration-only form (recorded under `docs/acr/`): an accepted version records that an operator applied it outside Authority Diff, changing no status. rollback, `superseded`, and `stale` are still not built.
+- [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`. The append-only `policy_activations` table and `POST /policy-versions/{id}/activations` were implemented in reduced, declaration-only form (recorded in ACR-0014): an accepted version records that an operator applied it outside Authority Diff, changing no status. rollback, `superseded`, and `stale` are still not built.
 - [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs.
 - [ ] `api_tokens` table and role, `idempotency_keys` and `Idempotency-Key` handling.
 - [ ] `@hono/zod-openapi`, `openapi.json` generation, `GET /metrics`, Prometheus metric.
