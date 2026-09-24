@@ -90,6 +90,7 @@ Check the import summary against step 1's figures before recording on; a differe
 
 ## Recording order
 
+Recording proceeds from tag `evidence-2026-09-24-classifier-0.2.3`, the evidence snapshot these figures come from.
 Verdicts, adoption, rejection, and acceptance are one-way on a volume, so record in journey order on one volume.
 A retake of any step after one of them needs a new volume from the seed procedure.
 
