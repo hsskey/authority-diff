@@ -11,6 +11,7 @@
     "format:check": "oxfmt --check",
     "lint:boundaries": "tsx scripts/cruise-boundaries.ts",
     "lint:boundaries:prove": "tsx scripts/prove-boundaries.ts",
+    "lint:css": "tsx scripts/check-css-policy.ts",
     "test": "vitest run",
     "test:int": "vitest run --config vitest.int.config.ts",
     "test:e2e": "playwright test --project=chromium",
@@ -29,7 +30,7 @@
     "authority": "tsx apps/cli/src/main.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "build:cli": "tsup --config apps/cli/tsup.config.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:boundaries && pnpm lint:prove && pnpm check:evidence && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:css && pnpm lint:boundaries && pnpm lint:prove && pnpm check:evidence && pnpm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
