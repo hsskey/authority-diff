@@ -1,6 +1,6 @@
-# ADR-0011 PolicyDocument schemaVersion 2에서 Mandate Exception을 복원하고 probe 해석 안정성으로 gate에 연결한다
+# ADR-0011 (구현 착수 결정이 아닌 초안) PolicyDocument schemaVersion 2에서 Mandate Exception을 복원하고 probe 해석 안정성으로 gate에 연결한다
 
-Status: proposed (draft). 구현 착수 결정이 아니다. 출처: docs/design.md 13.5, 14, 15, 16.4, 24.4, 24.6과 docs/cutline.md 6, 12장. ADR-0005, ADR-0009를 전제로 한다.
+Status: Proposed. 구현 착수 결정이 아니다. 출처: docs/design.md 13.5, 14, 15, 16.4, 24.4, 24.6과 docs/cutline.md 6, 12장. ADR-0005, ADR-0009를 전제로 한다.
 
 - Context:
   ADR-0009는 schemaVersion 1에서 `PolicyRule.mandateException`과 `Decision.isMandateDependent`를 뺐고, 자연어 Mandate 조건이 필요해지면 명시적인 schemaVersion 2 migration으로 추가한다고 정했다.
@@ -108,12 +108,19 @@ Status: proposed (draft). 구현 착수 결정이 아니다. 출처: docs/design
   probe 결과는 replay Effect, Diff Group, Adoption Group을 바꾸지 않는다. review를 닫거나 여는 근거로만 쓴다.
   gate 연결은 calibration 기록이 1개 이상 있은 뒤에만 켠다.
 
-- Decision (착수 순서):
-  이 초안은 아래 조건이 채워질 때 단계별로 accepted로 바꾼다.
-  - schemaVersion 2 복원: docs/cutline.md 12장의 첫 번째 증거(작성자가 probe 결과로 문장을 실제로 고친 사례 3건 이상)와 세 번째 증거(두 번째 사람의 해석이 작성자와 다른 Scenario 1건 이상)가 확인될 때. ADR-0009의 reversal trigger("probe가 가치를 보임")에 해당한다.
-  - golden set과 calibration: 두 번째 증거(schemaVersion 2 이후 실제 정책에 Mandate Exception 2개 이상)까지 확인될 때.
+- Decision (착수 조건):
+  docs/cutline.md 12장의 확장 증거 세 가지를 그대로 옮긴다.
+  1. 탐색 실행에서 낮은 margin이나 기대와의 불일치 때문에 작성자가 정책 문장을 실제로 고친 사례가 3건 이상이고 고친 뒤 전체 재실행에서 해당 항목의 분포가 의도대로 움직이고 옆 항목이 나빠지지 않음.
+  2. schemaVersion 2 이후, 실제 정책에 Mandate Exception이 2개 이상 쓰임.
+  3. probe가 표시한 Scenario 중 1건 이상에서 두 번째 사람의 해석이 작성자와 실제로 다름.
+  이 초안은 아래 순서로 단계별로 accepted로 바꾼다.
+  - schemaVersion 2 복원: 조건 1과 3이 확인될 때. ADR-0009의 reversal trigger("probe가 가치를 보임")에 해당한다.
+  - golden set과 calibration: 조건 2까지 확인될 때.
   - gate 연결: calibration 기록이 생긴 뒤.
-  지금은 세 증거 모두 없다. 탐색 실행은 기대 Effect 불일치 0건이고 두 번째 독자 비교가 없다.
+  현재 상태에서는 세 조건 모두 충족될 수 없다. default template에 Mandate-dependent Rule이 없기 때문이다.
+  Mandate-dependent Rule이 없으면 Effect는 Rule을 그대로 따르므로 탐색 실행은 기대 Effect 불일치 0건이었고(35/35) 문장을 고칠 근거가 생기지 않는다(조건 1).
+  schemaVersion 1에는 Mandate Exception field가 없다(조건 2).
+  probe가 표시할 불일치나 낮은 margin의 Scenario가 없어 두 번째 사람과 비교할 대상도 없다(조건 3).
 
 - Alternatives:
   Mandate Exception 없이 더 좁은 `allow` Rule로 표현하기. deterministic이지만 "Principal이 명시적으로 요청했을 때"라는 조건은 Capability, Zone, reversibility로 표현할 수 없다.
