@@ -723,6 +723,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       }
       const stats = run === null ? null : diffStatsOf(run);
       const baselineContentHash = await baselineContentHashOf(review);
+      const conformance = (await replay.listConformanceFindings()).run;
       return ok(
         renderReport({
           changeReviewId: review.id,
@@ -738,6 +739,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
           transitions: stats?.transitions ?? null,
           operationWidening: stats?.operationWidening ?? null,
           groups: reportGroups.value.groups,
+          conformance,
           decision,
           auditTail,
         }),

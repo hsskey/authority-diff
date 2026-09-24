@@ -1,6 +1,12 @@
 import { foldHomePaths } from '@authority/kernel';
 import type { Effect, IsoTimestamp } from '@authority/kernel';
-import type { AdoptionEffect, AdoptionStats, ReplayStats } from '@authority/replay/schema';
+import { UNGUARDED_PERMISSION_MODES } from '@authority/replay/schema';
+import type {
+  AdoptionEffect,
+  AdoptionStats,
+  PermissionModeCount,
+  ReplayStats,
+} from '@authority/replay/schema';
 import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
 
 /**
@@ -58,6 +64,19 @@ export interface AuditTail {
   readonly hash: string;
 }
 
+/**
+ * The most recent completed conformance run as the report shows it: the run's
+ * identity, so the reader can tell it from the review's own replay, and its
+ * Action counts per runtime permission mode.
+ */
+export interface ReportConformance {
+  readonly replayRunId: string;
+  readonly policyVersionId: string;
+  readonly windowFrom: IsoTimestamp;
+  readonly windowTo: IsoTimestamp;
+  readonly byPermissionMode: readonly PermissionModeCount[];
+}
+
 export interface ReportInput {
   readonly changeReviewId: string;
   readonly status: ChangeReviewStatus;
@@ -72,6 +91,7 @@ export interface ReportInput {
   readonly transitions: readonly ReportTransition[] | null;
   readonly operationWidening: ReplayStats['operationWidening'] | null;
   readonly groups: readonly ReportGroup[];
+  readonly conformance: ReportConformance | null;
   readonly decision: ReportDecision | null;
   readonly auditTail: AuditTail | null;
 }
@@ -244,6 +264,37 @@ function renderGroups(groups: readonly ReportGroup[]): string {
   return sections.join('\n');
 }
 
+function sumActions(rows: readonly PermissionModeCount[]): number {
+  return rows.reduce((sum, row) => sum + row.actionCount, 0);
+}
+
+function renderConformance(conformance: ReportConformance | null): string {
+  if (conformance === null) {
+    return '완료된 conformance run이 없어 permission mode 표가 없습니다.';
+  }
+  const rows = conformance.byPermissionMode;
+  const lines = [
+    `- Conformance Replay Run: \`${conformance.replayRunId}\``,
+    `- Policy Version: \`${conformance.policyVersionId}\``,
+    `- 관측 기간: ${conformance.windowFrom} ~ ${conformance.windowTo}`,
+  ];
+  if (rows.length === 0) {
+    return [...lines, '- 이 run에는 permission mode 집계가 없습니다.'].join('\n');
+  }
+  const total = sumActions(rows);
+  const unguarded = sumActions(
+    rows.filter((row) => UNGUARDED_PERMISSION_MODES.includes(row.permissionMode)),
+  );
+  return [
+    ...lines,
+    `- guard 없이 실행될 수 있는 Action(${UNGUARDED_PERMISSION_MODES.join(', ')}): ${unguarded}건 (${ratio(unguarded, total)})`,
+    '',
+    '| permission mode | Action 수 | finding Action 수 |',
+    '| --- | --- | --- |',
+    ...rows.map((row) => `| ${row.permissionMode} | ${row.actionCount} | ${row.findingCount} |`),
+  ].join('\n');
+}
+
 function renderDecision(decision: ReportDecision | null, label: DecisionLabel): string {
   if (decision === null) {
     return '아직 결정되지 않았습니다.';
@@ -312,6 +363,10 @@ export function renderReport(input: ReportInput): string {
     '## Diff Group과 Verdict',
     '',
     renderGroups(input.groups),
+    '',
+    '## Conformance: permission mode별 Action',
+    '',
+    renderConformance(input.conformance),
     '',
     '## 결정',
     '',

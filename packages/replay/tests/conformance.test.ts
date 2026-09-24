@@ -75,6 +75,7 @@ const TOOL_INPUT_HASH = 'c'.repeat(64);
 function observationsFor(
   target: ActionForReplay,
   evidence: readonly Evidence[],
+  permissionMode: string | null = null,
 ): ObservationForReplay[] {
   return evidence.map((item) => ({
     ...item,
@@ -82,6 +83,7 @@ function observationsFor(
     sessionExternalId: target.sessionExternalId,
     toolName: 'Bash',
     toolInputHash: TOOL_INPUT_HASH,
+    permissionMode,
     occurredAt: target.occurredAt,
   }));
 }
@@ -98,6 +100,7 @@ function hookEvent(
     toolName: 'Bash',
     toolInputHash: TOOL_INPUT_HASH,
     hookDecision: null,
+    permissionMode: null,
     occurredAt: IsoTimestampSchema.parse(at),
   };
 }
@@ -323,7 +326,75 @@ describe('computeConformanceWith', () => {
         { from: 'deny', to: 'deny', count: 0 },
       ],
       operationWidening: [],
+      byPermissionMode: [{ permissionMode: 'unknown', actionCount: 4, findingCount: 1 }],
     });
+  });
+
+  test('byPermissionMode counts every Action under the first mode its observations carried, or unknown', () => {
+    const bypassed = action('a', [operation(0, 'write')]);
+    const asked = action('b', [operation(0, 'write')]);
+    const unobserved = action('c', [operation(0, 'write')]);
+    const empty = action('d', []);
+
+    const result = computeConformanceWith(
+      (operations) => (operations.length === 0 ? null : decision(['allow'])),
+      [bypassed, asked, unobserved, empty],
+      [
+        ...observationsFor(bypassed, [PRE], 'bypassPermissions'),
+        ...observationsFor(asked, [PRE]),
+        ...observationsFor(asked, [ASKED], 'default'),
+        ...observationsFor(empty, [PRE], 'auto'),
+      ],
+      WINDOW,
+    );
+
+    expect(result.stats.byPermissionMode).toEqual([
+      { permissionMode: 'auto', actionCount: 1, findingCount: 0 },
+      { permissionMode: 'bypassPermissions', actionCount: 1, findingCount: 0 },
+      { permissionMode: 'default', actionCount: 1, findingCount: 1 },
+      { permissionMode: 'unknown', actionCount: 1, findingCount: 0 },
+    ]);
+  });
+
+  test('byPermissionMode.findingCount counts the Actions of each mode inside a finding', () => {
+    const bypassed = action('a', [operation(0, 'write')]);
+    const prompted = action('b', [operation(0, 'write')]);
+    const autoExecuted = action('c', [operation(0, 'write')]);
+
+    const result = computeConformanceWith(
+      () => decision(['ask']),
+      [bypassed, prompted, autoExecuted],
+      [
+        ...observationsFor(bypassed, [PRE], 'bypassPermissions'),
+        ...observationsFor(prompted, [PRE, ASKED], 'default'),
+        ...observationsFor(autoExecuted, [PRE], 'default'),
+      ],
+      WINDOW,
+    );
+
+    expect(result.stats.byPermissionMode).toEqual([
+      { permissionMode: 'bypassPermissions', actionCount: 1, findingCount: 1 },
+      { permissionMode: 'default', actionCount: 2, findingCount: 1 },
+    ]);
+  });
+
+  test('the permission mode of an observation is part of resultHash', () => {
+    const target = action('a', [operation(0, 'write')]);
+
+    const bypassed = computeConformanceWith(
+      () => decision(['allow']),
+      [target],
+      observationsFor(target, [PRE], 'bypassPermissions'),
+      WINDOW,
+    );
+    const plain = computeConformanceWith(
+      () => decision(['allow']),
+      [target],
+      observationsFor(target, [PRE], 'default'),
+      WINDOW,
+    );
+
+    expect(bypassed.resultHash).not.toBe(plain.resultHash);
   });
 
   test('resultHash is stable across observation order', () => {

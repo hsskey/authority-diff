@@ -4,10 +4,12 @@ import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision } from '@authority/policy/schema';
 import type { ActionForReplay, ObservationForReplay } from '@authority/trace/schema';
+import { UNKNOWN_PERMISSION_MODE } from '../../schema.ts';
 import type {
   ConformanceFinding,
   ConformanceFindingKind,
   Disposition,
+  PermissionModeCount,
   ReplayStats,
 } from '../../schema.ts';
 import { EFFECT_ORDER, sampleActionKeys } from './group-summary.ts';
@@ -80,6 +82,27 @@ function signatureEntry(
   return { action, kind, operation, decision };
 }
 
+/** The first mode the Action's observations carried in time order, or `unknown`. */
+function permissionModeOf(observations: readonly ObservationForReplay[]): string {
+  return (
+    observations.find((observation) => observation.permissionMode !== null)?.permissionMode ??
+    UNKNOWN_PERMISSION_MODE
+  );
+}
+
+interface ModeCounter {
+  actionCount: number;
+  findingCount: number;
+}
+
+function byPermissionModeOf(counters: ReadonlyMap<string, ModeCounter>): PermissionModeCount[] {
+  return [...counters.entries()]
+    .map(([permissionMode, counter]) => ({ permissionMode, ...counter }))
+    .sort((a, b) =>
+      a.permissionMode < b.permissionMode ? -1 : a.permissionMode > b.permissionMode ? 1 : 0,
+    );
+}
+
 function findingKeyOf(entry: FindingEntry): string {
   return sha256Hex(
     canonicalJson([
@@ -122,6 +145,9 @@ function buildFinding(findingKey: string, entries: readonly FindingEntry[]): Con
  * Action. Findings sort by findingKey.
  * operationWidening is empty: Disposition is Action-level, so this path has no
  * Operation Effect pair to count.
+ * byPermissionMode counts every Action, excluded ones included, under the
+ * first permission mode its paired observations carried, or `unknown`, and
+ * the Actions of each mode that landed in a finding.
  * `resultHash = sha256Hex(canonicalJson({ stats, findings }))`.
  */
 export function computeConformanceWith(
@@ -150,20 +176,24 @@ export function computeConformanceWith(
     observationsByAction.set(observation.actionKey, bucket);
   }
   const transitionCounts = new Map<string, number>();
+  const modeCounters = new Map<string, ModeCounter>();
   const grouped = new Map<string, FindingEntry[]>();
   let excludedActions = 0;
   let changedActions = 0;
 
   for (const action of actions) {
+    const actionObservations = observationsByAction.get(action.actionKey) ?? [];
+    const permissionMode = permissionModeOf(actionObservations);
+    const modeCounter = modeCounters.get(permissionMode) ?? { actionCount: 0, findingCount: 0 };
+    modeCounter.actionCount += 1;
+    modeCounters.set(permissionMode, modeCounter);
+
     const candidate = evaluateCandidate(action.operations);
     if (candidate === null) {
       excludedActions += 1;
       continue;
     }
-    const disposition = deriveDisposition(
-      action.observedOutcome,
-      observationsByAction.get(action.actionKey) ?? [],
-    );
+    const disposition = deriveDisposition(action.observedOutcome, actionObservations);
     const observed = DISPOSITION_EFFECT[disposition];
     if (observed === null) {
       excludedActions += 1;
@@ -179,6 +209,7 @@ export function computeConformanceWith(
     if (kind === null) {
       continue;
     }
+    modeCounter.findingCount += 1;
     const entry = signatureEntry(action, candidate, kind);
     const findingKey = findingKeyOf(entry);
     const bucket = grouped.get(findingKey) ?? [];
@@ -195,6 +226,7 @@ export function computeConformanceWith(
       EFFECT_ORDER.map((to) => ({ from, to, count: transitionCounts.get(`${from}>${to}`) ?? 0 })),
     ),
     operationWidening: [],
+    byPermissionMode: byPermissionModeOf(modeCounters),
   };
   const findings = [...grouped.entries()]
     .map(([findingKey, entries]) => buildFinding(findingKey, entries))

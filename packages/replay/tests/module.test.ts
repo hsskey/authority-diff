@@ -21,6 +21,7 @@ import { computeAdoption, computeDiff } from '../diff.ts';
 import { ReplayRunIdSchema, ReplayRunSchema } from '../schema.ts';
 import type {
   ConformanceFinding,
+  PermissionModeCount,
   ReplayRun,
   StoredAdoptionGroup,
   StoredDiffGroup,
@@ -64,6 +65,7 @@ function observation(
   target: ActionForReplay,
   event: 'pre_tool_use' | 'permission_request',
   actionKey: string | null = target.actionKey,
+  permissionMode: string | null = null,
 ): ObservationForReplay {
   return {
     actionKey,
@@ -72,6 +74,7 @@ function observation(
     toolName: 'Bash',
     toolInputHash: TOOL_INPUT_HASH,
     hookDecision: null,
+    permissionMode,
     occurredAt: target.occurredAt,
   };
 }
@@ -88,6 +91,7 @@ function makeStore(): FakeStore {
   const analyzabilityCounts = new Map<string, AnalyzabilityCounts>();
   const findings = new Map<string, readonly ConformanceFinding[]>();
   const unpaired = new Map<string, number>();
+  const byPermissionMode = new Map<string, readonly PermissionModeCount[]>();
   const completedNewestFirst = () =>
     [...runs.values()]
       .filter((run) => run.status === 'completed')
@@ -135,6 +139,7 @@ function makeStore(): FakeStore {
       if ('matrix' in input.stats) {
         matrices.set(input.replayRunId, input.stats.matrix);
         unpaired.set(input.replayRunId, input.stats.unpairedPermissionRequests ?? 0);
+        byPermissionMode.set(input.replayRunId, input.stats.byPermissionMode ?? []);
       } else {
         matrices.set(input.replayRunId, input.stats.cells);
       }
@@ -200,6 +205,7 @@ function makeStore(): FakeStore {
               windowFrom: run.windowFrom,
               windowTo: run.windowTo,
               unpairedPermissionRequests: unpaired.get(run.id) ?? 0,
+              byPermissionMode: byPermissionMode.get(run.id) ?? [],
             },
       );
     },
@@ -511,6 +517,35 @@ describe('replay module', () => {
     ]);
   });
 
+  test('a conformance run lists its Action counts per permission mode', async () => {
+    const target = actions[0];
+    if (target === undefined) {
+      throw new Error('fixture has an Action');
+    }
+    const { module } = makeModule({
+      reader: makeReader({
+        getObservations: () =>
+          Promise.resolve([
+            observation(target, 'pre_tool_use', target.actionKey, 'bypassPermissions'),
+          ]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+    const listed = await module.listConformanceFindings();
+
+    expect(
+      listed.run?.byPermissionMode.map((row) => [row.permissionMode, row.actionCount]),
+    ).toEqual([
+      ['bypassPermissions', 1],
+      ['unknown', actions.length - 1],
+    ]);
+  });
+
   test('a conformance run is stored with kind conformance and no baseline version', async () => {
     const { module } = makeModule();
 
@@ -555,6 +590,7 @@ describe('replay module', () => {
       toolName: null,
       toolInputHash: null,
       hookDecision: null,
+      permissionMode: null,
       occurredAt: IsoTimestampSchema.parse('2026-01-02T02:46:00.000Z'),
     };
     const { module } = makeModule({

@@ -25,10 +25,12 @@ import {
   AuthorityMapCellSchema,
   ConformanceFindingSchema,
   DiffGroupSchema,
+  PermissionModeCountSchema,
   ReplayRunIdSchema,
   ReplayRunSchema,
   ReplayRunStatusSchema,
   ReplayStatsSchema,
+  UNGUARDED_PERMISSION_MODES,
 } from '@authority/replay/schema';
 import {
   ChangeReviewIdSchema,
@@ -338,6 +340,11 @@ export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 // the candidate version and window, so the request takes no query parameters.
 // unpairedPermissionRequests counts the run's permission_requests that no
 // pre_tool_use matched, so they could not reach any Action's Disposition.
+// byPermissionMode is the run's Action and finding counts per runtime
+// permission mode; the modes in UNGUARDED_PERMISSION_MODES never prompt.
+export { PermissionModeCountSchema, UNGUARDED_PERMISSION_MODES };
+export type { PermissionModeCount } from '@authority/replay/schema';
+
 export const ConformanceFindingResponseSchema = ConformanceFindingSchema;
 export type ConformanceFindingResponse = z.infer<typeof ConformanceFindingResponseSchema>;
 
@@ -349,6 +356,7 @@ export const ListConformanceFindingsResponseSchema = z.object({
       windowFrom: IsoTimestampSchema,
       windowTo: IsoTimestampSchema,
       unpairedPermissionRequests: z.number().int().nonnegative(),
+      byPermissionMode: z.array(PermissionModeCountSchema),
     })
     .nullable(),
   items: z.array(ConformanceFindingResponseSchema),

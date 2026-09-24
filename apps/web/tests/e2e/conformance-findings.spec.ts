@@ -22,6 +22,11 @@ test('lists each finding with its kind, capability, zone, and counts', async ({ 
         windowFrom: TS,
         windowTo: TS,
         unpairedPermissionRequests: 0,
+        byPermissionMode: [
+          { permissionMode: 'bypassPermissions', actionCount: 6, findingCount: 4 },
+          { permissionMode: 'default', actionCount: 3, findingCount: 0 },
+          { permissionMode: 'unknown', actionCount: 1, findingCount: 0 },
+        ],
       },
       items: [
         {
@@ -47,6 +52,39 @@ test('lists each finding with its kind, capability, zone, and counts', async ({ 
   await expect(row).toContainText('public_remote');
   await expect(row).toContainText('git');
   await expect(row.getByRole('cell').nth(4)).toHaveText('4');
+});
+
+test('shows the Action counts per permission mode and the workload that could run without a guard', async ({
+  page,
+}) => {
+  await page.route(
+    CONFORMANCE_FINDINGS,
+    fulfillWith({
+      run: {
+        replayRunId: `rpl_${SUFFIX}`,
+        policyVersionId: `pver_${SUFFIX}`,
+        windowFrom: TS,
+        windowTo: TS,
+        unpairedPermissionRequests: 0,
+        byPermissionMode: [
+          { permissionMode: 'auto', actionCount: 2, findingCount: 1 },
+          { permissionMode: 'bypassPermissions', actionCount: 6, findingCount: 4 },
+          { permissionMode: 'default', actionCount: 3, findingCount: 0 },
+          { permissionMode: 'unknown', actionCount: 1, findingCount: 0 },
+        ],
+      },
+      items: [],
+    }),
+  );
+
+  await page.goto('/conformance');
+
+  const breakdown = page.getByRole('region', { name: 'permission mode별 Action' });
+  await expect(breakdown.getByText('8건 / 12건 (bypassPermissions, auto)')).toBeVisible();
+  const row = breakdown.getByRole('row').filter({ hasText: 'bypassPermissions' });
+  await expect(row.getByRole('cell').nth(1)).toHaveText('6');
+  await expect(row.getByRole('cell').nth(2)).toHaveText('4');
+  await expect(breakdown.getByRole('row').filter({ hasText: 'unknown' })).toBeVisible();
 });
 
 test('shows the empty screen when no conformance run has completed', async ({ page }) => {

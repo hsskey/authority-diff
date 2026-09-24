@@ -67,6 +67,7 @@ export type {
   AdoptionReportGroup,
   AuditTail,
   AdoptionReportInput,
+  ReportConformance,
   ReportGroup,
   ReportInput,
   TraceSourceCounts,
