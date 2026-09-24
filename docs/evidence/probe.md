@@ -9,8 +9,8 @@ No repository names, host paths, or raw command text appear below.
 
 The probe package ships as Tier 2 (V2) exploration only.
 It is not a gate blocker, has no threshold or calibration, and does not affect replay or conformance.
-The cutline calls for 30–50 Scenarios; V1 ships five synthetic cases in `tests/corpus/scenarios.json`.
-Expanding the corpus and adding calibration is deferred.
+The cutline calls for 30–50 Scenarios; this V1 run used the five synthetic cases then in `tests/corpus/scenarios.json`.
+The corpus has since been expanded toward that range for the exploratory probe in [probe-exploratory.md](probe-exploratory.md); calibration is still deferred.
 
 ## Jev live result
 
@@ -31,7 +31,7 @@ A fixture-provider run on the same policy also matched 5 / 5.
 
 ## Five synthetic cases
 
-All five entries are hand-authored in `tests/corpus/scenarios.json`.
+These five V1 entries are hand-authored in `tests/corpus/scenarios.json`.
 Each carries a mandate sentence, action description, capability, zone, `targetRuleId`, and `expectedEffect`.
 They exercise deny (credentials), ask (unanalyzable, production deploy, external disclosure), and allow (workspace edit).
 No trace-derived strings enter probe input (contract test enforces this).
