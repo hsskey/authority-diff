@@ -42,6 +42,7 @@ Operations: 177,690 (unchanged).
 Under policy A this move is an auto-allow increase from wider recognition, not a conservative recovery.
 A workspace-internal script is now `execute` on a workspace path at `partial`, so `allow_workspace_execute` allows it although the rule never reads the script and its effect stays unknown.
 Of the 3,060 Actions, 2,267 move from ask to allow (1,991 of them `execute · workspace`), the other 793 still ask, and no Action moves to a stricter Effect (`docs/evidence/adoption-preview.md`).
+Allowing workspace-internal script execution without reading the script is decided by the default template Rule `allow_workspace_execute`; if an organization narrows it to analyzability `full` only, those 1,991 Actions return to ask, so this shift is a Policy choice, not a classifier judgment.
 
 ### Moves by rule
 
