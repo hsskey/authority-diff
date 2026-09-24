@@ -547,29 +547,34 @@ function postMethod(args: readonly ShellWord[]): boolean {
 }
 
 /**
- * A copy reads every local source operand, then writes the last operand or,
- * for scp/rsync/sftp with a `host:path` operand, sends to that host.
+ * A copy reads every local source operand and, for scp/rsync/sftp, fetches from
+ * every `host:path` source operand. It then sends to a `host:path` destination
+ * (the last operand) or writes the local destination.
  */
 function copyOps(cmd: NormalizedCommand, allowsRemote: boolean): OperationDraft[] {
   const operands = nonFlagArgs(cmd.args);
   const isRemote = (w: ShellWord): boolean =>
     allowsRemote && /^[^/\s]+@?[^/\s]*:/.test(w.text) && !w.text.startsWith('/');
-  const reads = operands
-    .slice(0, -1)
-    .filter((w) => !isRemote(w))
-    .map((w) => fileDraft(cmd, 'read', w));
-  const remote = operands.find(isRemote);
-  if (remote !== undefined) {
-    const host = hostFromRemoteSpec(remote.text);
-    const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
-    return [
-      ...reads,
-      draft('send', target, host === null ? 'partial' : 'full', cmd.program, cmd.raw, [
-        'remote_copy',
-      ]),
-    ];
+  const sources = operands.slice(0, -1);
+  const destination = operands.at(-1);
+  const reads = sources.filter((w) => !isRemote(w)).map((w) => fileDraft(cmd, 'read', w));
+  const fetches = sources.filter(isRemote).map((w) => remoteCopyDraft(cmd, 'fetch', w));
+  if (destination !== undefined && isRemote(destination)) {
+    return [...reads, ...fetches, remoteCopyDraft(cmd, 'send', destination)];
   }
-  return [...reads, ...fileOps(cmd, 'write', { patternFirst: false, destLast: true })];
+  return [...reads, ...fetches, ...fileOps(cmd, 'write', { patternFirst: false, destLast: true })];
+}
+
+function remoteCopyDraft(
+  cmd: NormalizedCommand,
+  capability: 'fetch' | 'send',
+  remote: ShellWord,
+): OperationDraft {
+  const host = hostFromRemoteSpec(remote.text);
+  const target: Target = host === null ? unknownTarget() : { kind: 'host', host, scheme: null };
+  return draft(capability, target, host === null ? 'partial' : 'full', cmd.program, cmd.raw, [
+    'remote_copy',
+  ]);
 }
 
 /** Host of a `user@host:path` or `host:path` scp/rsync operand. */

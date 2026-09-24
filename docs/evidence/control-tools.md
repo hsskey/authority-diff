@@ -3,6 +3,7 @@
 For each name put in `CONTROL_TOOL_NAMES`, this is the basis that official docs confirm "it does not change external state; it only controls the agent's progress".
 A name that could not be confirmed is not put on the list (conservatively treated as unknown/none).
 A ToolCall of an included tool is 0 Operations (excluded from evaluation); an excluded name is classified by other rules (unknown becomes execute/unknown/none).
+Joining `CONTROL_TOOL_NAMES` requires official documentation; a `no_operation` mapping in the classifier's general tool table may also rest on a recorded observation (`StructuredOutput`: its observed input is only result JSON fields with no path, URL, or command, so it yields 0 Operations).
 
 Sources are Anthropic official docs only.
 

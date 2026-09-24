@@ -3,9 +3,9 @@
  *
  * Bash input is parsed and delegated to the Bash classifier; an `mcp__*` name
  * becomes an `mcp` execute Operation; a control tool yields zero Operations; a
- * documented non-Bash tool maps to its capability; anything else is opaque
- * execution (never a false `read`). A truncated input always adds a `none`
- * Operation in addition to whatever was analyzed.
+ * tool-table entry maps to its capability or to zero Operations; anything else
+ * is opaque execution (never a false `read`). A truncated input always adds a
+ * `none` Operation in addition to whatever was analyzed.
  */
 import type { Analyzability, Capability, Operation, Target, ToolCall } from '../../schema.ts';
 import type { BashParser } from '../shell/parser.ts';
@@ -16,13 +16,19 @@ import { hostTarget, pathTarget, resolvePath, unknownTarget } from './targets.ts
 
 const MCP_NAME = /^mcp__([^_]+(?:_[^_]+)*)__(.+)$/;
 
-/** Non-Bash tools with a documented capability (docs/design.md 13.2). */
-interface ToolMapping {
-  readonly capability: Capability;
-  readonly kind: 'path' | 'host' | 'none';
-  readonly fields: readonly string[];
-}
-const TOOL_TABLE: ReadonlyMap<string, ToolMapping> = new Map([
+/**
+ * Non-Bash tools with a documented capability (docs/design.md 13.2), or with a
+ * recorded input shape that reaches no file, network, or process and so yields
+ * zero Operations (docs/evidence/control-tools.md).
+ */
+type ToolMapping =
+  | {
+      readonly capability: Capability;
+      readonly kind: 'path' | 'host' | 'none';
+      readonly fields: readonly string[];
+    }
+  | { readonly kind: 'no_operation' };
+const TOOL_TABLE: ReadonlyMap<string, ToolMapping> = new Map<string, ToolMapping>([
   ['Read', { capability: 'read', kind: 'path', fields: ['file_path', 'notebook_path'] }],
   ['NotebookRead', { capability: 'read', kind: 'path', fields: ['notebook_path'] }],
   ['Write', { capability: 'write', kind: 'path', fields: ['file_path'] }],
@@ -34,6 +40,7 @@ const TOOL_TABLE: ReadonlyMap<string, ToolMapping> = new Map([
   ['LS', { capability: 'read', kind: 'path', fields: ['path'] }],
   ['WebFetch', { capability: 'fetch', kind: 'host', fields: ['url'] }],
   ['WebSearch', { capability: 'fetch', kind: 'none', fields: [] }],
+  ['StructuredOutput', { kind: 'no_operation' }],
 ]);
 
 export function classifyToolCall(call: ToolCall, parser: BashParser): readonly Operation[] {
@@ -61,6 +68,7 @@ function analyze(call: ToolCall, parser: BashParser): OperationDraft[] {
   }
 
   const mapping = TOOL_TABLE.get(name);
+  if (mapping?.kind === 'no_operation') return [];
   if (mapping !== undefined) return [toolDraft(call, name, mapping)];
 
   // Unknown tool: exactly one opaque Operation, never a false read.
@@ -86,7 +94,11 @@ function bashDrafts(call: ToolCall, parser: BashParser): OperationDraft[] {
   return drafts;
 }
 
-function toolDraft(call: ToolCall, name: string, mapping: ToolMapping): OperationDraft {
+function toolDraft(
+  call: ToolCall,
+  name: string,
+  mapping: Exclude<ToolMapping, { kind: 'no_operation' }>,
+): OperationDraft {
   const input = parseJson(call.toolInputRedacted);
   if (input === null) {
     return draft('execute', unknownTarget(), 'none', name, call.toolInputRedacted, [
