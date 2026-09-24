@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { writeAuthToken } from '../shared/auth.ts';
+import { usePageTitle } from '../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -9,6 +10,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const [token, setToken] = useState('');
+  usePageTitle('로그인');
 
   return (
     <section>

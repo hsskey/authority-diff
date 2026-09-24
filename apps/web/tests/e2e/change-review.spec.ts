@@ -351,7 +351,7 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await page.getByRole('button', { name: '변경 검토 만들기' }).click();
 
   // review -> the Change Review screen loads with the gate closed
-  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByText('평가한 action')).toBeVisible();
   await expect(page.getByTestId('trace-sources')).toHaveText(
     '기록 출처: 실제 transcript 18건 / synthetic 2건',
@@ -383,8 +383,8 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
     .selectOption('expected');
 
   // back on the review the gate is now open
-  await page.getByRole('link', { name: 'Change Review로 돌아가세요' }).click();
-  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await page.getByRole('link', { name: '변경 검토로 돌아가세요' }).click();
+  await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByText('Gate: 열림')).toBeVisible();
 
   // accept -> the decision is recorded

@@ -6,12 +6,14 @@ import { callRoute, describeApiError } from '../shared/api-client.ts';
 import { EmptyState } from '../shared/components/EmptyState.tsx';
 import { ErrorState } from '../shared/components/ErrorState.tsx';
 import { LoadingState } from '../shared/components/LoadingState.tsx';
+import { usePageTitle } from '../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/conformance')({
   component: ConformanceFindingListPage,
 });
 
 function ConformanceFindingListPage() {
+  usePageTitle('적합성');
   const findingsQuery = useQuery({
     queryKey: ['conformance-findings'],
     queryFn: async () => {

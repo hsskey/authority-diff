@@ -49,6 +49,7 @@ export function VerdictSelect({
         aria-label={`${groupLabel} 판정`}
         value={verdict ?? ''}
         disabled={disabled || record.isPending}
+        aria-busy={record.isPending}
         onChange={(event) => {
           const next = VERDICT_OPTIONS.find((option) => option === event.target.value);
           if (next) {

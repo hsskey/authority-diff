@@ -12,6 +12,7 @@ import { callRoute, describeApiError, type ApiClientError } from '../../../../sh
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
 import { effectLabel } from '../../../../features/change-review/format.ts';
+import { usePageTitle } from '../../../../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/policies/$policyId/versions/$versionId')({
   component: PolicyVersionPage,
@@ -30,6 +31,7 @@ const STATUS_LABEL: Record<VersionStatus, string> = {
 
 function PolicyVersionPage() {
   const { policyId, versionId } = Route.useParams();
+  usePageTitle('Policy Version');
   const versionQuery = useQuery({
     queryKey: ['policy-version', versionId],
     queryFn: async () => {
@@ -164,6 +166,7 @@ function PolicyVersionEditor({
           onChange={(event) => setDraftText(event.target.value)}
           readOnly={!isDraft}
           aria-label="정책 문서 JSON"
+          aria-invalid={isDraft && !draft.ok}
         />
         {!isDraft ? (
           <p className="state-message hint">
@@ -180,6 +183,7 @@ function PolicyVersionEditor({
           <button
             type="button"
             disabled={!isDraft || !isDirty || !draft.ok || save.isPending}
+            aria-busy={save.isPending}
             onClick={() => {
               if (draft.ok) {
                 save.mutate(draft.document);
@@ -191,6 +195,7 @@ function PolicyVersionEditor({
           <button
             type="button"
             disabled={validate.isPending || isDirty}
+            aria-busy={validate.isPending}
             onClick={() => validate.mutate()}
           >
             {validate.isPending ? '검증 중…' : '검증'}
@@ -198,6 +203,7 @@ function PolicyVersionEditor({
           <button
             type="button"
             disabled={createDraft.isPending}
+            aria-busy={createDraft.isPending}
             onClick={() => createDraft.mutate()}
           >
             {createDraft.isPending ? '만드는 중…' : '이 version에서 draft 만들기'}
@@ -244,14 +250,16 @@ function VersionMeta({ version }: { version: PolicyVersionResponse }) {
 function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
   return (
     <div className="stack">
-      <h2 className="section-title">Rule ({rules.length})</h2>
+      <h2 className="section-title" id="policy-rules">
+        Rule ({rules.length})
+      </h2>
       {rules.length === 0 ? (
         <p className="state-message hint">
           이 문서에는 Rule이 없습니다. Rule이 없으면 모든 Operation의 Effect는 확인 필요입니다.
         </p>
       ) : (
         <div className="table-scroll">
-          <table className="data-table">
+          <table className="data-table" aria-labelledby="policy-rules">
             <thead>
               <tr>
                 <th scope="col">Rule ID</th>
@@ -296,7 +304,10 @@ function describeMatch(value: '*' | readonly string[] | null): string {
 
 function ValidationResult({ result }: { result: ValidatePolicyVersionResponse }) {
   return (
-    <div className={`panel stack ${result.isValid ? 'status-ok' : 'status-error'}`}>
+    <div
+      className={`panel stack ${result.isValid ? 'status-ok' : 'status-error'}`}
+      role={result.isValid ? 'status' : 'alert'}
+    >
       <h2 className="section-title">
         검증: {result.isValid ? '통과' : `문제 ${result.issues.length}건`}
       </h2>
@@ -431,6 +442,7 @@ function CreateReview({ policyId, version }: { policyId: string; version: Policy
         <button
           type="button"
           disabled={create.isPending || !canCreate}
+          aria-busy={create.isPending}
           onClick={() => create.mutate()}
         >
           {create.isPending ? '만드는 중…' : title}

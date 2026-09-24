@@ -21,6 +21,7 @@ import {
   formatZoneTransition,
 } from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
+import { usePageTitle } from '../../../../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
   component: DiffGroupPage,
@@ -47,6 +48,13 @@ function useReview(reviewId: string) {
 function DiffGroupPage() {
   const { reviewId, groupKey } = Route.useParams();
   const reviewQuery = useReview(reviewId);
+  const pendingTitle =
+    reviewQuery.data === undefined
+      ? 'Group'
+      : reviewQuery.data.kind === 'adoption'
+        ? 'Adoption Group'
+        : 'Diff Group';
+  usePageTitle(pendingTitle);
 
   if (reviewQuery.isPending) {
     return (
@@ -131,7 +139,7 @@ function ChangeGroupPage({
       {groupsQuery.isSuccess && group === null ? (
         <EmptyState
           title="Diff Group을 찾지 못했습니다"
-          message={`이 Change Review에는 group ${groupKey}이 없습니다.`}
+          message={`이 변경 검토에는 group ${groupKey}이 없습니다.`}
         />
       ) : null}
       {group !== null ? (
@@ -284,7 +292,7 @@ function ChangeGroupSignature({
       <p className="state-message hint">
         검토를 마치려면{' '}
         <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
-          Change Review로 돌아가세요
+          변경 검토로 돌아가세요
         </Link>
         .
       </p>
@@ -364,30 +372,32 @@ function AdoptionGroupSignature({
 /** The programs mixed into one group: the signature carries none, so the mix is shown here. */
 function ProgramMix({ group }: { group: ReviewAdoptionGroupResponse }) {
   return (
-    <table className="data-table">
-      <caption>
-        Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
-        {group.programSummary.length}개 표시
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Program</th>
-          <th scope="col" className="num">
-            Action
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {group.programSummary.map((entry) => (
-          <tr key={entry.program ?? '__none__'}>
-            <td className={entry.program === null ? 'hint' : 'mono'}>
-              {entry.program ?? '인식 안 됨'}
-            </td>
-            <td className="num">{entry.count}</td>
+    <div className="table-scroll">
+      <table className="data-table">
+        <caption>
+          Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
+          {group.programSummary.length}개 표시
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Program</th>
+            <th scope="col" className="num">
+              Action
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {group.programSummary.map((entry) => (
+            <tr key={entry.program ?? '__none__'}>
+              <td className={entry.program === null ? 'hint' : 'mono'}>
+                {entry.program ?? '인식 안 됨'}
+              </td>
+              <td className="num">{entry.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -527,36 +537,39 @@ function DecisionView({
           {effectLabel(decision.effect)}
         </span>
       </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th scope="col">Op</th>
-            <th scope="col">Zone</th>
-            <th scope="col">Reversibility</th>
-            <th scope="col">Effect</th>
-            <th scope="col">근거</th>
-          </tr>
-        </thead>
-        <tbody>
-          {decision.operations.map((operation) => (
-            <tr key={operation.operationIndex}>
-              <td className="mono">#{operation.operationIndex}</td>
-              <td>{operation.zone}</td>
-              <td>{operation.reversibility}</td>
-              <td className="nowrap">
-                <span className={`effect-badge effect-${operation.effect}`}>
-                  {effectLabel(operation.effect)}
-                </span>
-              </td>
-              <td>
-                {operation.decidingRuleId === null
-                  ? '-'
-                  : (rationales[operation.decidingRuleId] ?? '-')}
-              </td>
+      <div className="table-scroll">
+        <table className="data-table">
+          <caption>Operation별 결정</caption>
+          <thead>
+            <tr>
+              <th scope="col">Op</th>
+              <th scope="col">Zone</th>
+              <th scope="col">Reversibility</th>
+              <th scope="col">Effect</th>
+              <th scope="col">근거</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {decision.operations.map((operation) => (
+              <tr key={operation.operationIndex}>
+                <td className="mono">#{operation.operationIndex}</td>
+                <td>{operation.zone}</td>
+                <td>{operation.reversibility}</td>
+                <td className="nowrap">
+                  <span className={`effect-badge effect-${operation.effect}`}>
+                    {effectLabel(operation.effect)}
+                  </span>
+                </td>
+                <td>
+                  {operation.decidingRuleId === null
+                    ? '-'
+                    : (rationales[operation.decidingRuleId] ?? '-')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <details>
         <summary>기술 세부</summary>
         <ul className="issue-list">

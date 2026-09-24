@@ -14,6 +14,7 @@ import { EmptyState } from '../shared/components/EmptyState.tsx';
 import { ErrorState } from '../shared/components/ErrorState.tsx';
 import { LoadingState } from '../shared/components/LoadingState.tsx';
 import { effectLabel, formatShare } from '../features/change-review/format.ts';
+import { usePageTitle } from '../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/')({
   component: ActivityShapePage,
@@ -85,6 +86,7 @@ function rankedCounts<K extends string>(
 }
 
 function ActivityShapePage() {
+  usePageTitle('활동 분포');
   const overviewQuery = useQuery({
     queryKey: ['activity-overview', WINDOW_DAYS],
     queryFn: async () => {
@@ -201,52 +203,56 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
           </div>
 
           <div className="two-column">
-            <table className="data-table">
-              <caption>Capability 분포 (Operation {operationCount}건)</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Capability</th>
-                  <th scope="col" className="num">
-                    Operation
-                  </th>
-                  <th scope="col" className="num">
-                    비율
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {capabilities.map((entry) => (
-                  <tr key={entry.key}>
-                    <td>{entry.key}</td>
-                    <td className="num">{entry.count}</td>
-                    <td className="num">{formatShare(entry.count, operationCount)}</td>
+            <div className="table-scroll">
+              <table className="data-table">
+                <caption>Capability 분포 (Operation {operationCount}건)</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Capability</th>
+                    <th scope="col" className="num">
+                      Operation
+                    </th>
+                    <th scope="col" className="num">
+                      비율
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <table className="data-table">
-              <caption>Target 종류 분포 (Operation 기준)</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Target 종류</th>
-                  <th scope="col" className="num">
-                    Operation
-                  </th>
-                  <th scope="col" className="num">
-                    비율
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {targetKinds.map((entry) => (
-                  <tr key={entry.key}>
-                    <td>{TARGET_KIND_LABEL[entry.key]}</td>
-                    <td className="num">{entry.count}</td>
-                    <td className="num">{formatShare(entry.count, operationCount)}</td>
+                </thead>
+                <tbody>
+                  {capabilities.map((entry) => (
+                    <tr key={entry.key}>
+                      <td>{entry.key}</td>
+                      <td className="num">{entry.count}</td>
+                      <td className="num">{formatShare(entry.count, operationCount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-scroll">
+              <table className="data-table">
+                <caption>Target 종류 분포 (Operation 기준)</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Target 종류</th>
+                    <th scope="col" className="num">
+                      Operation
+                    </th>
+                    <th scope="col" className="num">
+                      비율
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {targetKinds.map((entry) => (
+                    <tr key={entry.key}>
+                      <td>{TARGET_KIND_LABEL[entry.key]}</td>
+                      <td className="num">{entry.count}</td>
+                      <td className="num">{formatShare(entry.count, operationCount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="two-column">
@@ -261,33 +267,35 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
 
 function TopPrograms({ programs }: { programs: ActivityOverviewResponse['topPrograms'] }) {
   return (
-    <table className="data-table">
-      <caption>자주 쓴 program 상위 {programs.length}개</caption>
-      <thead>
-        <tr>
-          <th scope="col">Program</th>
-          <th scope="col" className="num">
-            Operation
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {programs.length === 0 ? (
+    <div className="table-scroll">
+      <table className="data-table">
+        <caption>자주 쓴 program 상위 {programs.length}개</caption>
+        <thead>
           <tr>
-            <td colSpan={2} className="hint">
-              program을 인식한 Operation이 없습니다.
-            </td>
+            <th scope="col">Program</th>
+            <th scope="col" className="num">
+              Operation
+            </th>
           </tr>
-        ) : (
-          programs.map((entry) => (
-            <tr key={entry.program}>
-              <td className="mono">{entry.program}</td>
-              <td className="num">{entry.count}</td>
+        </thead>
+        <tbody>
+          {programs.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="hint">
+                program을 인식한 Operation이 없습니다.
+              </td>
             </tr>
-          ))
-        )}
-      </tbody>
-    </table>
+          ) : (
+            programs.map((entry) => (
+              <tr key={entry.program}>
+                <td className="mono">{entry.program}</td>
+                <td className="num">{entry.count}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -304,39 +312,41 @@ function RemoteHosts({ remoteKeys }: { remoteKeys: ActivityOverviewResponse['top
   );
 
   return (
-    <table className="data-table">
-      <caption>
-        VCS 원격 host (상위 {remoteKeys.length}개 Remote Key 기준, 저장소 이름은 가림)
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Host</th>
-          <th scope="col" className="num">
-            저장소
-          </th>
-          <th scope="col" className="num">
-            Operation
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {hosts.length === 0 ? (
+    <div className="table-scroll">
+      <table className="data-table">
+        <caption>
+          VCS 원격 host (상위 {remoteKeys.length}개 Remote Key 기준, 저장소 이름은 가림)
+        </caption>
+        <thead>
           <tr>
-            <td colSpan={3} className="hint">
-              Remote Key를 인식한 Operation이 없습니다.
-            </td>
+            <th scope="col">Host</th>
+            <th scope="col" className="num">
+              저장소
+            </th>
+            <th scope="col" className="num">
+              Operation
+            </th>
           </tr>
-        ) : (
-          hosts.map(([host, entry]) => (
-            <tr key={host}>
-              <td className="mono">{host}</td>
-              <td className="num">{entry.remotes}</td>
-              <td className="num">{entry.count}</td>
+        </thead>
+        <tbody>
+          {hosts.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="hint">
+                Remote Key를 인식한 Operation이 없습니다.
+              </td>
             </tr>
-          ))
-        )}
-      </tbody>
-    </table>
+          ) : (
+            hosts.map(([host, entry]) => (
+              <tr key={host}>
+                <td className="mono">{host}</td>
+                <td className="num">{entry.remotes}</td>
+                <td className="num">{entry.count}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -393,7 +403,12 @@ function FirstPolicyPanel() {
         어떤 판정도 내리지 않습니다.
       </p>
       <div className="actions">
-        <button type="button" disabled={create.isPending} onClick={() => create.mutate()}>
+        <button
+          type="button"
+          disabled={create.isPending}
+          aria-busy={create.isPending}
+          onClick={() => create.mutate()}
+        >
           {create.isPending ? '만드는 중…' : '첫 조직 정책 만들기'}
         </button>
       </div>
@@ -743,35 +758,37 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
         })}
       </div>
 
-      <table className="data-table">
-        <caption>
-          평가한 Action {total}건, Capability × Zone cell {map.cells.length}개
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Capability</th>
-            <th scope="col">Zone</th>
-            <th scope="col">Effect</th>
-            <th scope="col" className="num">
-              Action
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedCells.map((cell) => (
-            <tr key={`${cell.capability}-${cell.zone}-${cell.effect}`}>
-              <td>{cell.capability}</td>
-              <td>{cell.zone}</td>
-              <td className="nowrap">
-                <span className={`effect-badge effect-${cell.effect}`}>
-                  {effectLabel(cell.effect)}
-                </span>
-              </td>
-              <td className="num">{cell.count}</td>
+      <div className="table-scroll">
+        <table className="data-table">
+          <caption>
+            평가한 Action {total}건, Capability × Zone cell {map.cells.length}개
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Capability</th>
+              <th scope="col">Zone</th>
+              <th scope="col">Effect</th>
+              <th scope="col" className="num">
+                Action
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sortedCells.map((cell) => (
+              <tr key={`${cell.capability}-${cell.zone}-${cell.effect}`}>
+                <td>{cell.capability}</td>
+                <td>{cell.zone}</td>
+                <td className="nowrap">
+                  <span className={`effect-badge effect-${cell.effect}`}>
+                    {effectLabel(cell.effect)}
+                  </span>
+                </td>
+                <td className="num">{cell.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
