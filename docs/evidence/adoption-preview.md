@@ -1,4 +1,24 @@
 corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `8ae52329…a444` (server), `8ae52329…a444` (local pipeline)
+<!-- evidence-numbers
+snapshot.sessions: 1,036
+snapshot.actions: 34,940
+snapshot.duplicates: 196
+snapshot.evaluated: 34,490
+policy-a.contentHash: f96ed41d…beb8
+policy-a.allow: 15,242
+policy-a.ask: 19,228
+policy-a.deny: 20
+analyzability.full: 17,972
+analyzability.partial: 6,610
+analyzability.none: 9,908
+adoption.groups: 24
+adoption.resultHash: 8ae52329…a444
+gate2.a-vs-b.resultHash: 2c4577fa…a8d9
+gate2.a-vs-bp.resultHash: 3082d2a4…1598
+gate2.a-vs-b.changed: 139
+conformance.resultHash: 7710c06c…8689
+review-loop.time: 59 s
+-->
 
 # Adoption preview (first Policy)
 

@@ -8,6 +8,9 @@ import {
 
 const doc = [
   'corpus snapshot: s (2026-01-01, 1 files, 2 Actions); classifier 0.2.2; measured 2026-01-02',
+  '<!-- evidence-numbers',
+  'counts.a: 1',
+  '-->',
   '',
   '# Title',
   '',
@@ -42,12 +45,15 @@ test('stampVersion reads the classifier version from the first line', () => {
   expect(stampVersion(doc)).toBe('0.2.2');
 });
 
-test('archiveMainSections freezes the main sections as the newest previous version', () => {
+test('archiveMainSections freezes the main sections, without the numbers block, as the newest previous version', () => {
   const result = archiveMainSections(doc, '0.2.2');
 
   expect(result).toBe(
     [
       'corpus snapshot: s (2026-01-01, 1 files, 2 Actions); classifier 0.2.2; measured 2026-01-02',
+      '<!-- evidence-numbers',
+      'counts.a: 1',
+      '-->',
       '',
       '# Title',
       '',
@@ -73,6 +79,6 @@ test('archiveMainSections freezes the main sections as the newest previous versi
   );
 });
 
-test('proseLinesWithDigits lists main-section prose with numbers, skipping blocks and previous versions', () => {
+test('proseLinesWithDigits lists main-section prose with numbers, skipping blocks, the numbers block, and previous versions', () => {
   expect(proseLinesWithDigits(doc)).toEqual(['Prose with 3 Actions.']);
 });

@@ -1,4 +1,12 @@
 corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; A vs B resultHash `2c4577fa…a8d9`
+<!-- evidence-numbers
+snapshot.actions: 34,940
+snapshot.evaluated: 34,490
+policy-a.allow: 15,242
+policy-a.ask: 19,228
+gate2.a-vs-b.resultHash: 2c4577fa…a8d9
+gate2.a-vs-bp.changed: 139
+-->
 
 # Classifier hardening round 3
 
