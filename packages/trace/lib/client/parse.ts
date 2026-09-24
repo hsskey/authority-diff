@@ -77,6 +77,15 @@ interface BuiltInput {
 }
 
 const MAX_INPUT_LENGTH = 16000;
+const REDACTION_TOKEN_RE = /__REDACTED_[A-Z0-9_]+__/g;
+
+/** Cuts at `max`, or before a redaction token the cut would split, so the server's re-redaction finds nothing. */
+function cutInput(text: string, max: number): string {
+  const split = [...text.matchAll(REDACTION_TOKEN_RE)].find(
+    (match) => match.index < max && max < match.index + match[0].length,
+  );
+  return text.slice(0, split?.index ?? max);
+}
 
 const HOME_PREFIX = /^\/(?:Users|home)\/[^/]+|^\/root(?=\/|$)/;
 
@@ -118,7 +127,7 @@ function buildToolInput(toolName: string, input: unknown, home: string | null): 
   }
   text = foldSessionHome(text, home);
   const isInputTruncated = text.length > MAX_INPUT_LENGTH;
-  const toolInputRedacted = isInputTruncated ? text.slice(0, MAX_INPUT_LENGTH) : text;
+  const toolInputRedacted = isInputTruncated ? cutInput(text, MAX_INPUT_LENGTH) : text;
   return { toolInputRedacted, isInputTruncated, redactions };
 }
 

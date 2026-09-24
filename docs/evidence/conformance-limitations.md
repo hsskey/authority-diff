@@ -13,7 +13,7 @@ See ACR-0007 for the Disposition derivation.
 The PermissionRequest hook input carries no `tool_use_id`, although the `/hooks` help screen mentions it for this event.
 A `permission_request` reaches its Action only by pairing with the closest earlier unpaired `pre_tool_use` of the same Session, tool name, and tool input hash, as ACR-0007 records.
 A `permission_request` whose `pre_tool_use` was not observed stays unpaired and is reported as `unpairedPermissionRequests` of the conformance run.
-This environment recorded only 2 `permission_request` observations, so `over_asked` stays near 0.
+Every `permission_request` observed here is an AskUserQuestion dialog, which carries no Operation, so `over_asked` stays near 0; `conformance.md` holds the per-run counts and the over_asked analysis.
 That is the result, not a pairing defect.
 
 ## Observation gap: hook outage
