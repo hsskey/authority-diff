@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { parseTranscript } from '../client.ts';
+import { parseTranscript, redactText } from '../client.ts';
 
 function assistantLine(input: {
   readonly id: string | null;
@@ -232,6 +232,22 @@ describe('parseTranscript tool input', () => {
     const call = parsed.toolCalls[0];
     expect(call?.toolInputRedacted.length).toBe(16000);
     expect(call?.isInputTruncated).toBe(true);
+  });
+
+  test('the 16000-char cut never leaves a partial redaction token for re-redaction to flag', () => {
+    const parsed = parseTranscript({
+      sessionExternalId: 's',
+      lines: [
+        assistantLine({
+          id: 't',
+          name: 'Bash',
+          toolInput: { command: `${'y'.repeat(15985)} API_TOKEN=synthvalue0001 tail` },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+      ],
+    });
+    const call = parsed.toolCalls[0];
+    expect(redactText(call?.toolInputRedacted ?? '').redactions).toEqual([]);
   });
 
   test('masks prefix-free credential values under secret-named keys as key_masked', () => {
