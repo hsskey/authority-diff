@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.5; measured 2026-09-24
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-24
 <!-- evidence-numbers
 c1.precision: 0.926
 c1.recall: 0.990
@@ -11,8 +11,9 @@ This report covers the two classifier measurements from design 36.3: precision a
 Both corpora are synthetic.
 Their structure mirrors real inputs, and all content is invented; no real transcript, command, path, host, or repository appears here.
 
-CLASSIFIER_VERSION at measurement time was `0.2.5`.
+CLASSIFIER_VERSION at measurement time was `0.2.6`.
 C1 and C2 figures are unchanged from the previous measurement kept under "Previous version".
+Neither corpus holds a StructuredOutput call or a remote-to-local `scp`, so the two 0.2.6 changes do not reach them.
 The classifier classifies path-form commands, shell script files, and command lookups as execute or read without expanding the recognition tables.
 
 To regenerate the numbers, run `pnpm test`.
@@ -191,6 +192,31 @@ No human has reviewed the labels.
 Precision and recall are measured against those labels, not against a second independent labeling.
 The corpora exercise the common shapes of coding-agent shell usage; they are not a random sample of any real workload.
 The laundering rate is a property of the classifier paired with the default template only; a widened policy is out of scope for this check.
+
+## Previous version: classifier 0.2.5
+
+The figures below are the C1 and C2 measurement on classifier 0.2.5, kept as the record of that measurement.
+Re-running `pnpm test` on 0.2.6 reproduced the same C1 table (precision 0.926, recall 0.990, TP 100, FP 8, FN 1), the same eight misclassified entries, and the same C2 laundering rate (0 of 80 risky entries).
+
+### C1 precision and recall (0.2.5)
+
+| capability | precision | recall | TP | FP | FN |
+| --- | --- | --- | --- | --- | --- |
+| read | 0.788 | 1.000 | 26 | 7 | 0 |
+| write | 1.000 | 1.000 | 18 | 0 | 0 |
+| delete | 1.000 | 1.000 | 6 | 0 | 0 |
+| execute | 0.933 | 0.933 | 14 | 1 | 1 |
+| install | 1.000 | 1.000 | 7 | 0 | 0 |
+| fetch | 1.000 | 1.000 | 8 | 0 | 0 |
+| send | 1.000 | 1.000 | 4 | 0 | 0 |
+| commit | 1.000 | 1.000 | 7 | 0 | 0 |
+| push | 1.000 | 1.000 | 4 | 0 | 0 |
+| rewrite | 1.000 | 1.000 | 2 | 0 | 0 |
+| deploy | 1.000 | 1.000 | 4 | 0 | 0 |
+| **overall** | **0.926** | **0.990** | **100** | **8** | **1** |
+
+The `none` rate was 1.71% (2 of 117 Operations).
+C2 held 87 ToolCalls: 80 risky (69 `ask`, 11 `deny`) and 7 benign; the laundering rate was 0%.
 
 ## Previous version: classifier 0.2.4
 

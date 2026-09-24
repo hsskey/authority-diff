@@ -1,11 +1,11 @@
 # Authority Diff
 
 Authority Diff is a review tool for an organization's Agent permission Policy.
-It classifies past Agent Actions, applies a Policy Version to them, and shows which Effect (allow, ask, deny) each Action would receive.
+It classifies past Agent Actions, evaluates them under a Policy Version, and shows which Effect (allow, ask, deny) each Action would receive.
 It reviews a first Policy before adoption, and a Policy change against the accepted baseline.
 It does not deploy or enforce a Policy, and it does not claim that a runtime will follow the evaluated Effects.
 
-V1 proves two questions on recorded Actions: what this first Policy would ask or deny, and which Actions a Policy change would move to a different Effect.
+V1 answers two questions on recorded Actions: what this first Policy would ask or deny, and which Actions a Policy change would move to a different Effect.
 
 ## Journey
 
@@ -14,26 +14,26 @@ import → activity overview → first Policy (draft) → adoption preview → r
 1. **Import.** `authority import` loads Claude Code transcripts, redacts secrets, and classifies each tool call into Operations.
 2. **Activity Overview.** With no Policy, `/` shows the imported activity: Sessions, Actions, Capability and Target Kind distribution, analyzability, top programs. No Effect and no Zone yet, because both need a Policy.
 3. **First Policy (draft).** "첫 조직 정책 만들기" creates draft version 1 from the default template. Edit the JSON (Rules and Environment Profile), save, validate. There is one Policy per organization.
-4. **Adoption preview.** "최초 도입 검토 만들기" applies the draft alone to the recorded Actions. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
+4. **Adoption preview.** "최초 도입 검토 만들기" evaluates the recorded Actions under the draft alone. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
 5. **Review and adopt.** Every Adoption Group needs a Verdict (의도한 제한 / 보류 / 정책 수정 필요). Only when all of them are 의도한 제한 does "최초 정책 채택" make version 1 `accepted` and write a Decision Record.
-6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Applying the Policy to a runtime (for example through managed settings) happens outside Authority Diff, and Authority Diff does not record whether it happened.
+6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Changing runtime settings to match the Policy (for example through managed settings) happens outside Authority Diff. Through the API an operator can record a declaration that it happened; Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
 7. **Change review.** A draft made from the accepted version gets a Change Review: the same Actions under both versions, Widening and Narrowing groups, Verdicts, accept or reject, Evidence Report.
 8. **Conformance.** Observation hooks report what the runtime actually did. Conformance compares those Runtime Observations with the accepted Policy and reports violation, under_asked, and over_asked findings. This is the only screen that says anything about runtime behavior.
 
 ## Result of the recorded journey
 
 <!-- evidence-numbers
-classifier: 0.2.5
+classifier: 0.2.6
 snapshot.sessions: 1,036
 snapshot.actions: 34,940
-snapshot.evaluated: 34,490
+snapshot.evaluated: 34,033
 policy-a.allow: 17,801
-policy-a.ask: 16,669
+policy-a.ask: 16,212
 policy-a.deny: 20
 adoption.groups: 24
 bp-scene.actions: 9
 -->
-Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.5 and the corrected environment profile (policy A).
+Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.6 and the corrected environment profile (policy A).
 Each figure follows the classifier version stamped on the first line of its evidence document; figures from earlier classifier versions stay only under that document's "Previous version" sections.
 Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
 
@@ -42,10 +42,10 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 <!-- remeasure:readme-adoption -->
 | evaluated Actions | allow | ask | deny | Adoption Groups |
 | ---: | ---: | ---: | ---: | --- |
-| 34,490 | 17,801 (51.6%) | 16,669 (48.3%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
+| 34,033 | 17,801 (52.3%) | 16,212 (47.6%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
 <!-- /remeasure:readme-adoption -->
 
-allow 51.6% and ask 48.3% sum to 99.9% because of rounding; deny is the remaining share (20 Actions; 0.06% in the table, 0.1% on the one-decimal tile).
+allow 52.3% and ask 47.6% sum to 99.9% because of rounding; deny is the remaining share (20 Actions; 0.06% in the table, 0.1% on the one-decimal tile).
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 The allow share includes scripts named by a path inside the workspace, which `allow_workspace_execute` allows without reading them; that part is auto-allow from wider command recognition, not a sign the scripts are safe.
 That is what the Policy says about this corpus, reported as-is.
@@ -113,14 +113,18 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 - **Single-person corpus.** Adoption preview, replay, and conformance numbers come from one Principal's Claude Code records.
 - **Single runtime.** Parse, import, and hooks cover Claude Code. There is no Codex adapter.
 - **Agent Verdict.** Adoption Group and Widening group Verdicts in the recorded journey were given by an Agent. A person has not recorded Verdicts on those groups.
-- **Adoption preview is not a runtime baseline.** The preview applies the draft to past Actions. It does not say which of those Actions a runtime approved, and `accepted` does not mean the runtime now behaves this way.
+- **Adoption preview is not a runtime baseline.** The preview evaluates past Actions under the draft. It does not say which of those Actions a runtime approved, and `accepted` does not mean the runtime now behaves this way.
 - **Hook observation gap.** When the hook is down, no Runtime Observation is written. Those Actions get Disposition `executed_prompt_unknown`.
 - **`over_asked` stays near 0.** The PermissionRequest hook input carries no tool use id, so a PermissionRequest pairs to its Action by Session, tool name, and tool input hash, and only when the earlier `pre_tool_use` was observed. This corpus recorded only 2 PermissionRequest observations.
 - **Publish direction.** Zone does not distinguish publish from fetch. `ask_external_disclosure` matches `push` on `public_remote` and `unknown_remote` only. A package publish to a registry listed in `trustedRemotes` is `push` on `trusted_remote` and is not treated as external disclosure.
 - **Worktree host Zone.** `workspace` is the Action's workspace root. Sibling worktree paths resolve as `host`. A Rule that allows read, write, or execute in `workspace` still asks there, which is most of the ask share above.
 - **Approximate remote parsing.** A Remote Key comes from the command text and the remotes found on disk at import time. A named remote used outside the Action workspace stays unresolved and falls to `unknown_remote` (`docs/evidence/classifier-limitations.md`, `docs/evidence/replay-limitations.md`).
 - **Real-record demo, no synthetic fixture.** The `github.com/**` scene in the recorded journey comes from recorded Actions. No `synthetic` fixture was imported, and no Widening outside the expected list appeared. Metrics, provenance, and grade are in `docs/evidence/v1-metrics.md`.
-- **Not built in V1.** Policy activation and rollback, settings export, a job queue, API tokens and roles, provider calibration, a Codex parser, and the other work listed in `docs/cutline.md` chapter 13 are out of scope.
+- **Not built in V1.** Enforcing or rolling back a Policy Version, settings export, a job queue, API tokens and roles, provider calibration, a Codex parser, and the other work listed in `docs/cutline.md` chapter 13 are out of scope.
 - **Node path.** `install-hooks` prefers a stable Node path over a versioned one, because a versioned path disappears on upgrade. It uses a Homebrew symlink that resolves to the same Cellar binary, or the vite-plus, Volta, or nvm shim. If neither exists, the versioned path remains and hooks break after upgrade.
 
 Classifier details, Zone publish counts, and hook spool behavior are in `docs/evidence/`. Range is `docs/cutline.md`. Target architecture is `docs/design.md`. Terms are `CONTEXT.md`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

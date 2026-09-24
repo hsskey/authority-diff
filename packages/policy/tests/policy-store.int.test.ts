@@ -257,6 +257,74 @@ describe('policy store', () => {
     expect(error.code).toBe('policy.transition_not_allowed');
   });
 
+  test('declareActivation records the declaration on an accepted version', async () => {
+    const { initialVersion } = await seedAcceptedDefaultPolicy();
+
+    const activation = expectOk(
+      await repository.declareActivation(initialVersion.id, {
+        reason: 'applied to managed settings',
+        actorName: 'operator',
+      }),
+    );
+
+    expect(activation).toMatchObject({
+      policyVersionId: initialVersion.id,
+      reason: 'applied to managed settings',
+      actorName: 'operator',
+    });
+  });
+
+  test('declaring an older accepted version leaves statuses and the baseline unchanged', async () => {
+    const { policy, initialVersion } = await seedAcceptedDefaultPolicy();
+    const draft = expectOk(await repository.createDraftVersion(policy.id, initialVersion.id));
+    expectOk(await repository.transitionVersion(draft.id, 'submit'));
+    const latest = expectOk(await repository.transitionVersion(draft.id, 'accept'));
+
+    expectOk(
+      await repository.declareActivation(initialVersion.id, { reason: 'kept', actorName: 'ops' }),
+    );
+
+    expect(expectOk(await repository.getVersion(initialVersion.id))).toEqual(initialVersion);
+    expect(expectOk(await repository.getBaseline(policy.id))).toEqual(latest);
+  });
+
+  test('declareActivation refuses a version that is not accepted', async () => {
+    const { initialVersion } = await createDefaultPolicy();
+
+    const error = expectErr(
+      await repository.declareActivation(initialVersion.id, { reason: 'early', actorName: 'ops' }),
+    );
+
+    expect(error.code).toBe('policy.version_not_accepted');
+  });
+
+  test('declareActivation reports an unknown version', async () => {
+    const missing = PolicyVersionIdSchema.parse(createUlidGenerator().next('pver'));
+
+    const error = expectErr(
+      await repository.declareActivation(missing, { reason: 'none', actorName: 'ops' }),
+    );
+
+    expect(error.code).toBe('policy.version_not_found');
+  });
+
+  test.each([
+    ['UPDATE', 'update policy_activations set reason = reason'],
+    ['DELETE', 'delete from policy_activations'],
+    ['TRUNCATE', 'truncate policy_activations'],
+  ])('policy_activations rejects %s', async (operation, statement) => {
+    const { initialVersion } = await seedAcceptedDefaultPolicy();
+    expectOk(
+      await repository.declareActivation(initialVersion.id, { reason: 'kept', actorName: 'ops' }),
+    );
+
+    const attempt = database.db.execute(statement);
+
+    await expect(attempt).rejects.toMatchObject({
+      cause: { message: `policy_activations is append-only: ${operation} is not allowed` },
+    });
+  });
+
   test('seedAcceptedPolicy inserts an accepted version 1 and is idempotent', async () => {
     const name = uniqueName();
     const first = expectOk(

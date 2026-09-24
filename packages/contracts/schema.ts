@@ -11,6 +11,7 @@ import {
 } from '@authority/trace/schema';
 import {
   DecisionSchema,
+  PolicyActivationSchema,
   PolicyDocumentSchema,
   PolicyIdSchema,
   PolicyIssueSchema,
@@ -206,6 +207,16 @@ export const ValidatePolicyVersionResponseSchema = z.object({
   issues: z.array(PolicyIssueSchema),
 });
 export type ValidatePolicyVersionResponse = z.infer<typeof ValidatePolicyVersionResponseSchema>;
+
+/** Strict so a rollback or review-linked request is refused instead of recorded as a plain activation declaration. */
+export const CreatePolicyActivationRequestSchema = z.strictObject({
+  reason: z.string().min(1),
+  actorName: z.string().min(1),
+});
+export type CreatePolicyActivationRequest = z.infer<typeof CreatePolicyActivationRequestSchema>;
+
+export const PolicyActivationResponseSchema = PolicyActivationSchema;
+export type PolicyActivationResponse = z.infer<typeof PolicyActivationResponseSchema>;
 
 /** Omit `kind` for `version_diff`. `conformance` baselines on observed_runtime; `adoption` applies the candidate with no baseline. */
 export const CreateReplayRunRequestSchema = z.union([

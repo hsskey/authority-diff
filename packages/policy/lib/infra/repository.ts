@@ -4,9 +4,11 @@ import { err, invariant, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import {
+  PolicyActivationSchema,
   PolicySchema,
   PolicyVersionSchema,
   type Policy,
+  type PolicyActivation,
   type PolicyDocument,
   type PolicyId,
   type PolicyVersion,
@@ -16,7 +18,7 @@ import { DEFAULT_POLICY_DOCUMENT } from '../domain/default-policy-document.ts';
 import { EMPTY_POLICY_DOCUMENT } from '../domain/empty-policy-document.ts';
 import { nextStatus, type PolicyTransition } from '../domain/transition.ts';
 import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
-import { policies, policyVersions } from './tables.ts';
+import { policies, policyActivations, policyVersions } from './tables.ts';
 
 export interface CreatePolicyInput {
   readonly name: string;
@@ -32,6 +34,11 @@ export interface SeedAcceptedPolicyResult {
   readonly policy: Policy;
   readonly version: PolicyVersion;
   readonly created: boolean;
+}
+
+export interface DeclareActivationInput {
+  readonly reason: string;
+  readonly actorName: string;
 }
 
 export interface PolicyPage {
@@ -74,6 +81,15 @@ export interface PolicyRepository {
   getBaseline(policyId: PolicyId): Promise<Result<PolicyVersion, AppError>>;
   hasAcceptedVersion(policyId: PolicyId): Promise<Result<boolean, AppError>>;
   /**
+   * Records that an operator applied an accepted version. The version's status
+   * and every other read stay unchanged; `policy.version_not_accepted` when the
+   * version is not `accepted`.
+   */
+  declareActivation(
+    id: PolicyVersionId,
+    input: DeclareActivationInput,
+  ): Promise<Result<PolicyActivation, AppError>>;
+  /**
    * Legacy, test-only path: inserts an accepted version 1 without a Change
    * Review. Product code creates a draft version 1 with `createPolicy` and
    * accepts it through review; this stays for fixtures and mirrors the rows
@@ -95,6 +111,8 @@ const contentHash = (document: PolicyDocument): string => sha256Hex(canonicalJso
 const toPolicy = (row: typeof policies.$inferSelect): Policy => PolicySchema.parse(row);
 const toVersion = (row: typeof policyVersions.$inferSelect): PolicyVersion =>
   PolicyVersionSchema.parse(row);
+const toActivation = (row: typeof policyActivations.$inferSelect): PolicyActivation =>
+  PolicyActivationSchema.parse(row);
 
 // drizzle wraps the driver error in a DrizzleQueryError and keeps the
 // PostgresError (code, constraint_name) on `cause`, so walk the cause chain.
@@ -422,6 +440,38 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           .where(and(eq(policyVersions.policyId, policyId), eq(policyVersions.status, 'accepted')))
           .limit(1);
         return ok(accepted !== undefined);
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    async declareActivation(id, input) {
+      try {
+        const version = await loadVersion(id);
+        if (version === null) {
+          return err(versionNotFound(id));
+        }
+        if (version.status !== 'accepted') {
+          return err({
+            code: 'policy.version_not_accepted',
+            message: `policy version ${id} is ${version.status}, not accepted`,
+            isRetryable: false,
+            details: { id, status: version.status },
+            cause: null,
+          });
+        }
+        const [row] = await db
+          .insert(policyActivations)
+          .values({
+            id: idGenerator.next('pact'),
+            policyVersionId: id,
+            reason: input.reason,
+            actorName: input.actorName,
+            createdAt: clock.now(),
+          })
+          .returning();
+        invariant(row !== undefined, 'insert returned no row');
+        return ok(toActivation(row));
       } catch (cause) {
         return err(internal(cause));
       }
