@@ -31,6 +31,181 @@ type DiffSample = DiffGroupSamplesResponse['items'][number];
 type AdoptionSample = AdoptionGroupSamplesResponse['items'][number];
 type Decision = DiffSample['baselineDecision'];
 type Rationales = DiffSample['baselineRuleRationales'];
+type Effect = ReviewDiffGroupResponse['fromEffect'];
+type Severity = ReviewDiffGroupResponse['severity'];
+
+function cx(...parts: Array<string | false | undefined>): string {
+  return parts
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    .join(' ');
+}
+
+function PageTitle({ children }: { children: ReactNode }) {
+  return <h1 className="m-0 mb-4 text-[1.5rem]">{children}</h1>;
+}
+
+function Stack({
+  as: Tag = 'div',
+  className,
+  children,
+}: {
+  as?: 'div' | 'section';
+  className?: string;
+  children: ReactNode;
+}) {
+  return <Tag className={cx('grid gap-5', className)}>{children}</Tag>;
+}
+
+function Panel({
+  as: Tag = 'div',
+  className,
+  children,
+}: {
+  as?: 'div' | 'dl';
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tag className={cx('rounded-lg border border-border bg-panel px-5 py-4', className)}>
+      {children}
+    </Tag>
+  );
+}
+
+function SectionTitle({
+  as: Tag = 'h2',
+  children,
+}: {
+  as?: 'h2' | 'h3' | 'h4' | 'span';
+  children: ReactNode;
+}) {
+  return <Tag className="m-0 text-[1.125rem]">{children}</Tag>;
+}
+
+function Hint({ children }: { children: ReactNode }) {
+  return <p className="m-0 text-[0.9rem] text-muted">{children}</p>;
+}
+
+function RowBetween({ children }: { children: ReactNode }) {
+  return <div className="flex items-center justify-between gap-4">{children}</div>;
+}
+
+function PanelRow({ children }: { children: ReactNode }) {
+  return <Panel className="flex items-center justify-between gap-4">{children}</Panel>;
+}
+
+function SampleCard({ children }: { children: ReactNode }) {
+  return <Panel className="grid gap-5">{children}</Panel>;
+}
+
+const EFFECT_BADGE_TONE: Record<Effect, string> = {
+  allow: 'bg-emerald-700/12 text-emerald-700',
+  ask: 'bg-amber-700/12 text-amber-700',
+  deny: 'bg-red-700/12 text-red-700',
+};
+
+function EffectBadge({ effect, children }: { effect: Effect; children: ReactNode }) {
+  return (
+    <span
+      className={cx(
+        'inline-block rounded-full px-2 py-[0.1rem] text-[0.75rem] font-semibold',
+        EFFECT_BADGE_TONE[effect],
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SeverityBadge({ severity }: { severity: Severity }) {
+  return (
+    <span
+      className={cx(
+        'inline-block rounded-full border border-current px-2 py-[0.1rem] text-[0.75rem] font-semibold',
+        severity === 'critical' ? 'text-red-700' : 'text-muted',
+      )}
+    >
+      {severity}
+    </span>
+  );
+}
+
+function IssueList({ children }: { children: ReactNode }) {
+  return <ul className="m-0 grid gap-[0.35rem] pl-5 text-[0.9rem]">{children}</ul>;
+}
+
+function RedactedInput({ children }: { children: ReactNode }) {
+  return (
+    <pre className="mx-0 mt-2 mb-0 overflow-x-auto rounded-md border border-border bg-gray-50 p-3 font-mono text-[0.8rem] leading-normal break-all whitespace-pre-wrap text-fg dark:border-gray-600 dark:bg-[#0b0d12] dark:text-gray-200">
+      {children}
+    </pre>
+  );
+}
+
+function MetaGrid({ children }: { children: ReactNode }) {
+  return (
+    <Panel as="dl" className="m-0 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
+      {children}
+    </Panel>
+  );
+}
+
+function DecisionPair({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">{children}</div>
+  );
+}
+
+function MetaField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-[0.75rem] tracking-[0.04em] text-muted uppercase">{label}</dt>
+      <dd className="mx-0 mt-1 mb-0">{children}</dd>
+    </div>
+  );
+}
+
+function TableHeadCell({ children, numeric = false }: { children: ReactNode; numeric?: boolean }) {
+  return (
+    <th
+      scope="col"
+      className={cx(
+        'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-[0.75rem] tracking-[0.04em] text-muted uppercase whitespace-nowrap dark:border-gray-700',
+        numeric && 'text-right tabular-nums',
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+
+function TableCell({
+  children,
+  numeric = false,
+  nowrap = false,
+  mono = false,
+  muted = false,
+}: {
+  children: ReactNode;
+  numeric?: boolean;
+  nowrap?: boolean;
+  mono?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <td
+      className={cx(
+        'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top dark:border-gray-700',
+        numeric && 'text-right tabular-nums',
+        nowrap && 'whitespace-nowrap',
+        mono && 'break-all font-mono text-[0.85em]',
+        muted && 'text-[0.9rem] text-muted',
+      )}
+    >
+      {children}
+    </td>
+  );
+}
 
 function useReview(reviewId: string) {
   return useQuery({
@@ -59,7 +234,7 @@ function DiffGroupPage() {
   if (reviewQuery.isPending) {
     return (
       <section>
-        <h1 className="page-title">Group</h1>
+        <PageTitle>Group</PageTitle>
         <LoadingState label="검토를 불러오는 중" />
       </section>
     );
@@ -67,7 +242,7 @@ function DiffGroupPage() {
   if (reviewQuery.isError) {
     return (
       <section>
-        <h1 className="page-title">Group</h1>
+        <PageTitle>Group</PageTitle>
         <ErrorState
           title="검토를 불러오지 못했습니다"
           message={reviewQuery.error?.message ?? '알 수 없는 오류'}
@@ -127,8 +302,8 @@ function ChangeGroupPage({
   const group = groupsQuery.data?.find((candidate) => candidate.groupKey === groupKey) ?? null;
 
   return (
-    <section className="stack">
-      <h1 className="page-title">Diff Group</h1>
+    <Stack as="section">
+      <PageTitle>Diff Group</PageTitle>
       {groupsQuery.isPending ? <LoadingState label="Diff Group을 불러오는 중" /> : null}
       {groupsQuery.isError ? (
         <ErrorState
@@ -152,7 +327,7 @@ function ChangeGroupPage({
           />
         </>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -200,8 +375,8 @@ function AdoptionGroupPage({
   const group = groupsQuery.data?.find((candidate) => candidate.groupKey === groupKey) ?? null;
 
   return (
-    <section className="stack">
-      <h1 className="page-title">Adoption Group</h1>
+    <Stack as="section">
+      <PageTitle>Adoption Group</PageTitle>
       {groupsQuery.isPending ? <LoadingState label="Adoption Group을 불러오는 중" /> : null}
       {groupsQuery.isError ? (
         <ErrorState
@@ -227,7 +402,7 @@ function AdoptionGroupPage({
           />
         </>
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -241,44 +416,25 @@ function ChangeGroupSignature({
   group: ReviewDiffGroupResponse;
 }) {
   return (
-    <div className="stack">
-      <p className="state-message hint">{foldHomePaths(group.headline)}</p>
-      <dl className="meta-grid panel">
-        <div>
-          <dt>방향</dt>
-          <dd>
-            {group.direction}{' '}
-            <span className={`severity-badge severity-${group.severity}`}>{group.severity}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>Capability</dt>
-          <dd>{group.capability}</dd>
-        </div>
-        <div>
-          <dt>Zone</dt>
-          <dd>{formatZoneTransition(group.fromZone, group.toZone)}</dd>
-        </div>
-        <div>
-          <dt>Effect</dt>
-          <dd>
-            {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
-          </dd>
-        </div>
-        <div>
-          <dt>Program</dt>
-          <dd>{group.program ?? '-'}</dd>
-        </div>
-        <div>
-          <dt>Action / Session</dt>
-          <dd>
-            {group.actionCount} / {group.sessionCount}
-          </dd>
-        </div>
-      </dl>
+    <Stack>
+      <Hint>{foldHomePaths(group.headline)}</Hint>
+      <MetaGrid>
+        <MetaField label="방향">
+          {group.direction} <SeverityBadge severity={group.severity} />
+        </MetaField>
+        <MetaField label="Capability">{group.capability}</MetaField>
+        <MetaField label="Zone">{formatZoneTransition(group.fromZone, group.toZone)}</MetaField>
+        <MetaField label="Effect">
+          {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
+        </MetaField>
+        <MetaField label="Program">{group.program ?? '-'}</MetaField>
+        <MetaField label="Action / Session">
+          {group.actionCount} / {group.sessionCount}
+        </MetaField>
+      </MetaGrid>
       {group.direction === 'widening' ? (
-        <div className="panel row-between">
-          <span className="section-title">판정</span>
+        <PanelRow>
+          <SectionTitle as="span">판정</SectionTitle>
           <VerdictSelect
             reviewId={reviewId}
             kind="change"
@@ -287,16 +443,16 @@ function ChangeGroupSignature({
             verdict={group.verdict}
             disabled={review.status !== 'ready'}
           />
-        </div>
+        </PanelRow>
       ) : null}
-      <p className="state-message hint">
+      <Hint>
         검토를 마치려면{' '}
         <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           변경 검토로 돌아가세요
         </Link>
         .
-      </p>
-    </div>
+      </Hint>
+    </Stack>
   );
 }
 
@@ -310,45 +466,25 @@ function AdoptionGroupSignature({
   group: ReviewAdoptionGroupResponse;
 }) {
   return (
-    <div className="stack">
-      <p className="state-message hint">{foldHomePaths(group.headline)}</p>
-      <dl className="meta-grid panel">
-        <div>
-          <dt>Effect</dt>
-          <dd>
-            <span className={`effect-badge effect-${group.effect}`}>
-              {effectLabel(group.effect)}
-            </span>
-          </dd>
-        </div>
-        <div>
-          <dt>Capability</dt>
-          <dd>{group.capability}</dd>
-        </div>
-        <div>
-          <dt>Zone</dt>
-          <dd>{group.zone}</dd>
-        </div>
-        <div>
-          <dt>Action / Session</dt>
-          <dd>
-            {group.actionCount} / {group.sessionCount}
-          </dd>
-        </div>
-        <div>
-          <dt>분석 불가 Action</dt>
-          <dd>{group.analyzabilityNoneCount}</dd>
-        </div>
-        <div>
-          <dt>기간</dt>
-          <dd>
-            {group.firstOccurredAt} → {group.lastOccurredAt}
-          </dd>
-        </div>
-      </dl>
+    <Stack>
+      <Hint>{foldHomePaths(group.headline)}</Hint>
+      <MetaGrid>
+        <MetaField label="Effect">
+          <EffectBadge effect={group.effect}>{effectLabel(group.effect)}</EffectBadge>
+        </MetaField>
+        <MetaField label="Capability">{group.capability}</MetaField>
+        <MetaField label="Zone">{group.zone}</MetaField>
+        <MetaField label="Action / Session">
+          {group.actionCount} / {group.sessionCount}
+        </MetaField>
+        <MetaField label="분석 불가 Action">{group.analyzabilityNoneCount}</MetaField>
+        <MetaField label="기간">
+          {group.firstOccurredAt} → {group.lastOccurredAt}
+        </MetaField>
+      </MetaGrid>
       <ProgramMix group={group} />
-      <div className="panel row-between">
-        <span className="section-title">판정</span>
+      <PanelRow>
+        <SectionTitle as="span">판정</SectionTitle>
         <VerdictSelect
           reviewId={reviewId}
           kind="adoption"
@@ -357,42 +493,40 @@ function AdoptionGroupSignature({
           verdict={group.verdict}
           disabled={review.status !== 'ready'}
         />
-      </div>
-      <p className="state-message hint">
+      </PanelRow>
+      <Hint>
         검토를 마치려면{' '}
         <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           최초 도입 검토로 돌아가세요
         </Link>
         .
-      </p>
-    </div>
+      </Hint>
+    </Stack>
   );
 }
 
 /** The programs mixed into one group: the signature carries none, so the mix is shown here. */
 function ProgramMix({ group }: { group: ReviewAdoptionGroupResponse }) {
   return (
-    <div className="table-scroll">
-      <table className="data-table">
-        <caption>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[0.9rem]">
+        <caption className="pb-2 text-left text-[0.85rem] text-muted">
           Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
           {group.programSummary.length}개 표시
         </caption>
         <thead>
           <tr>
-            <th scope="col">Program</th>
-            <th scope="col" className="num">
-              Action
-            </th>
+            <TableHeadCell>Program</TableHeadCell>
+            <TableHeadCell numeric>Action</TableHeadCell>
           </tr>
         </thead>
         <tbody>
           {group.programSummary.map((entry) => (
             <tr key={entry.program ?? '__none__'}>
-              <td className={entry.program === null ? 'hint' : 'mono'}>
+              <TableCell muted={entry.program === null} mono={entry.program !== null}>
                 {entry.program ?? '인식 안 됨'}
-              </td>
-              <td className="num">{entry.count}</td>
+              </TableCell>
+              <TableCell numeric>{entry.count}</TableCell>
             </tr>
           ))}
         </tbody>
@@ -436,24 +570,24 @@ function SampleSection<S extends { action: { actionKey: string } }>({
   }
 
   return (
-    <div className="stack">
-      <h2 className="section-title">Sample ({query.data.length})</h2>
+    <Stack>
+      <SectionTitle>Sample ({query.data.length})</SectionTitle>
       {query.data.map(render)}
-    </div>
+    </Stack>
   );
 }
 
 function ChangeSampleCard({ sample }: { sample: DiffSample }) {
   const { action } = sample;
   return (
-    <div className="panel stack sample-card">
+    <SampleCard>
       <div>
-        <h3 className="section-title">도구 입력(가림 처리)</h3>
-        <pre className="redacted-input">{foldHomePaths(action.toolInputRedacted)}</pre>
+        <SectionTitle as="h3">도구 입력(가림 처리)</SectionTitle>
+        <RedactedInput>{foldHomePaths(action.toolInputRedacted)}</RedactedInput>
       </div>
       <div>
-        <h3 className="section-title">Operations ({action.operations.length})</h3>
-        <ul className="issue-list">
+        <SectionTitle as="h3">Operations ({action.operations.length})</SectionTitle>
+        <IssueList>
           {action.operations.map((operation, position) => (
             <li key={operation.index}>
               #{operation.index} {operation.capability} ·{' '}
@@ -464,9 +598,9 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
               · {foldHomePaths(sample.targetKeys[position] ?? 'unknown')}
             </li>
           ))}
-        </ul>
+        </IssueList>
       </div>
-      <div className="decision-pair">
+      <DecisionPair>
         <DecisionView
           title="Baseline 결정"
           decision={sample.baselineDecision}
@@ -477,22 +611,22 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
           decision={sample.candidateDecision}
           rationales={sample.candidateRuleRationales}
         />
-      </div>
-    </div>
+      </DecisionPair>
+    </SampleCard>
   );
 }
 
 function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
   const { action } = sample;
   return (
-    <div className="panel stack sample-card">
+    <SampleCard>
       <div>
-        <h3 className="section-title">도구 입력(가림 처리)</h3>
-        <pre className="redacted-input">{foldHomePaths(action.toolInputRedacted)}</pre>
+        <SectionTitle as="h3">도구 입력(가림 처리)</SectionTitle>
+        <RedactedInput>{foldHomePaths(action.toolInputRedacted)}</RedactedInput>
       </div>
       <div>
-        <h3 className="section-title">Operations ({action.operations.length})</h3>
-        <ul className="issue-list">
+        <SectionTitle as="h3">Operations ({action.operations.length})</SectionTitle>
+        <IssueList>
           {action.operations.map((operation, position) => (
             <li key={operation.index}>
               #{operation.index} {operation.capability} ·{' '}
@@ -500,16 +634,16 @@ function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
               {foldHomePaths(sample.targetKeys[position] ?? 'unknown')}
             </li>
           ))}
-        </ul>
+        </IssueList>
       </div>
-      <div className="decision-pair">
+      <DecisionPair>
         <DecisionView
           title="제안 정책 결정"
           decision={sample.candidateDecision}
           rationales={sample.candidateRuleRationales}
         />
-      </div>
-    </div>
+      </DecisionPair>
+    </SampleCard>
   );
 }
 
@@ -530,41 +664,39 @@ function DecisionView({
   rationales: Rationales;
 }) {
   return (
-    <div className="stack decision-view">
-      <div className="row-between">
-        <h4 className="section-title">{title}</h4>
-        <span className={`effect-badge effect-${decision.effect}`}>
-          {effectLabel(decision.effect)}
-        </span>
-      </div>
-      <div className="table-scroll">
-        <table className="data-table">
-          <caption>Operation별 결정</caption>
+    <Stack className="content-start">
+      <RowBetween>
+        <SectionTitle as="h4">{title}</SectionTitle>
+        <EffectBadge effect={decision.effect}>{effectLabel(decision.effect)}</EffectBadge>
+      </RowBetween>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[0.9rem]">
+          <caption className="pb-2 text-left text-[0.85rem] text-muted">Operation별 결정</caption>
           <thead>
             <tr>
-              <th scope="col">Op</th>
-              <th scope="col">Zone</th>
-              <th scope="col">Reversibility</th>
-              <th scope="col">Effect</th>
-              <th scope="col">근거</th>
+              <TableHeadCell>Op</TableHeadCell>
+              <TableHeadCell>Zone</TableHeadCell>
+              <TableHeadCell>Reversibility</TableHeadCell>
+              <TableHeadCell>Effect</TableHeadCell>
+              <TableHeadCell>근거</TableHeadCell>
             </tr>
           </thead>
           <tbody>
             {decision.operations.map((operation) => (
               <tr key={operation.operationIndex}>
-                <td className="mono">#{operation.operationIndex}</td>
-                <td>{operation.zone}</td>
-                <td>{operation.reversibility}</td>
-                <td className="nowrap">
-                  <span className={`effect-badge effect-${operation.effect}`}>
+                <TableCell mono>#{operation.operationIndex}</TableCell>
+                <TableCell>{operation.zone}</TableCell>
+                <TableCell>{operation.reversibility}</TableCell>
+                <TableCell nowrap>
+                  <EffectBadge effect={operation.effect}>
                     {effectLabel(operation.effect)}
-                  </span>
-                </td>
-                <td>
+                  </EffectBadge>
+                </TableCell>
+                <TableCell>
                   {operation.decidingRuleId === null
                     ? '-'
                     : (rationales[operation.decidingRuleId] ?? '-')}
-                </td>
+                </TableCell>
               </tr>
             ))}
           </tbody>
@@ -572,14 +704,14 @@ function DecisionView({
       </div>
       <details>
         <summary>기술 세부</summary>
-        <ul className="issue-list">
+        <IssueList>
           {decision.operations.map((operation) => (
-            <li key={operation.operationIndex} className="mono">
+            <li key={operation.operationIndex} className="break-all font-mono text-[0.85em]">
               #{operation.operationIndex} {operation.decidingRuleId ?? '-'}
             </li>
           ))}
-        </ul>
+        </IssueList>
       </details>
-    </div>
+    </Stack>
   );
 }
