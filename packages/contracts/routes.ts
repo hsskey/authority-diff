@@ -10,6 +10,7 @@ import {
   ConformanceFindingResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
+  CreatePolicyActivationRequestSchema,
   CreatePolicyDraftFromFindingRequestSchema,
   CreatePolicyRequestSchema,
   CreatePolicyResponseSchema,
@@ -28,6 +29,7 @@ import {
   ListPolicyVersionsResponseSchema,
   ListReviewAdoptionGroupsResponseSchema,
   ListReviewDiffGroupsResponseSchema,
+  PolicyActivationResponseSchema,
   PolicyVersionResponseSchema,
   ReclassifyActionsRequestSchema,
   ReclassifyActionsResponseSchema,
@@ -118,6 +120,11 @@ export const routes = {
   validatePolicyVersion: postNoBody(
     `${API}/policy-versions/:id/validations`,
     ValidatePolicyVersionResponseSchema,
+  ),
+  createPolicyActivation: post(
+    `${API}/policy-versions/:id/activations`,
+    CreatePolicyActivationRequestSchema,
+    PolicyActivationResponseSchema,
   ),
 
   createReplayRun: post(

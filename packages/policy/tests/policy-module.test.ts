@@ -59,6 +59,7 @@ function makeRepository(
     transitionVersion: () => unconfigured(),
     getBaseline: () => unconfigured(),
     hasAcceptedVersion: () => unconfigured(),
+    declareActivation: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     ...overrides,
   };

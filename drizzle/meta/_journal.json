@@ -78,6 +78,13 @@
       "when": 1790258825042,
       "tag": "0010_known_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790280733017,
+      "tag": "0011_policy_activations",
+      "breakpoints": true
     }
   ]
 }

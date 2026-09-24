@@ -87,6 +87,11 @@ Status is `draft`, `in_review`, `accepted`, `rejected`.
 `accepted` is a review result, not a deployment or enforcement status.
 _Avoid_: revision, snapshot, active / applied / enforced for accepted
 
+**Policy Activation**:
+A declaration that an operator applied an accepted Policy Version outside Authority Diff, with a reason and the operator's name.
+It is only recorded: it does not change Policy Version status, and replay, conformance, and evaluation do not read it.
+_Avoid_: deployment, enforcement, active version
+
 **Decision**:
 The evaluation of one Policy Version against one Action.
 It includes the Effect and the Rule it rests on.

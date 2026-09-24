@@ -1,6 +1,7 @@
 export {
   createPolicyRepository,
   type CreatePolicyInput,
+  type DeclareActivationInput,
   type PolicyPage,
   type PolicyVersionPage,
   type PolicyRepository,

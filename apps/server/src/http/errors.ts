@@ -17,6 +17,7 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'policy.organization_policy_exists': 409,
   'policy.draft_exists': 409,
   'policy.version_not_draft': 409,
+  'policy.version_not_accepted': 409,
   'policy.in_review_exists': 409,
   'policy.transition_not_allowed': 409,
   'policy.content_conflict': 412,
