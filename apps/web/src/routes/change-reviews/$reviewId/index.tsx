@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import type {
@@ -31,6 +31,7 @@ export const Route = createFileRoute('/change-reviews/$reviewId/')({
 type Effect = ReviewDiffGroupResponse['fromEffect'];
 type ReviewKind = ChangeReviewResponse['kind'];
 type ReviewStatus = ChangeReviewResponse['status'];
+type Severity = ReviewDiffGroupResponse['severity'];
 
 const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
 
@@ -52,6 +53,176 @@ const DECISION_LABEL: Record<ReviewKind, { accept: string; reject: string; title
   change: { accept: '정책 변경 수락', reject: '정책 변경 반려', title: '정책 변경 결정' },
   adoption: { accept: '최초 정책 채택', reject: '최초 정책 반려', title: '최초 정책 채택 결정' },
 };
+
+const STATUS_TONE: Record<ReviewStatus, string> = {
+  computing: 'text-blue-700',
+  ready: 'text-blue-700',
+  accepted: 'text-emerald-700',
+  rejected: 'text-red-700',
+  failed: 'text-red-700',
+  withdrawn: 'text-muted',
+};
+
+const SEVERITY_TONE: Record<Severity, string> = {
+  critical: 'text-red-700',
+  normal: 'text-muted',
+};
+
+const EFFECT_TONE: Record<Effect, string> = {
+  allow: 'border-emerald-700 text-emerald-700',
+  ask: 'border-amber-700 text-amber-700',
+  deny: 'border-red-700 text-red-700',
+};
+
+const MONO = 'break-all font-mono text-[0.85em]';
+const BADGE =
+  'inline-block rounded-full border border-current px-[0.6rem] py-[0.15rem] text-xs font-semibold';
+const SEVERITY_BADGE =
+  'inline-block rounded-full border border-current px-2 py-[0.1rem] text-xs font-semibold';
+const PRIMARY_BUTTON =
+  'cursor-pointer rounded-md border border-gray-800 bg-gray-900 px-[0.9rem] py-2 text-white disabled:cursor-not-allowed disabled:opacity-50';
+const SECONDARY_BUTTON =
+  'cursor-pointer rounded-md border border-gray-800 bg-transparent px-[0.9rem] py-2 text-inherit disabled:cursor-not-allowed disabled:opacity-50';
+const BUTTON_LINK =
+  'inline-block justify-self-start rounded-md border border-gray-800 bg-gray-900 px-[0.9rem] py-2 text-white no-underline';
+const FIELD = 'grid max-w-96 gap-1 text-[0.85rem]';
+const FIELD_INPUT =
+  'rounded-md border border-gray-300 bg-white px-[0.6rem] py-[0.4rem] text-inherit dark:border-gray-600 dark:bg-gray-900';
+const ISSUE_LIST = 'm-0 grid gap-[0.35rem] pl-5 text-[0.9rem]';
+const META_GRID = 'm-0 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4';
+const META_TERM = 'text-xs uppercase tracking-[0.04em] text-muted';
+const META_VALUE = 'mt-1 mb-0';
+const SUMMARY_LINES =
+  'm-0 grid gap-[0.4rem] rounded-lg border border-border bg-panel py-4 pr-5 pl-10 text-base';
+
+function Stack({ children }: { children: ReactNode }) {
+  return <div className="grid gap-5">{children}</div>;
+}
+
+function PanelStack({
+  children,
+  role,
+  tone,
+}: {
+  children: ReactNode;
+  role?: 'status';
+  tone?: 'ok' | 'error';
+}) {
+  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'error' ? 'text-red-700' : '';
+  return (
+    <div
+      className={`grid gap-5 rounded-lg border border-border bg-panel px-5 py-4${toneClass ? ` ${toneClass}` : ''}`}
+      role={role}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PanelMessage({
+  children,
+  muted = false,
+  role,
+  testId,
+}: {
+  children: ReactNode;
+  muted?: boolean;
+  role?: 'status';
+  testId?: string;
+}) {
+  return (
+    <p
+      className={`m-0 rounded-lg border border-border bg-panel px-5 py-4${muted ? ' text-[0.9rem] text-muted' : ''}`}
+      role={role}
+      data-testid={testId}
+    >
+      {children}
+    </p>
+  );
+}
+
+function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
+  return (
+    <h2 className="m-0 text-lg" id={id}>
+      {children}
+    </h2>
+  );
+}
+
+function Hint({ children }: { children: ReactNode }) {
+  return <p className="m-0 text-[0.9rem] text-muted">{children}</p>;
+}
+
+function ErrorMessage({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-red-700" role="alert">
+      {children}
+    </p>
+  );
+}
+
+function Actions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap gap-3">{children}</div>;
+}
+
+function TableScroll({ children }: { children: ReactNode }) {
+  return <div className="overflow-x-auto">{children}</div>;
+}
+
+function DataTable({ labelledBy, children }: { labelledBy: string; children: ReactNode }) {
+  return (
+    <table className="w-full border-collapse text-[0.9rem]" aria-labelledby={labelledBy}>
+      {children}
+    </table>
+  );
+}
+
+function HeaderCell({
+  children,
+  numeric = false,
+  scope = 'col',
+}: {
+  children: ReactNode;
+  numeric?: boolean;
+  scope?: 'col' | 'row';
+}) {
+  const base =
+    scope === 'row'
+      ? 'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top font-semibold tracking-normal dark:border-gray-700'
+      : 'whitespace-nowrap border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-xs uppercase tracking-[0.04em] text-muted dark:border-gray-700';
+  return (
+    <th scope={scope} className={numeric ? `${base} text-right tabular-nums` : base}>
+      {children}
+    </th>
+  );
+}
+
+function Cell({
+  children,
+  numeric = false,
+  nowrap = false,
+  changed = false,
+}: {
+  children: ReactNode;
+  numeric?: boolean;
+  nowrap?: boolean;
+  changed?: boolean;
+}) {
+  const numericClass = numeric ? ' text-right tabular-nums' : '';
+  const nowrapClass = nowrap ? ' whitespace-nowrap' : '';
+  const changedClass = changed ? ' font-semibold text-amber-700' : '';
+  return (
+    <td
+      className={`border-b border-gray-200 px-[0.6rem] py-2 text-left align-top dark:border-gray-700${numericClass}${nowrapClass}${changedClass}`}
+    >
+      {children}
+    </td>
+  );
+}
+
+function StatusBadge({ status, label }: { status: ReviewStatus; label: string }) {
+  return <span className={`${BADGE} ${STATUS_TONE[status]}`}>{label}</span>;
+}
 
 function ChangeReviewPage() {
   const { reviewId } = Route.useParams();
@@ -119,7 +290,7 @@ function ChangeReviewPage() {
 
   return (
     <section>
-      <h1 className="page-title">{kind === undefined ? '검토' : PAGE_TITLE[kind]}</h1>
+      <h1 className="m-0 mb-4 text-2xl">{kind === undefined ? '검토' : PAGE_TITLE[kind]}</h1>
       {isPending ? <LoadingState label="검토를 불러오는 중" /> : null}
       {reviewQuery.isError ? (
         <ErrorState
@@ -166,12 +337,12 @@ function ChangeReviewDetail({
   const narrowing = groups.filter((group) => group.direction === 'narrowing');
 
   return (
-    <div className="stack">
+    <Stack>
       <TraceSources review={review} />
       {review.status === 'computing' ? (
-        <p className="state-message hint panel" role="status">
+        <PanelMessage muted role="status">
           과거 Action에 두 version을 대입하는 중입니다. 완료되면 화면이 갱신됩니다.
-        </p>
+        </PanelMessage>
       ) : null}
       <ReviewMeta review={review} />
       <SummaryLines review={review} widening={widening} narrowing={narrowing} />
@@ -182,7 +353,7 @@ function ChangeReviewDetail({
       <DecisionPanel reviewId={reviewId} review={review} />
       <WithdrawPanel reviewId={reviewId} review={review} />
       <ReportDownload reviewId={reviewId} kind={review.kind} />
-    </div>
+    </Stack>
   );
 }
 
@@ -200,7 +371,7 @@ function AdoptionReviewDetail({
   const canJudge = review.status === 'ready';
 
   return (
-    <div className="stack">
+    <Stack>
       <TraceSources review={review} />
       <ReviewMeta review={review} />
       <AdoptionSummary review={review} />
@@ -222,46 +393,44 @@ function AdoptionReviewDetail({
       <DecisionPanel reviewId={reviewId} review={review} />
       <WithdrawPanel reviewId={reviewId} review={review} />
       <ReportDownload reviewId={reviewId} kind={review.kind} />
-    </div>
+    </Stack>
   );
 }
 
 function TraceSources({ review }: { review: ChangeReviewResponse }) {
   return (
-    <p className="state-message panel" data-testid="trace-sources">
-      {traceSourcesLabel(review.traceSources)}
-    </p>
+    <PanelMessage testId="trace-sources">{traceSourcesLabel(review.traceSources)}</PanelMessage>
   );
 }
 
 function ReviewMeta({ review }: { review: ChangeReviewResponse }) {
   return (
-    <dl className="meta-grid panel">
+    <dl className={`${META_GRID} rounded-lg border border-border bg-panel px-5 py-4`}>
       <div>
-        <dt>검토</dt>
-        <dd className="mono">{review.id}</dd>
+        <dt className={META_TERM}>검토</dt>
+        <dd className={`${META_VALUE} ${MONO}`}>{review.id}</dd>
       </div>
       <div>
-        <dt>상태</dt>
-        <dd>
-          <span className={`status-badge status-${review.status}`}>
-            {STATUS_LABEL[review.status]}
-          </span>
+        <dt className={META_TERM}>상태</dt>
+        <dd className={META_VALUE}>
+          <StatusBadge status={review.status} label={STATUS_LABEL[review.status]} />
         </dd>
       </div>
       <div>
-        <dt>{review.kind === 'adoption' ? '제안 version' : '변경안 version'}</dt>
-        <dd className="mono">{review.candidateVersionId}</dd>
+        <dt className={META_TERM}>
+          {review.kind === 'adoption' ? '제안 version' : '변경안 version'}
+        </dt>
+        <dd className={`${META_VALUE} ${MONO}`}>{review.candidateVersionId}</dd>
       </div>
       <div>
-        <dt>기준 version</dt>
-        <dd className={review.baselineVersionId === null ? '' : 'mono'}>
+        <dt className={META_TERM}>기준 version</dt>
+        <dd className={review.baselineVersionId === null ? META_VALUE : `${META_VALUE} ${MONO}`}>
           {review.baselineVersionId ?? '없음 (최초 도입)'}
         </dd>
       </div>
       <div>
-        <dt>기간</dt>
-        <dd>
+        <dt className={META_TERM}>기간</dt>
+        <dd className={META_VALUE}>
           {review.windowFrom} → {review.windowTo}
         </dd>
       </div>
@@ -283,7 +452,7 @@ function SummaryLines({
   const narrowingActions = narrowing.reduce((sum, group) => sum + group.actionCount, 0);
 
   return (
-    <ol className="summary-lines panel">
+    <ol className={SUMMARY_LINES}>
       <li>
         평가한 action <strong>{stats ? stats.evaluatedActions : '계산 중'}</strong>건
       </li>
@@ -319,9 +488,9 @@ function AdoptionSummary({ review }: { review: ChangeReviewResponse }) {
 
   if (review.status === 'computing') {
     return (
-      <p className="state-message hint panel" role="status">
+      <PanelMessage muted role="status">
         제안 정책을 과거 Action에 적용하는 중입니다. 완료되면 화면이 갱신됩니다.
-      </p>
+      </PanelMessage>
     );
   }
   if (runQuery.isPending) {
@@ -345,8 +514,8 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
   const { effectCounts, evaluatedActions, totalActions, excludedActions, analyzability } =
     run.stats;
   return (
-    <div className="stack">
-      <ol className="summary-lines panel">
+    <Stack>
+      <ol className={SUMMARY_LINES}>
         <li>
           평가한 action <strong>{evaluatedActions}</strong>건 (전체 {totalActions}건, Operation이
           없어 제외 {excludedActions}건)
@@ -356,23 +525,28 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
           {formatShare(analyzability.none, evaluatedActions)})
         </li>
       </ol>
-      <h2 className="section-title">제안 정책 적용 시 Effect</h2>
-      <p className="state-message hint">
+      <SectionTitle>제안 정책 적용 시 Effect</SectionTitle>
+      <Hint>
         과거 Action에 제안 정책을 적용한 결과입니다. 과거 runtime의 승인 여부를 복원한 것이
         아닙니다.
-      </p>
-      <div className="effect-summary" data-testid="adoption-effects">
+      </Hint>
+      <div className="grid grid-cols-3 gap-3" data-testid="adoption-effects">
         {EFFECTS.map((effect) => (
-          <div key={effect} className={`panel effect-tile effect-${effect}`}>
-            <span className="effect-label">{effectLabel(effect)}</span>
-            <span className="effect-count">{effectCounts[effect]}</span>
-            <span className="effect-percent">
+          <div
+            key={effect}
+            className={`grid gap-[0.15rem] rounded-lg border bg-panel px-5 py-4 text-center ${EFFECT_TONE[effect]}`}
+          >
+            <span className="text-[0.7rem] tracking-[0.05em] text-muted uppercase">
+              {effectLabel(effect)}
+            </span>
+            <span className="text-2xl font-semibold tabular-nums">{effectCounts[effect]}</span>
+            <span className="text-[0.8rem] text-muted">
               {formatShare(effectCounts[effect], evaluatedActions)}
             </span>
           </div>
         ))}
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -387,39 +561,37 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
   }
 
   return (
-    <div className="stack">
-      <h2 className="section-title" id="effect-transitions">
-        Effect 전이
-      </h2>
-      <table className="data-table transition-matrix" aria-labelledby="effect-transitions">
+    <Stack>
+      <SectionTitle id="effect-transitions">Effect 전이</SectionTitle>
+      <DataTable labelledBy="effect-transitions">
         <thead>
           <tr>
-            <th scope="col">기준 \ 변경안</th>
+            <HeaderCell>기준 \ 변경안</HeaderCell>
             {EFFECTS.map((to) => (
-              <th key={to} scope="col" className="num">
+              <HeaderCell key={to} numeric>
                 {effectLabel(to)}
-              </th>
+              </HeaderCell>
             ))}
           </tr>
         </thead>
         <tbody>
           {EFFECTS.map((from) => (
             <tr key={from}>
-              <th scope="row">{effectLabel(from)}</th>
+              <HeaderCell scope="row">{effectLabel(from)}</HeaderCell>
               {EFFECTS.map((to) => {
                 const count = counts.get(`${from}->${to}`) ?? 0;
                 const isDiagonal = from === to;
                 return (
-                  <td key={to} className={`num${isDiagonal ? '' : ' transition-changed'}`}>
+                  <Cell key={to} numeric changed={!isDiagonal}>
                     {count}
-                  </td>
+                  </Cell>
                 );
               })}
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
+    </Stack>
   );
 }
 
@@ -435,52 +607,46 @@ function WideningGroups({
   const sorted = [...groups].sort(bySeverityThenImpact);
 
   return (
-    <div className="stack">
-      <h2 className="section-title" id="widening-groups">
-        Widening group ({groups.length})
-      </h2>
+    <Stack>
+      <SectionTitle id="widening-groups">Widening group ({groups.length})</SectionTitle>
       {sorted.length === 0 ? (
-        <p className="state-message hint">넓어진 group이 없습니다.</p>
+        <Hint>넓어진 group이 없습니다.</Hint>
       ) : (
-        <div className="table-scroll">
-          <table className="data-table" aria-labelledby="widening-groups">
+        <TableScroll>
+          <DataTable labelledBy="widening-groups">
             <thead>
               <tr>
-                <th scope="col">Severity</th>
-                <th scope="col">Capability</th>
-                <th scope="col">Zone</th>
-                <th scope="col">Effect</th>
-                <th scope="col">Program</th>
-                <th scope="col" className="num">
-                  Action
-                </th>
-                <th scope="col" className="num">
-                  Session
-                </th>
-                <th scope="col">판정</th>
-                <th scope="col">상세</th>
+                <HeaderCell>Severity</HeaderCell>
+                <HeaderCell>Capability</HeaderCell>
+                <HeaderCell>Zone</HeaderCell>
+                <HeaderCell>Effect</HeaderCell>
+                <HeaderCell>Program</HeaderCell>
+                <HeaderCell numeric>Action</HeaderCell>
+                <HeaderCell numeric>Session</HeaderCell>
+                <HeaderCell>판정</HeaderCell>
+                <HeaderCell>상세</HeaderCell>
               </tr>
             </thead>
             <tbody>
               {sorted.map((group) => (
                 <tr key={group.groupKey}>
-                  <td className="nowrap">
-                    <span className={`severity-badge severity-${group.severity}`}>
+                  <Cell nowrap>
+                    <span className={`${SEVERITY_BADGE} ${SEVERITY_TONE[group.severity]}`}>
                       {group.severity}
                     </span>
-                  </td>
-                  <td>{group.capability}</td>
-                  <td className="nowrap">{formatZoneTransition(group.fromZone, group.toZone)}</td>
-                  <td className="nowrap">
+                  </Cell>
+                  <Cell>{group.capability}</Cell>
+                  <Cell nowrap>{formatZoneTransition(group.fromZone, group.toZone)}</Cell>
+                  <Cell nowrap>
                     {formatZoneTransition(
                       effectLabel(group.fromEffect),
                       effectLabel(group.toEffect),
                     )}
-                  </td>
-                  <td>{group.program ?? '-'}</td>
-                  <td className="num">{group.actionCount}</td>
-                  <td className="num">{group.sessionCount}</td>
-                  <td className="nowrap">
+                  </Cell>
+                  <Cell>{group.program ?? '-'}</Cell>
+                  <Cell numeric>{group.actionCount}</Cell>
+                  <Cell numeric>{group.sessionCount}</Cell>
+                  <Cell nowrap>
                     <VerdictSelect
                       reviewId={reviewId}
                       kind="change"
@@ -489,22 +655,22 @@ function WideningGroups({
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />
-                  </td>
-                  <td className="nowrap">
+                  </Cell>
+                  <Cell nowrap>
                     <Link
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
                     </Link>
-                  </td>
+                  </Cell>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
+        </TableScroll>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -519,46 +685,42 @@ function NarrowingGroups({
     return null;
   }
   return (
-    <div className="stack">
-      <h2 className="section-title" id="narrowing-groups">
-        Narrowing group ({groups.length})
-      </h2>
-      <div className="table-scroll">
-        <table className="data-table" aria-labelledby="narrowing-groups">
+    <Stack>
+      <SectionTitle id="narrowing-groups">Narrowing group ({groups.length})</SectionTitle>
+      <TableScroll>
+        <DataTable labelledBy="narrowing-groups">
           <thead>
             <tr>
-              <th scope="col">Capability</th>
-              <th scope="col">Zone</th>
-              <th scope="col">Effect</th>
-              <th scope="col" className="num">
-                Action
-              </th>
-              <th scope="col">상세</th>
+              <HeaderCell>Capability</HeaderCell>
+              <HeaderCell>Zone</HeaderCell>
+              <HeaderCell>Effect</HeaderCell>
+              <HeaderCell numeric>Action</HeaderCell>
+              <HeaderCell>상세</HeaderCell>
             </tr>
           </thead>
           <tbody>
             {groups.map((group) => (
               <tr key={group.groupKey}>
-                <td>{group.capability}</td>
-                <td className="nowrap">{formatZoneTransition(group.fromZone, group.toZone)}</td>
-                <td className="nowrap">
+                <Cell>{group.capability}</Cell>
+                <Cell nowrap>{formatZoneTransition(group.fromZone, group.toZone)}</Cell>
+                <Cell nowrap>
                   {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
-                </td>
-                <td className="num">{group.actionCount}</td>
-                <td className="nowrap">
+                </Cell>
+                <Cell numeric>{group.actionCount}</Cell>
+                <Cell nowrap>
                   <Link
                     to="/change-reviews/$reviewId/groups/$groupKey"
                     params={{ reviewId, groupKey: group.groupKey }}
                   >
                     보기
                   </Link>
-                </td>
+                </Cell>
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
-    </div>
+        </DataTable>
+      </TableScroll>
+    </Stack>
   );
 }
 
@@ -576,43 +738,35 @@ function AdoptionGroups({
   canJudge: boolean;
 }) {
   return (
-    <div className="stack">
-      <h2 className="section-title" id={`adoption-groups-${effect}`}>
+    <Stack>
+      <SectionTitle id={`adoption-groups-${effect}`}>
         {title} ({groups.length})
-      </h2>
+      </SectionTitle>
       {groups.length === 0 ? (
-        <p className="state-message hint">
-          이 정책에서 '{effectLabel(effect)}' 대상이 되는 group이 없습니다.
-        </p>
+        <Hint>이 정책에서 '{effectLabel(effect)}' 대상이 되는 group이 없습니다.</Hint>
       ) : (
-        <div className="table-scroll">
-          <table className="data-table" aria-labelledby={`adoption-groups-${effect}`}>
+        <TableScroll>
+          <DataTable labelledBy={`adoption-groups-${effect}`}>
             <thead>
               <tr>
-                <th scope="col">Capability</th>
-                <th scope="col">Zone</th>
-                <th scope="col" className="num">
-                  Program 수
-                </th>
-                <th scope="col" className="num">
-                  Action
-                </th>
-                <th scope="col" className="num">
-                  Session
-                </th>
-                <th scope="col">판정</th>
-                <th scope="col">상세</th>
+                <HeaderCell>Capability</HeaderCell>
+                <HeaderCell>Zone</HeaderCell>
+                <HeaderCell numeric>Program 수</HeaderCell>
+                <HeaderCell numeric>Action</HeaderCell>
+                <HeaderCell numeric>Session</HeaderCell>
+                <HeaderCell>판정</HeaderCell>
+                <HeaderCell>상세</HeaderCell>
               </tr>
             </thead>
             <tbody>
               {groups.map((group) => (
                 <tr key={group.groupKey}>
-                  <td>{group.capability}</td>
-                  <td>{group.zone}</td>
-                  <td className="num">{group.distinctProgramCount}</td>
-                  <td className="num">{group.actionCount}</td>
-                  <td className="num">{group.sessionCount}</td>
-                  <td className="nowrap">
+                  <Cell>{group.capability}</Cell>
+                  <Cell>{group.zone}</Cell>
+                  <Cell numeric>{group.distinctProgramCount}</Cell>
+                  <Cell numeric>{group.actionCount}</Cell>
+                  <Cell numeric>{group.sessionCount}</Cell>
+                  <Cell nowrap>
                     <VerdictSelect
                       reviewId={reviewId}
                       kind="adoption"
@@ -621,42 +775,42 @@ function AdoptionGroups({
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />
-                  </td>
-                  <td className="nowrap">
+                  </Cell>
+                  <Cell nowrap>
                     <Link
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
                     </Link>
-                  </td>
+                  </Cell>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
+        </TableScroll>
       )}
-    </div>
+    </Stack>
   );
 }
 
 function GateBlockers({ review }: { review: ChangeReviewResponse }) {
   const { gate } = review;
   return (
-    <div className={`panel stack ${gate.isOpen ? 'status-ok' : 'status-error'}`} role="status">
-      <h2 className="section-title">
+    <PanelStack role="status" tone={gate.isOpen ? 'ok' : 'error'}>
+      <SectionTitle>
         Gate: {gate.isOpen ? '열림' : `blocker ${gate.blockers.length}건`}
-      </h2>
+      </SectionTitle>
       {gate.isOpen ? (
-        <p className="state-message">승인을 막는 blocker가 없습니다.</p>
+        <p className="m-0">승인을 막는 blocker가 없습니다.</p>
       ) : (
-        <ul className="issue-list">
+        <ul className={ISSUE_LIST}>
           {gate.blockers.map((blocker) => (
             <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
           ))}
         </ul>
       )}
-    </div>
+    </PanelStack>
   );
 }
 
@@ -691,66 +845,74 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   const isDecided = review.status === 'accepted' || review.status === 'rejected';
   if (isDecided) {
     return (
-      <div className="panel stack">
-        <h2 className="section-title">결정 기록</h2>
-        <dl className="meta-grid">
+      <PanelStack>
+        <SectionTitle>결정 기록</SectionTitle>
+        <dl className={META_GRID}>
           <div>
-            <dt>결정</dt>
-            <dd>
-              <span className={`status-badge status-${review.status}`}>
-                {review.status === 'accepted' ? labels.accept : labels.reject}
-              </span>
+            <dt className={META_TERM}>결정</dt>
+            <dd className={META_VALUE}>
+              <StatusBadge
+                status={review.status}
+                label={review.status === 'accepted' ? labels.accept : labels.reject}
+              />
             </dd>
           </div>
           <div>
-            <dt>결정자</dt>
-            <dd>{review.decidedBy ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>결정자</dt>
+            <dd className={META_VALUE}>{review.decidedBy ?? '기록 없음'}</dd>
           </div>
           <div>
-            <dt>시각</dt>
-            <dd>{review.decidedAt ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>시각</dt>
+            <dd className={META_VALUE}>{review.decidedAt ?? '기록 없음'}</dd>
           </div>
           <div>
-            <dt>사유</dt>
-            <dd>{review.decisionNote ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>사유</dt>
+            <dd className={META_VALUE}>{review.decisionNote ?? '기록 없음'}</dd>
           </div>
         </dl>
         {review.kind === 'adoption' && review.status === 'accepted' ? (
-          <p className="state-message hint">
+          <Hint>
             채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다.
-          </p>
+          </Hint>
         ) : null}
-      </div>
+      </PanelStack>
     );
   }
 
   const canSubmit = reviewerName.trim().length > 0 && !decide.isPending;
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">{labels.title}</h2>
-      <label className="field">
+    <PanelStack>
+      <SectionTitle>{labels.title}</SectionTitle>
+      <label className={FIELD}>
         검토자 이름
         <input
           type="text"
+          className={FIELD_INPUT}
           value={reviewerName}
           onChange={(event) => setReviewerName(event.target.value)}
         />
       </label>
-      <label className="field">
+      <label className={FIELD}>
         사유
-        <input type="text" value={note} onChange={(event) => setNote(event.target.value)} />
+        <input
+          type="text"
+          className={FIELD_INPUT}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
       </label>
       {!review.gate.isOpen ? (
-        <ul className="issue-list">
+        <ul className={ISSUE_LIST}>
           {review.gate.blockers.map((blocker) => (
             <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
           ))}
         </ul>
       ) : null}
-      <div className="actions">
+      <Actions>
         <button
           type="button"
+          className={PRIMARY_BUTTON}
           disabled={!canSubmit || !review.gate.isOpen || review.status !== 'ready'}
           aria-busy={decide.isPending}
           onClick={() => decide.mutate('accept')}
@@ -759,20 +921,16 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
         </button>
         <button
           type="button"
-          className="button-secondary"
+          className={SECONDARY_BUTTON}
           disabled={!canSubmit || review.status !== 'ready'}
           aria-busy={decide.isPending}
           onClick={() => decide.mutate('reject')}
         >
           {labels.reject}
         </button>
-      </div>
-      {decide.error ? (
-        <p className="state-message status-error" role="alert">
-          결정 실패: {decide.error.message}
-        </p>
-      ) : null}
-    </div>
+      </Actions>
+      {decide.error ? <ErrorMessage>결정 실패: {decide.error.message}</ErrorMessage> : null}
+    </PanelStack>
   );
 }
 
@@ -800,22 +958,22 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
 
   if (review.status === 'withdrawn') {
     return (
-      <div className="panel stack">
-        <h2 className="section-title">검토 철회됨</h2>
-        <p className="state-message hint">
+      <PanelStack>
+        <SectionTitle>검토 철회됨</SectionTitle>
+        <Hint>
           이 검토는 결정 없이 닫혔고 version이 draft로 돌아갔습니다. draft를 고친 뒤 새 검토를 만들
           수 있습니다.
-        </p>
-        <div className="actions">
+        </Hint>
+        <Actions>
           <Link
-            className="button-link"
+            className={BUTTON_LINK}
             to="/policies/$policyId/versions/$versionId"
             params={{ policyId: review.policyId, versionId: review.candidateVersionId }}
           >
             draft version 열기
           </Link>
-        </div>
-      </div>
+        </Actions>
+      </PanelStack>
     );
   }
   if (review.status !== 'computing' && review.status !== 'ready') {
@@ -823,28 +981,22 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   }
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">검토 철회</h2>
-      <p className="state-message hint">
-        결정 없이 이 검토를 닫고 version을 draft로 되돌립니다. 결정 기록은 남지 않습니다.
-      </p>
-      <div className="actions">
+    <PanelStack>
+      <SectionTitle>검토 철회</SectionTitle>
+      <Hint>결정 없이 이 검토를 닫고 version을 draft로 되돌립니다. 결정 기록은 남지 않습니다.</Hint>
+      <Actions>
         <button
           type="button"
-          className="button-secondary"
+          className={SECONDARY_BUTTON}
           disabled={withdraw.isPending}
           aria-busy={withdraw.isPending}
           onClick={() => withdraw.mutate()}
         >
           검토 철회
         </button>
-      </div>
-      {withdraw.error ? (
-        <p className="state-message status-error" role="alert">
-          철회 실패: {withdraw.error.message}
-        </p>
-      ) : null}
-    </div>
+      </Actions>
+      {withdraw.error ? <ErrorMessage>철회 실패: {withdraw.error.message}</ErrorMessage> : null}
+    </PanelStack>
   );
 }
 
@@ -860,27 +1012,24 @@ function ReportDownload({ reviewId, kind }: { reviewId: string; kind: ReviewKind
   });
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">보고서</h2>
-      <p className="state-message hint">
-        결정 근거로 남길 Evidence Report를 Markdown으로 내려받습니다.
-      </p>
-      <div className="actions">
+    <PanelStack>
+      <SectionTitle>보고서</SectionTitle>
+      <Hint>결정 근거로 남길 Evidence Report를 Markdown으로 내려받습니다.</Hint>
+      <Actions>
         <button
           type="button"
+          className={PRIMARY_BUTTON}
           disabled={download.isPending}
           aria-busy={download.isPending}
           onClick={() => download.mutate()}
         >
           보고서 다운로드
         </button>
-      </div>
+      </Actions>
       {download.error ? (
-        <p className="state-message status-error" role="alert">
-          보고서 다운로드 실패: {download.error.message}
-        </p>
+        <ErrorMessage>보고서 다운로드 실패: {download.error.message}</ErrorMessage>
       ) : null}
-    </div>
+    </PanelStack>
   );
 }
 
