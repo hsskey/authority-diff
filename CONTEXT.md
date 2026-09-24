@@ -147,12 +147,13 @@ _Avoid_: top targets
 The judgement a person records on a Diff Group or Adoption Group.
 `expected`, `investigate`, `unexpected`.
 Screen labels differ by Review Kind.
-`change` uses expected change (예상된 변화) / needs investigation (조사 필요) / unexpected (예상 밖); `adoption` uses intended restriction (의도한 제한) / hold (보류) / policy needs a fix (정책 수정 필요).
+The Korean screen strings live in the web ko message catalog (`apps/web/src/i18n/ko.ts` until I2 lands), not in this file.
+`change` uses expected change / needs investigation / unexpected; `adoption` uses intended restriction / hold / policy needs a fix.
 
 **Change Review**:
 The unit that decides whether to accept one Policy Version.
 It binds a Replay Run, Verdicts, and the decision record.
-The screen label is change review (변경 검토) when Review Kind is `change`, and first-adoption review (최초 도입 검토) when it is `adoption`.
+The screen label is change review when Review Kind is `change`, and first-adoption review when it is `adoption`.
 When Review Kind is `adoption` there is no baseline Policy Version.
 _Avoid_: approval request, PR
 
@@ -164,12 +165,12 @@ _Avoid_: review type, review mode
 
 **Accept Policy Change / Reject Policy Change**:
 The two actions that leave a decision on a Change Review.
-When Review Kind is `adoption` they are called adopt first policy (최초 정책 채택) / reject first policy (최초 정책 반려).
+When Review Kind is `adoption` they are called adopt first policy / reject first policy.
 _Avoid_: Approve Review, Mark Reviewed, activate
 
 **Withdraw Review**:
 The action by which a person closes a `computing` or `ready` Change Review without a decision.
-The screen label is withdraw review (검토 철회) and review status becomes `withdrawn` (철회됨).
+The screen label is withdraw review and review status becomes `withdrawn`.
 The candidate Policy Version returns to `draft` via the withdrawal transition, no Decision Record is written, and a withdrawn review does not count as an open review.
 _Avoid_: cancel, delete, discard
 

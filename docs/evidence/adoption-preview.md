@@ -28,7 +28,7 @@ Every number in the main sections below is labelled **classifier 0.2.4, policy A
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
 Judge: Agent. No person has recorded a Verdict on these groups.
-Journey grade: **medium** (중): real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
+Journey grade: **medium**: real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
 
 ## Result
 
@@ -214,7 +214,7 @@ Its `resultHash` values are not comparable with the 0.2.4 values above.
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
 Judge: Agent. No person has recorded a Verdict on these groups.
-Journey grade: **medium** (중): real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
+Journey grade: **medium**: real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
 
 ### Change from classifier 0.2.3
 
@@ -381,7 +381,7 @@ Its `resultHash` values are not comparable with the 0.2.3 values above.
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
 Judge: Agent. No person has recorded a Verdict on these groups.
-Journey grade: **medium** (중): real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
+Journey grade: **medium**: real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
 
 ### Change from classifier 0.2.2
 

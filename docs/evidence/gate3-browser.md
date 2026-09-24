@@ -2,7 +2,7 @@ corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Ac
 
 # Gate 3 browser reading
 
-Journey grade stays **medium** (중): the reader below is an Agent, not a person.
+Journey grade stays **medium**: the reader below is an Agent, not a person.
 
 ## Third-party (no-context agent) reading
 
