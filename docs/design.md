@@ -683,8 +683,8 @@ Collapsed concepts:
 | `delete` | delete a file | `rm`, `rmdir`, `find -delete`, `git clean` |
 | `execute` | run a program whose effects cannot be enumerated | unrecognized program, `python3 -c`, heredoc passed to an interpreter, `bash -c`, `eval`, `npm run`, `make`, `mcp__*` |
 | `install` | add 3rd-party code | `pnpm add`, `pip install`, `cargo install`, `npx <pkg>` (`install` + `execute`) |
-| `fetch` | bring in from outside | `curl`/`wget` GET, `git clone`, `git pull`, `WebFetch`, `WebSearch` |
-| `send` | send a payload outward | `curl -d`, `-F`, `-T`, `-X POST`, `scp`, remote `rsync`, `gh gist create`, `gh pr comment` |
+| `fetch` | bring in from outside | `curl`/`wget` GET, `git clone`, `git pull`, remote-to-local `scp`/`rsync`, `WebFetch`, `WebSearch` |
+| `send` | send a payload outward | `curl -d`, `-F`, `-T`, `-X POST`, local-to-remote `scp`/`rsync`, `gh gist create`, `gh pr comment` |
 | `commit` | change local VCS state | `git add`, `commit`, `merge`, `stash`, `tag` |
 | `push` | publish or post an artifact | `git push`, `npm publish`, `docker push` |
 | `rewrite` | overwrite history or work contents irreversibly | `git push --force`, `--force-with-lease`, `+refspec`, `git reset --hard`, `git branch -D` |

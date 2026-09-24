@@ -30,8 +30,9 @@ This is a limitation of the hook input, and runtime version grouping is not poss
 
 ## StructuredOutput
 
-`StructuredOutput` is classified as `execute` on the `host` zone and is left as is.
+Classifier 0.2.6 maps `StructuredOutput` to zero Operations in the tool table, so it is excluded from evaluation; `docs/evidence/control-tools.md` records the mapping rationale.
 It is a harness-only tool specific to this environment, not a tool a coding session calls on its own.
+The classifier 0.2.5 conformance figures in `conformance.md` predate this change and still count it as `execute` on the `host` zone.
 
 ## First conformance run violations
 
