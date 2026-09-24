@@ -1,10 +1,12 @@
+import { Panel } from './Panel.tsx';
+
 export function ErrorState({ title, message }: { title: string; message: string }) {
   return (
-    <div className="panel status-error" role="alert">
-      <p className="state-message">
+    <Panel className="status-error" role="alert">
+      <p className="m-0">
         <strong>{title}</strong>
       </p>
-      <p className="state-message">{message}</p>
-    </div>
+      <p className="m-0">{message}</p>
+    </Panel>
   );
 }

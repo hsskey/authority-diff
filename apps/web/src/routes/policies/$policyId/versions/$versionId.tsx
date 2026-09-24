@@ -11,6 +11,10 @@ import { routes } from '@authority/contracts/routes';
 import { callRoute, describeApiError, type ApiClientError } from '../../../../shared/api-client.ts';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
+import { PageTitle } from '../../../../shared/components/PageTitle.tsx';
+import { Panel, PanelStack } from '../../../../shared/components/Panel.tsx';
+import { SectionTitle } from '../../../../shared/components/SectionTitle.tsx';
+import { Stack } from '../../../../shared/components/Stack.tsx';
 import { effectLabel } from '../../../../features/change-review/format.ts';
 import { usePageTitle } from '../../../../shared/use-page-title.ts';
 
@@ -45,7 +49,7 @@ function PolicyVersionPage() {
 
   return (
     <section>
-      <h1 className="page-title">Policy Version</h1>
+      <PageTitle>Policy Version</PageTitle>
       {versionQuery.isPending ? <LoadingState label="Policy Version을 불러오는 중" /> : null}
       {versionQuery.isError ? (
         <ErrorState
@@ -149,12 +153,12 @@ function PolicyVersionEditor({
   });
 
   return (
-    <div className="stack">
+    <Stack>
       <VersionMeta version={version} />
 
-      <div className="panel stack">
-        <div className="row-between">
-          <h2 className="section-title">정책 문서</h2>
+      <PanelStack>
+        <div className="flex items-center justify-between gap-4">
+          <SectionTitle>정책 문서</SectionTitle>
           <span className={`status-badge status-${version.status}`}>
             {STATUS_LABEL[version.status]}
           </span>
@@ -169,13 +173,13 @@ function PolicyVersionEditor({
           aria-invalid={isDraft && !draft.ok}
         />
         {!isDraft ? (
-          <p className="state-message hint">
+          <p className="m-0 hint">
             draft version만 편집할 수 있습니다. 바꾸려면 이 version에서 draft를 만드세요.
           </p>
         ) : draft.ok ? (
-          <p className="state-message status-ok">문서가 계약과 맞습니다.</p>
+          <p className="m-0 status-ok">문서가 계약과 맞습니다.</p>
         ) : (
-          <p className="state-message status-error" role="alert">
+          <p className="m-0 status-error" role="alert">
             {draft.message}
           </p>
         )}
@@ -210,27 +214,27 @@ function PolicyVersionEditor({
           </button>
         </div>
         {isDirty ? (
-          <p className="state-message hint">
+          <p className="m-0 hint">
             검증은 저장된 문서를 대상으로 합니다. 검증 전에 draft를 저장하세요.
           </p>
         ) : null}
         <MutationError label="저장 실패" error={save.error} />
         <MutationError label="검증 요청 실패" error={validate.error} />
         <MutationError label="draft 생성 실패" error={createDraft.error} />
-      </div>
+      </PanelStack>
 
       {validation ? <ValidationResult result={validation} /> : null}
 
       <RuleTable rules={ruleSource.rules} />
 
       <CreateReview policyId={policyId} version={version} />
-    </div>
+    </Stack>
   );
 }
 
 function VersionMeta({ version }: { version: PolicyVersionResponse }) {
   return (
-    <dl className="meta-grid panel">
+    <Panel as="dl" className="meta-grid">
       <div>
         <dt>Version</dt>
         <dd>#{version.versionNumber}</dd>
@@ -243,22 +247,20 @@ function VersionMeta({ version }: { version: PolicyVersionResponse }) {
         <dt>수정 시각</dt>
         <dd>{version.updatedAt}</dd>
       </div>
-    </dl>
+    </Panel>
   );
 }
 
 function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
   return (
-    <div className="stack">
-      <h2 className="section-title" id="policy-rules">
-        Rule ({rules.length})
-      </h2>
+    <Stack>
+      <SectionTitle id="policy-rules">Rule ({rules.length})</SectionTitle>
       {rules.length === 0 ? (
-        <p className="state-message hint">
+        <p className="m-0 hint">
           이 문서에는 Rule이 없습니다. Rule이 없으면 모든 Operation의 Effect는 확인 필요입니다.
         </p>
       ) : (
-        <div className="table-scroll">
+        <div className="overflow-x-auto">
           <table className="data-table" aria-labelledby="policy-rules">
             <thead>
               <tr>
@@ -279,7 +281,7 @@ function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
                   <td>{describeMatch(rule.match.zones)}</td>
                   <td>{describeMatch(rule.match.reversibility)}</td>
                   <td>{describeMatch(rule.match.analyzability)}</td>
-                  <td className="nowrap">
+                  <td className="whitespace-nowrap">
                     <span className={`effect-badge effect-${rule.effect}`}>
                       {effectLabel(rule.effect)}
                     </span>
@@ -291,7 +293,7 @@ function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
           </table>
         </div>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -304,13 +306,13 @@ function describeMatch(value: '*' | readonly string[] | null): string {
 
 function ValidationResult({ result }: { result: ValidatePolicyVersionResponse }) {
   return (
-    <div
-      className={`panel stack ${result.isValid ? 'status-ok' : 'status-error'}`}
+    <PanelStack
+      className={result.isValid ? 'status-ok' : 'status-error'}
       role={result.isValid ? 'status' : 'alert'}
     >
-      <h2 className="section-title">
+      <SectionTitle>
         검증: {result.isValid ? '통과' : `문제 ${result.issues.length}건`}
-      </h2>
+      </SectionTitle>
       {result.issues.length > 0 ? (
         <ul className="issue-list">
           {result.issues.map((issue, index) => (
@@ -321,11 +323,11 @@ function ValidationResult({ result }: { result: ValidatePolicyVersionResponse })
           ))}
         </ul>
       ) : (
-        <p className="state-message">
+        <p className="m-0">
           저장된 draft에서 정적 문제를 찾지 못했습니다. 안전성 판단이 아니라 문서 검사 결과입니다.
         </p>
       )}
-    </div>
+    </PanelStack>
   );
 }
 
@@ -405,15 +407,15 @@ function CreateReview({ policyId, version }: { policyId: string; version: Policy
   const canCreate = version.status === 'draft' && openReview === null;
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">{title}</h2>
-      <p className="state-message hint">
+    <PanelStack>
+      <SectionTitle>{title}</SectionTitle>
+      <p className="m-0 hint">
         {hasAccepted
           ? '이 candidate와 채택된 기준 version을 같은 기간의 과거 Action에 대입해 달라지는 Effect를 찾습니다.'
           : '이 제안 정책을 과거 Action에 적용하면 각각 허용, 확인 필요, 차단 중 무엇이 되는지 계산합니다. 과거 runtime의 승인 여부는 복원하지 않습니다.'}
       </p>
       {openReview !== null ? (
-        <p className="state-message">
+        <p className="m-0">
           이 version의 검토가 이미 진행 중입니다.{' '}
           <Link to="/change-reviews/$reviewId" params={{ reviewId: openReview.id }}>
             {hasAccepted ? '변경 검토 열기' : '최초 도입 검토 열기'}
@@ -449,13 +451,13 @@ function CreateReview({ policyId, version }: { policyId: string; version: Policy
         </button>
       </div>
       {version.status !== 'draft' && openReview === null ? (
-        <p className="state-message hint">
+        <p className="m-0 hint">
           검토는 draft version에서만 만들 수 있습니다. 이 version은 {STATUS_LABEL[version.status]}{' '}
           상태입니다.
         </p>
       ) : null}
       <MutationError label={`${title} 실패`} error={create.error} />
-    </div>
+    </PanelStack>
   );
 }
 
@@ -482,7 +484,7 @@ function MutationError({ label, error }: { label: string; error: Error | null })
     return null;
   }
   return (
-    <p className="state-message status-error" role="alert">
+    <p className="m-0 status-error" role="alert">
       {label}: {error.message}
     </p>
   );

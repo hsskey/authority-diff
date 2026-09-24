@@ -7,16 +7,19 @@ export function Layout({ children }: { children: ReactNode }) {
   const hasToken = readAuthToken() !== null;
 
   return (
-    <div className="layout">
+    <div className="grid min-h-screen grid-rows-[auto_1fr]">
       <a href="#main-content" className="skip-link">
         본문으로 건너뛰기
       </a>
-      <header className="layout-header">
-        <div className="layout-header-inner">
-          <Link to="/" className="layout-brand">
+      <header className="layout-header border-b border-border bg-panel px-6 py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-8 gap-y-4">
+          <Link to="/" className="font-semibold whitespace-nowrap no-underline">
             Authority Diff
           </Link>
-          <nav className="layout-nav" aria-label="주 메뉴">
+          <nav
+            className="layout-nav flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap"
+            aria-label="주 메뉴"
+          >
             <Link to="/" activeOptions={{ exact: true }} activeProps={{ 'aria-current': 'page' }}>
               활동 분포
             </Link>
@@ -32,6 +35,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {hasToken ? (
             <button
               type="button"
+              className="ml-auto"
               onClick={() => {
                 clearAuthToken();
                 window.location.assign('/login');
@@ -42,7 +46,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : null}
         </div>
       </header>
-      <main id="main-content" className="layout-main" tabIndex={-1}>
+      <main id="main-content" className="layout-main mx-auto w-full max-w-5xl p-6" tabIndex={-1}>
         {children}
       </main>
     </div>
