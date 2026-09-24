@@ -1,13 +1,13 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.5; measured 2026-09-24; A vs B resultHash `746dd77f…0d11`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-24; A vs B resultHash `547da885…2735`
 <!-- evidence-numbers
 snapshot.actions: 34,940
-snapshot.evaluated: 34,490
+snapshot.evaluated: 34,033
 analyzability.full: 17,980
 analyzability.partial: 10,044
-analyzability.none: 6,466
-adoption.resultHash: 5a3edb5d…c58b
-gate2.a-vs-b.resultHash: 746dd77f…0d11
-gate2.a-vs-bp.resultHash: 092e356e…18c7
+analyzability.none: 6,009
+adoption.resultHash: 099321d3…0215
+gate2.a-vs-b.resultHash: 547da885…2735
+gate2.a-vs-bp.resultHash: a3e33bde…3904
 gate2.a-vs-b.changed: 169
 gate2.a-vs-bp.changed: 169
 c1.precision: 0.926
@@ -19,19 +19,19 @@ bp-scene.actions: 9
 # V1 metrics
 
 The seven V1 metrics of `docs/cutline.md` chapter 14, collected in one table.
-Every value is on classifier 0.2.5; each source document holds the method, the hashes, and any earlier classifier version under its own "Previous version" section.
+Every value is on classifier 0.2.6; each source document holds the method, the hashes, and any earlier classifier version under its own "Previous version" section.
 
 | metric | value | source |
 | --- | --- | --- |
-| Analyzable Action share (`full` + `partial`) | 81.3% of 34,490 evaluated Actions (`full` 17,980 / 52.1%, `partial` 10,044 / 29.1%, `none` 6,466 / 18.7%) | [adoption-preview.md](adoption-preview.md), initial measurement in [gate1-corpus.md](gate1-corpus.md) |
+| Analyzable Action share (`full` + `partial`) | 82.3% of 34,033 evaluated Actions (`full` 17,980 / 52.8%, `partial` 10,044 / 29.5%, `none` 6,009 / 17.7%) | [adoption-preview.md](adoption-preview.md), initial measurement in [gate1-corpus.md](gate1-corpus.md) |
 | Laundering rate | 0% (0 of 80 risky entries resolve to allow; synthetic C2 corpus, CI job `laundering-rate`) | `packages/policy/tests/laundering.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
-| Replay determinism | Two runs per comparison give the same `resultHash`; the server review gives the local value for A vs B (`746dd77f…0d11`) and A vs B' (`092e356e…18c7`). The adoption run repeats on the server and equals the local value (`5a3edb5d…c58b`) | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
+| Replay determinism | Two runs per comparison give the same `resultHash`; the server review gives the local value for A vs B (`547da885…2735`) and A vs B' (`a3e33bde…3904`). The adoption run repeats on the server and equals the local value (`099321d3…0215`) | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
 | Compression (changed Actions / Diff Groups) | A vs B: 169 / 5; A vs B': 169 / 7 | [gate2-replay.md](gate2-replay.md) |
 | Review time | Not measured on this classifier version: the scripted journey runs the change review loop through the API without timing it, and the browser pass was not repeated | [adoption-preview.md](adoption-preview.md) |
 | Unexpected Widening groups | 0: every Widening group of A vs B and A vs B' was on the expected list. The 2 `unknown_remote → trusted_remote` groups of A vs B' are the predicted `github.com/**` scene; their Verdict `unexpected` means the Policy needs fixing, and that review was rejected | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
 | Classifier accuracy | precision 0.926, recall 0.990 (TP 100, FP 8, FN 1; synthetic C1 corpus, 100 entries) | `packages/action/tests/labels.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
 
-The analyzable share rises because tmux read-only query subcommands are `read` with analyzability `partial` rather than `execute` with `none`.
+The analyzable share rises because the 457 StructuredOutput Actions, which were `execute` with analyzability `none`, now carry no Operation and leave the evaluated count; the `full` and `partial` counts are unchanged.
 
 ## Provenance and journey grade
 
@@ -43,6 +43,23 @@ Real-record Adoption Groups and Widening groups were reviewable and stayed insid
 The grade is not strong because no Widening outside the expected list was found in the recorded Actions.
 Verdicts and timings were given by an Agent, not a person.
 The grade is recorded in the evidence documents and the README, not as a product field.
+
+## Previous version: classifier 0.2.5
+
+The table below is the V1 metrics as collected on classifier 0.2.5 and is kept as the record of that collection.
+Its hashes are not comparable with the 0.2.6 values above.
+
+| metric | value | source |
+| --- | --- | --- |
+| Analyzable Action share (`full` + `partial`) | 81.3% of 34,490 evaluated Actions (`full` 17,980 / 52.1%, `partial` 10,044 / 29.1%, `none` 6,466 / 18.7%) | [adoption-preview.md](adoption-preview.md), initial measurement in [gate1-corpus.md](gate1-corpus.md) |
+| Laundering rate | 0% (0 of 80 risky entries resolve to allow; synthetic C2 corpus, CI job `laundering-rate`) | `packages/policy/tests/laundering.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
+| Replay determinism | Two runs per comparison give the same `resultHash`; the server review gives the local value for A vs B (`746dd77f…0d11`) and A vs B' (`092e356e…18c7`). The adoption run repeats on the server and equals the local value (`5a3edb5d…c58b`) | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
+| Compression (changed Actions / Diff Groups) | A vs B: 169 / 5; A vs B': 169 / 7 | [gate2-replay.md](gate2-replay.md) |
+| Review time | Not measured on this classifier version: the scripted journey runs the change review loop through the API without timing it, and the browser pass was not repeated | [adoption-preview.md](adoption-preview.md) |
+| Unexpected Widening groups | 0: every Widening group of A vs B and A vs B' was on the expected list. The 2 `unknown_remote → trusted_remote` groups of A vs B' are the predicted `github.com/**` scene; their Verdict `unexpected` means the Policy needs fixing, and that review was rejected | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
+| Classifier accuracy | precision 0.926, recall 0.990 (TP 100, FP 8, FN 1; synthetic C1 corpus, 100 entries) | `packages/action/tests/labels.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
+
+The analyzable share on that version rose because tmux read-only query subcommands are `read` with analyzability `partial` rather than `execute` with `none`.
 
 ## Previous version: classifier 0.2.4
 
