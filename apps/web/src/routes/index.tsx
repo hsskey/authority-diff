@@ -13,8 +13,28 @@ import { callRoute, describeApiError } from '../shared/api-client.ts';
 import { EmptyState } from '../shared/components/EmptyState.tsx';
 import { ErrorState } from '../shared/components/ErrorState.tsx';
 import { LoadingState } from '../shared/components/LoadingState.tsx';
-import { effectLabel, formatShare } from '../features/change-review/format.ts';
 import { usePageTitle } from '../shared/use-page-title.ts';
+import {
+  BUTTON_LINK,
+  Actions,
+  DataTable,
+  EffectBadge,
+  EffectSummary,
+  EffectTile,
+  Hint,
+  MetaGrid,
+  Mono,
+  Panel,
+  PrimaryButton,
+  SectionTitle,
+  Stack,
+  StateMessage,
+  TableCaption,
+  Td,
+  Th,
+  TwoColumn,
+} from '../features/activity-overview/ui.tsx';
+import { effectLabel, formatShare } from '../features/change-review/format.ts';
 
 export const Route = createFileRoute('/')({
   component: ActivityShapePage,
@@ -112,8 +132,8 @@ function ActivityShapePage() {
   });
 
   return (
-    <section className="stack">
-      <h1 className="page-title">활동 분포</h1>
+    <section className="grid gap-5">
+      <h1 className="m-0 mb-4 text-2xl leading-normal">활동 분포</h1>
       {overviewQuery.isPending ? <LoadingState label="가져온 활동을 집계하는 중" /> : null}
       {overviewQuery.isError ? (
         <ErrorState
@@ -150,14 +170,14 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
   );
 
   return (
-    <div className="stack" aria-labelledby="activity-overview-title">
-      <h2 className="section-title" id="activity-overview-title">
+    <Stack aria-labelledby="activity-overview-title">
+      <SectionTitle id="activity-overview-title">
         가져온 활동 개요 (최근 {overview.windowDays}일)
-      </h2>
-      <p className="state-message hint">
+      </SectionTitle>
+      <Hint>
         transcript에서 가져온 Action만 집계합니다. Effect와 Zone은 정책이 있어야 계산됩니다.
-      </p>
-      <dl className="meta-grid panel">
+      </Hint>
+      <MetaGrid>
         <div>
           <dt>기간</dt>
           <dd>
@@ -176,7 +196,7 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
           <dt>평가 가능 Action</dt>
           <dd>{evaluable}</dd>
         </div>
-      </dl>
+      </MetaGrid>
 
       {overview.actionCount === 0 ? (
         <EmptyState
@@ -185,117 +205,110 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
         />
       ) : (
         <>
-          <h3 className="section-title">분석 가능성 (Action 기준)</h3>
-          <div className="effect-summary" data-testid="overview-analyzability">
+          <SectionTitle as="h3">분석 가능성 (Action 기준)</SectionTitle>
+          <EffectSummary data-testid="overview-analyzability">
             {ANALYZABILITY_ORDER.map((level) => {
               const count = overview.analyzability[level];
               return (
-                <div
+                <EffectTile
                   key={level}
-                  className={`panel effect-tile effect-${ANALYZABILITY_EFFECT_CLASS[level]}`}
-                >
-                  <span className="effect-label">{ANALYZABILITY_LABEL[level]}</span>
-                  <span className="effect-count">{count}</span>
-                  <span className="effect-percent">{formatShare(count, evaluable)}</span>
-                </div>
+                  effect={ANALYZABILITY_EFFECT_CLASS[level]}
+                  label={ANALYZABILITY_LABEL[level]}
+                  count={count}
+                  percent={formatShare(count, evaluable)}
+                />
               );
             })}
-          </div>
+          </EffectSummary>
 
-          <div className="two-column">
-            <div className="table-scroll">
-              <table className="data-table">
-                <caption>Capability 분포 (Operation {operationCount}건)</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Capability</th>
-                    <th scope="col" className="num">
-                      Operation
-                    </th>
-                    <th scope="col" className="num">
-                      비율
-                    </th>
+          <TwoColumn>
+            <DataTable>
+              <TableCaption>Capability 분포 (Operation {operationCount}건)</TableCaption>
+              <thead>
+                <tr>
+                  <Th scope="col">Capability</Th>
+                  <Th scope="col" numeric>
+                    Operation
+                  </Th>
+                  <Th scope="col" numeric>
+                    비율
+                  </Th>
+                </tr>
+              </thead>
+              <tbody>
+                {capabilities.map((entry) => (
+                  <tr key={entry.key}>
+                    <Td>{entry.key}</Td>
+                    <Td numeric>{entry.count}</Td>
+                    <Td numeric>{formatShare(entry.count, operationCount)}</Td>
                   </tr>
-                </thead>
-                <tbody>
-                  {capabilities.map((entry) => (
-                    <tr key={entry.key}>
-                      <td>{entry.key}</td>
-                      <td className="num">{entry.count}</td>
-                      <td className="num">{formatShare(entry.count, operationCount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="table-scroll">
-              <table className="data-table">
-                <caption>Target 종류 분포 (Operation 기준)</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Target 종류</th>
-                    <th scope="col" className="num">
-                      Operation
-                    </th>
-                    <th scope="col" className="num">
-                      비율
-                    </th>
+                ))}
+              </tbody>
+            </DataTable>
+            <DataTable>
+              <TableCaption>Target 종류 분포 (Operation 기준)</TableCaption>
+              <thead>
+                <tr>
+                  <Th scope="col">Target 종류</Th>
+                  <Th scope="col" numeric>
+                    Operation
+                  </Th>
+                  <Th scope="col" numeric>
+                    비율
+                  </Th>
+                </tr>
+              </thead>
+              <tbody>
+                {targetKinds.map((entry) => (
+                  <tr key={entry.key}>
+                    <Td>{TARGET_KIND_LABEL[entry.key]}</Td>
+                    <Td numeric>{entry.count}</Td>
+                    <Td numeric>{formatShare(entry.count, operationCount)}</Td>
                   </tr>
-                </thead>
-                <tbody>
-                  {targetKinds.map((entry) => (
-                    <tr key={entry.key}>
-                      <td>{TARGET_KIND_LABEL[entry.key]}</td>
-                      <td className="num">{entry.count}</td>
-                      <td className="num">{formatShare(entry.count, operationCount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                ))}
+              </tbody>
+            </DataTable>
+          </TwoColumn>
 
-          <div className="two-column">
+          <TwoColumn>
             <TopPrograms programs={overview.topPrograms} />
             <RemoteHosts remoteKeys={overview.topRemoteKeys} />
-          </div>
+          </TwoColumn>
         </>
       )}
-    </div>
+    </Stack>
   );
 }
 
 function TopPrograms({ programs }: { programs: ActivityOverviewResponse['topPrograms'] }) {
   return (
-    <div className="table-scroll">
-      <table className="data-table">
-        <caption>자주 쓴 program 상위 {programs.length}개</caption>
-        <thead>
+    <DataTable>
+      <TableCaption>자주 쓴 program 상위 {programs.length}개</TableCaption>
+      <thead>
+        <tr>
+          <Th scope="col">Program</Th>
+          <Th scope="col" numeric>
+            Operation
+          </Th>
+        </tr>
+      </thead>
+      <tbody>
+        {programs.length === 0 ? (
           <tr>
-            <th scope="col">Program</th>
-            <th scope="col" className="num">
-              Operation
-            </th>
+            <Td colSpan={2} muted>
+              program을 인식한 Operation이 없습니다.
+            </Td>
           </tr>
-        </thead>
-        <tbody>
-          {programs.length === 0 ? (
-            <tr>
-              <td colSpan={2} className="hint">
-                program을 인식한 Operation이 없습니다.
-              </td>
+        ) : (
+          programs.map((entry) => (
+            <tr key={entry.program}>
+              <Td mono>{entry.program}</Td>
+              <Td numeric>{entry.count}</Td>
             </tr>
-          ) : (
-            programs.map((entry) => (
-              <tr key={entry.program}>
-                <td className="mono">{entry.program}</td>
-                <td className="num">{entry.count}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+          ))
+        )}
+      </tbody>
+    </DataTable>
   );
 }
 
@@ -312,41 +325,39 @@ function RemoteHosts({ remoteKeys }: { remoteKeys: ActivityOverviewResponse['top
   );
 
   return (
-    <div className="table-scroll">
-      <table className="data-table">
-        <caption>
-          VCS 원격 host (상위 {remoteKeys.length}개 Remote Key 기준, 저장소 이름은 가림)
-        </caption>
-        <thead>
+    <DataTable>
+      <TableCaption>
+        VCS 원격 host (상위 {remoteKeys.length}개 Remote Key 기준, 저장소 이름은 가림)
+      </TableCaption>
+      <thead>
+        <tr>
+          <Th scope="col">Host</Th>
+          <Th scope="col" numeric>
+            저장소
+          </Th>
+          <Th scope="col" numeric>
+            Operation
+          </Th>
+        </tr>
+      </thead>
+      <tbody>
+        {hosts.length === 0 ? (
           <tr>
-            <th scope="col">Host</th>
-            <th scope="col" className="num">
-              저장소
-            </th>
-            <th scope="col" className="num">
-              Operation
-            </th>
+            <Td colSpan={3} muted>
+              Remote Key를 인식한 Operation이 없습니다.
+            </Td>
           </tr>
-        </thead>
-        <tbody>
-          {hosts.length === 0 ? (
-            <tr>
-              <td colSpan={3} className="hint">
-                Remote Key를 인식한 Operation이 없습니다.
-              </td>
+        ) : (
+          hosts.map(([host, entry]) => (
+            <tr key={host}>
+              <Td mono>{host}</Td>
+              <Td numeric>{entry.remotes}</Td>
+              <Td numeric>{entry.count}</Td>
             </tr>
-          ) : (
-            hosts.map(([host, entry]) => (
-              <tr key={host}>
-                <td className="mono">{host}</td>
-                <td className="num">{entry.remotes}</td>
-                <td className="num">{entry.count}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+          ))
+        )}
+      </tbody>
+    </DataTable>
   );
 }
 
@@ -363,13 +374,13 @@ function PolicyState({
   }
   if (rest.length > 0 || hasMore) {
     return (
-      <div className="panel stack status-error" role="alert">
-        <h2 className="section-title">지원하지 않는 상태: 조직 정책이 2개 이상입니다</h2>
-        <p className="state-message">
+      <Panel className="grid gap-5 text-red-700" role="alert">
+        <SectionTitle>지원하지 않는 상태: 조직 정책이 2개 이상입니다</SectionTitle>
+        <StateMessage>
           Authority Diff는 조직 정책 하나만 다룹니다. 어느 정책도 자동으로 고르지 않으며, 정책을
           하나만 남긴 뒤 다시 시작하세요.
-        </p>
-      </div>
+        </StateMessage>
+      </Panel>
     );
   }
   return <SinglePolicyState policy={policy} />;
@@ -396,28 +407,28 @@ function FirstPolicyPanel() {
   });
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">아직 조직 정책이 없습니다</h2>
-      <p className="state-message hint">
+    <Panel className="grid gap-5">
+      <SectionTitle>아직 조직 정책이 없습니다</SectionTitle>
+      <Hint>
         기본 template으로 첫 정책의 draft version 1을 만들고 편집 화면으로 이동합니다. 채택 전에는
         어떤 판정도 내리지 않습니다.
-      </p>
-      <div className="actions">
-        <button
+      </Hint>
+      <Actions>
+        <PrimaryButton
           type="button"
           disabled={create.isPending}
           aria-busy={create.isPending}
           onClick={() => create.mutate()}
         >
           {create.isPending ? '만드는 중…' : '첫 조직 정책 만들기'}
-        </button>
-      </div>
+        </PrimaryButton>
+      </Actions>
       {create.error ? (
-        <p className="state-message status-error" role="alert">
+        <StateMessage className="text-red-700" role="alert">
           정책 생성 실패: {create.error.message}
-        </p>
+        </StateMessage>
       ) : null}
-    </div>
+    </Panel>
   );
 }
 
@@ -472,11 +483,11 @@ function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
   }
   const latest = latestOf(versions, ['rejected']);
   return (
-    <div className="panel stack">
-      <h2 className="section-title">채택된 정책도 열린 draft도 없습니다</h2>
-      <p className="state-message hint">
+    <Panel className="grid gap-5">
+      <SectionTitle>채택된 정책도 열린 draft도 없습니다</SectionTitle>
+      <Hint>
         최초 도입 검토가 반려된 상태입니다. 마지막 version에서 새 draft를 만들어 다시 검토하세요.
-      </p>
+      </Hint>
       {latest !== null ? (
         <Link
           to="/policies/$policyId/versions/$versionId"
@@ -485,7 +496,7 @@ function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
           version #{latest.versionNumber} 보기
         </Link>
       ) : null}
-    </div>
+    </Panel>
   );
 }
 
@@ -527,22 +538,22 @@ function InitialSetupState({
   const reviewQuery = useOpenReview(policy.id, candidate.id);
 
   return (
-    <div className="panel stack">
-      <h2 className="section-title">최초 정책 설정 진행 중</h2>
-      <p className="state-message hint">
+    <Panel className="grid gap-5">
+      <SectionTitle>최초 정책 설정 진행 중</SectionTitle>
+      <Hint>
         draft version #{candidate.versionNumber}이 있고 채택된 version은 아직 없습니다. 제안 정책을
         과거 Action에 적용해 보고 확인 필요·차단 group을 판정한 뒤 채택합니다.
-      </p>
-      <div className="actions">
+      </Hint>
+      <Actions>
         <Link
-          className="button-link"
+          className={BUTTON_LINK}
           to="/policies/$policyId/versions/$versionId"
           params={{ policyId: policy.id, versionId: candidate.id }}
         >
           최초 정책 설정 계속하기
         </Link>
-      </div>
-      <h3 className="section-title">도입 preview</h3>
+      </Actions>
+      <SectionTitle as="h3">도입 preview</SectionTitle>
       {reviewQuery.isPending ? <LoadingState label="도입 검토를 확인하는 중" /> : null}
       {reviewQuery.isError ? (
         <ErrorState
@@ -551,7 +562,7 @@ function InitialSetupState({
         />
       ) : null}
       {reviewQuery.isSuccess ? <AdoptionPreview review={reviewQuery.data} /> : null}
-    </div>
+    </Panel>
   );
 }
 
@@ -574,24 +585,24 @@ function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
 
   if (review === null) {
     return (
-      <p className="state-message hint">
+      <Hint>
         아직 최초 도입 검토를 만들지 않았습니다. draft 편집 화면에서 "최초 도입 검토 만들기"를
         누르면 제안 정책 적용 결과가 여기에 나타납니다.
-      </p>
+      </Hint>
     );
   }
   if (review.status === 'computing') {
     return (
-      <p className="state-message hint" role="status">
+      <Hint role="status">
         제안 정책을 과거 Action에 적용하는 중입니다.{' '}
         <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           검토 화면 열기
         </Link>
-      </p>
+      </Hint>
     );
   }
   return (
-    <div className="stack">
+    <Stack>
       {runQuery.isSuccess ? <AdoptionEffectTiles run={runQuery.data} /> : null}
       {runQuery.isError ? (
         <ErrorState
@@ -599,10 +610,10 @@ function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
           message={runQuery.error?.message ?? '알 수 없는 오류'}
         />
       ) : null}
-      <Link className="button-link" to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+      <Link className={BUTTON_LINK} to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
         최초 도입 검토 계속하기
       </Link>
-    </div>
+    </Stack>
   );
 }
 
@@ -612,22 +623,22 @@ function AdoptionEffectTiles({ run }: { run: ReplayRunResponse }) {
   }
   const { effectCounts, evaluatedActions } = run.stats;
   return (
-    <div className="stack">
-      <p className="state-message hint">
+    <Stack>
+      <Hint>
         제안 정책을 적용하면 평가한 Action {evaluatedActions}건이 각각 아래 Effect를 받습니다.
-      </p>
-      <div className="effect-summary" data-testid="adoption-preview">
+      </Hint>
+      <EffectSummary data-testid="adoption-preview">
         {EFFECT_ORDER.map((effect) => (
-          <div key={effect} className={`panel effect-tile effect-${effect}`}>
-            <span className="effect-label">{effectLabel(effect)}</span>
-            <span className="effect-count">{effectCounts[effect]}</span>
-            <span className="effect-percent">
-              {formatShare(effectCounts[effect], evaluatedActions)}
-            </span>
-          </div>
+          <EffectTile
+            key={effect}
+            effect={effect}
+            label={effectLabel(effect)}
+            count={effectCounts[effect]}
+            percent={formatShare(effectCounts[effect], evaluatedActions)}
+          />
         ))}
-      </div>
-    </div>
+      </EffectSummary>
+    </Stack>
   );
 }
 
@@ -652,15 +663,15 @@ function AcceptedPolicyState({
   });
 
   return (
-    <div className="stack">
-      <div className="panel stack">
-        <h2 className="section-title">채택된 정책: version #{accepted.versionNumber}</h2>
-        <p className="state-message hint">
+    <Stack>
+      <Panel className="grid gap-5">
+        <SectionTitle>채택된 정책: version #{accepted.versionNumber}</SectionTitle>
+        <Hint>
           채택은 검토 기록입니다. runtime에 반영하는 일은 Authority Diff 밖에서 이루어집니다.
-        </p>
-        <div className="actions">
+        </Hint>
+        <Actions>
           <Link
-            className="button-link"
+            className={BUTTON_LINK}
             to="/policies/$policyId/versions/$versionId"
             params={{ policyId: policy.id, versionId: accepted.id }}
           >
@@ -668,16 +679,16 @@ function AcceptedPolicyState({
           </Link>
           {candidate !== null ? (
             <Link
-              className="button-link"
+              className={BUTTON_LINK}
               to="/policies/$policyId/versions/$versionId"
               params={{ policyId: policy.id, versionId: candidate.id }}
             >
               변경 draft #{candidate.versionNumber} 계속하기
             </Link>
           ) : null}
-        </div>
-      </div>
-      <h2 className="section-title">채택된 정책 기준 활동 분포</h2>
+        </Actions>
+      </Panel>
+      <SectionTitle>채택된 정책 기준 활동 분포</SectionTitle>
       {mapQuery.isPending ? <LoadingState label="활동 분포를 불러오는 중" /> : null}
       {mapQuery.isError ? (
         <ErrorState
@@ -686,7 +697,7 @@ function AcceptedPolicyState({
         />
       ) : null}
       {mapQuery.isSuccess ? <AuthorityMap map={mapQuery.data} /> : null}
-    </div>
+    </Stack>
   );
 }
 
@@ -712,11 +723,11 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
   );
 
   return (
-    <div className="stack">
-      <dl className="meta-grid panel">
+    <Stack>
+      <MetaGrid>
         <div>
           <dt>기준 version</dt>
-          <dd className="mono">{map.run.policyVersionId}</dd>
+          <Mono>{map.run.policyVersionId}</Mono>
         </div>
         <div>
           <dt>기간</dt>
@@ -726,69 +737,68 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
         </div>
         <div>
           <dt>Replay Run</dt>
-          <dd className="mono">{map.run.replayRunId}</dd>
+          <Mono>{map.run.replayRunId}</Mono>
         </div>
-      </dl>
+      </MetaGrid>
 
-      <div className="effect-summary" data-testid="map-effects">
+      <EffectSummary data-testid="map-effects">
         {EFFECT_ORDER.map((effect) => {
           const count = byEffect.get(effect) ?? 0;
           return (
-            <div key={effect} className={`panel effect-tile effect-${effect}`}>
-              <span className="effect-label">{effectLabel(effect)}</span>
-              <span className="effect-count">{count}</span>
-              <span className="effect-percent">{formatShare(count, total)}</span>
-            </div>
+            <EffectTile
+              key={effect}
+              effect={effect}
+              label={effectLabel(effect)}
+              count={count}
+              percent={formatShare(count, total)}
+            />
           );
         })}
-      </div>
+      </EffectSummary>
 
-      <h3 className="section-title">분석 가능성 (평가한 Action 기준)</h3>
-      <div className="effect-summary" data-testid="map-analyzability">
+      <SectionTitle as="h3">분석 가능성 (평가한 Action 기준)</SectionTitle>
+      <EffectSummary data-testid="map-analyzability">
         {ANALYZABILITY_ORDER.map((level) => {
           const count = map.analyzability[level];
-          const effectClass = ANALYZABILITY_EFFECT_CLASS[level];
           return (
-            <div key={level} className={`panel effect-tile effect-${effectClass}`}>
-              <span className="effect-label">{ANALYZABILITY_LABEL[level]}</span>
-              <span className="effect-count">{count}</span>
-              <span className="effect-percent">{formatShare(count, total)}</span>
-            </div>
+            <EffectTile
+              key={level}
+              effect={ANALYZABILITY_EFFECT_CLASS[level]}
+              label={ANALYZABILITY_LABEL[level]}
+              count={count}
+              percent={formatShare(count, total)}
+            />
           );
         })}
-      </div>
+      </EffectSummary>
 
-      <div className="table-scroll">
-        <table className="data-table">
-          <caption>
-            평가한 Action {total}건, Capability × Zone cell {map.cells.length}개
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Capability</th>
-              <th scope="col">Zone</th>
-              <th scope="col">Effect</th>
-              <th scope="col" className="num">
-                Action
-              </th>
+      <DataTable>
+        <TableCaption>
+          평가한 Action {total}건, Capability × Zone cell {map.cells.length}개
+        </TableCaption>
+        <thead>
+          <tr>
+            <Th scope="col">Capability</Th>
+            <Th scope="col">Zone</Th>
+            <Th scope="col">Effect</Th>
+            <Th scope="col" numeric>
+              Action
+            </Th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedCells.map((cell) => (
+            <tr key={`${cell.capability}-${cell.zone}-${cell.effect}`}>
+              <Td>{cell.capability}</Td>
+              <Td>{cell.zone}</Td>
+              <Td nowrap>
+                <EffectBadge effect={cell.effect}>{effectLabel(cell.effect)}</EffectBadge>
+              </Td>
+              <Td numeric>{cell.count}</Td>
             </tr>
-          </thead>
-          <tbody>
-            {sortedCells.map((cell) => (
-              <tr key={`${cell.capability}-${cell.zone}-${cell.effect}`}>
-                <td>{cell.capability}</td>
-                <td>{cell.zone}</td>
-                <td className="nowrap">
-                  <span className={`effect-badge effect-${cell.effect}`}>
-                    {effectLabel(cell.effect)}
-                  </span>
-                </td>
-                <td className="num">{cell.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          ))}
+        </tbody>
+      </DataTable>
+    </Stack>
   );
 }
