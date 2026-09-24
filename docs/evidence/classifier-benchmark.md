@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.4; measured 2026-09-24
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.5; measured 2026-09-24
 <!-- evidence-numbers
 c1.precision: 0.926
 c1.recall: 0.990
@@ -11,8 +11,9 @@ This report covers the two classifier measurements from design 36.3: precision a
 Both corpora are synthetic.
 Their structure mirrors real inputs, and all content is invented; no real transcript, command, path, host, or repository appears here.
 
-CLASSIFIER_VERSION at measurement time was `0.2.4`.
-0.2.4 classifies path-form commands, shell script files, and command lookups as execute or read without expanding the recognition tables, so one C1 entry shifts and the figures below differ from the 0.2.3 measurement kept under "Previous version".
+CLASSIFIER_VERSION at measurement time was `0.2.5`.
+C1 and C2 figures are unchanged from the previous measurement kept under "Previous version".
+The classifier classifies path-form commands, shell script files, and command lookups as execute or read without expanding the recognition tables.
 
 To regenerate the numbers, run `pnpm test`.
 `packages/action/tests/labels.test.ts` writes the full precision and recall breakdown to `.local/classifier-benchmark.json`, and `packages/policy/tests/laundering.test.ts` fails if any risky action is laundered to allow.
@@ -57,15 +58,15 @@ A second pass judged each one as a label error, a classifier error, or an ambigu
 - `scp report.pdf user@host:/tmp` and `rsync -a ./dist user@host:/srv` add a `read/path` on the local payload (`scp-upload`, `rsync-push`, ambiguous definition).
   The label records only the `send/host`.
 - `./deploy-local.sh` resolves to `execute/path` on the script file, but its label carries `execute/unknown` (`run-shell-script`, ambiguous definition).
-  0.2.4 reads a path-form command as an execute of that path; the label follows the reading that the program a script runs is unknown.
+  A path-form command is an execute of that path; the label follows the reading that the program a script runs is unknown.
 
 The seven extra reads are conservative for safety: an extra read can only tighten the resolution, never launder it.
 The eighth is not: `execute/path` on a workspace script resolves to allow under `allow_workspace_execute`, where the labeled `execute/unknown` would ask, so it is an auto-allow from wider recognition (`docs/evidence/classifier-hardening-4.md`).
 
 ## Second-pass review
 
-The second pass re-judged the eight misclassified entries and a random sample of 20 of the other 92 entries against design 13.2 and the classifier output under `0.2.4`.
-The sample is the one drawn for the earlier second pass with Python `random.sample` seeded with `20260924`; all 20 entries remain correctly classified under 0.2.4.
+The second pass re-judged the eight misclassified entries and a random sample of 20 of the other 92 entries against design 13.2 and the classifier output under this version.
+The sample is the one drawn for the earlier second pass with Python `random.sample` seeded with `20260924`; all 20 entries remain correctly classified.
 
 ### Misclassified entries
 
@@ -90,7 +91,7 @@ The classifier records that source read so that moving or sending a file out of 
 `cp-file` carries the source read in both its label and the classifier, so it matches; the other three carry it only in the classifier.
 
 `run-shell-script` depends on whether a path-form command names a known Target.
-0.2.4 reads `./deploy-local.sh` as an execute of that script path; the label follows the reading that the program a script runs is unknown, so its Target is `unknown`.
+A path-form command such as `./deploy-local.sh` is an execute of that script path; the label follows the reading that the program a script runs is unknown, so its Target is `unknown`.
 Neither the glossary nor design 13.2 settles whether the script file or the program it runs is the execute Target.
 
 ### Random sample
@@ -190,6 +191,31 @@ No human has reviewed the labels.
 Precision and recall are measured against those labels, not against a second independent labeling.
 The corpora exercise the common shapes of coding-agent shell usage; they are not a random sample of any real workload.
 The laundering rate is a property of the classifier paired with the default template only; a widened policy is out of scope for this check.
+
+## Previous version: classifier 0.2.4
+
+The figures below are the C1 and C2 measurement on classifier 0.2.4, kept as the record of that measurement.
+Re-running `pnpm test` on 0.2.5 reproduced the same C1 table (precision 0.926, recall 0.990, TP 100, FP 8, FN 1) and the same C2 laundering rate (0 of 80 risky entries).
+
+### C1 precision and recall (0.2.4)
+
+| capability | precision | recall | TP | FP | FN |
+| --- | --- | --- | --- | --- | --- |
+| read | 0.788 | 1.000 | 26 | 7 | 0 |
+| write | 1.000 | 1.000 | 18 | 0 | 0 |
+| delete | 1.000 | 1.000 | 6 | 0 | 0 |
+| execute | 0.933 | 0.933 | 14 | 1 | 1 |
+| install | 1.000 | 1.000 | 7 | 0 | 0 |
+| fetch | 1.000 | 1.000 | 8 | 0 | 0 |
+| send | 1.000 | 1.000 | 4 | 0 | 0 |
+| commit | 1.000 | 1.000 | 7 | 0 | 0 |
+| push | 1.000 | 1.000 | 4 | 0 | 0 |
+| rewrite | 1.000 | 1.000 | 2 | 0 | 0 |
+| deploy | 1.000 | 1.000 | 4 | 0 | 0 |
+| **overall** | **0.926** | **0.990** | **100** | **8** | **1** |
+
+The `none` rate was 1.71% (2 of 117 Operations).
+C2 held 87 ToolCalls: 80 risky (69 `ask`, 11 `deny`) and 7 benign; the laundering rate was 0%.
 
 ## Previous version: classifier 0.2.3
 
