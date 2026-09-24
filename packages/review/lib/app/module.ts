@@ -1,5 +1,5 @@
 import { err, ok } from '@authority/kernel';
-import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
+import type { AppError, Clock, Effect, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
 import type {
   PolicyDocument,
   PolicyId,
@@ -9,6 +9,7 @@ import type {
 import type { ReplayModule } from '@authority/replay';
 import type {
   AdoptionGroup,
+  ConformanceFindingKind,
   DiffGroup,
   ReplayRun,
   ReplayRunStatus,
@@ -24,7 +25,10 @@ import {
   type VerdictSnapshotEntry,
 } from '../../schema.ts';
 import { computeGate } from '../domain/gate.ts';
-import { ruleDraftFromFinding } from '../domain/rule-draft-from-finding.ts';
+import {
+  isEffectAllowedForFinding,
+  ruleDraftFromFinding,
+} from '../domain/rule-draft-from-finding.ts';
 import {
   renderAdoptionReport,
   renderReport,
@@ -165,9 +169,13 @@ export interface ReviewModule {
   getReport(id: ChangeReviewId): Promise<Result<string, AppError>>;
   /**
    * Creates a draft Policy Version from the latest conformance run's candidate
-   * and adds a Rule for the finding's Capability and Zone.
+   * and adds a Rule for the finding's Capability and Zone. `effect` is required
+   * and must be allowed for the finding kind.
    */
-  createPolicyDraftFromFinding(findingKey: string): Promise<Result<PolicyVersion, AppError>>;
+  createPolicyDraftFromFinding(
+    findingKey: string,
+    effect: Effect,
+  ): Promise<Result<PolicyVersion, AppError>>;
   listDiffGroups(
     id: ChangeReviewId,
     input: ListReviewDiffGroupsInput,
@@ -244,6 +252,19 @@ function groupNotFound(groupKey: string): AppError {
     message: `no group ${groupKey} in this review's replay`,
     isRetryable: false,
     details: { groupKey },
+    cause: null,
+  };
+}
+
+function findingEffectNotAllowed(kind: ConformanceFindingKind, effect: Effect): AppError {
+  return {
+    code: 'replay.finding_effect_not_allowed',
+    message:
+      kind === 'violation' && effect === 'allow'
+        ? 'a violation is a target for fixing the runtime configuration, not for relaxing the policy'
+        : `effect ${effect} is not allowed for a ${kind} Conformance Finding`,
+    isRetryable: false,
+    details: { kind, effect },
     cause: null,
   };
 }
@@ -827,12 +848,15 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       return ok({ items, nextCursor });
     },
 
-    async createPolicyDraftFromFinding(findingKey) {
+    async createPolicyDraftFromFinding(findingKey, effect) {
       const located = await replay.getConformanceFinding(findingKey);
       if (!located.ok) {
         return located;
       }
       const { finding, policyVersionId } = located.value;
+      if (!isEffectAllowedForFinding(finding.kind, effect)) {
+        return err(findingEffectNotAllowed(finding.kind, effect));
+      }
       const base = await policy.getVersion(policyVersionId);
       if (!base.ok) {
         return base;
@@ -843,6 +867,7 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       }
       const rule = ruleDraftFromFinding(
         finding,
+        effect,
         draft.value.document.rules.map((existing) => existing.ruleId),
       );
       return policy.updateDraftDocument(draft.value.id, draft.value.contentHash, {

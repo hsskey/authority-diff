@@ -1,29 +1,27 @@
+import type { Effect } from '@authority/kernel';
 import { PolicyRuleSchema } from '@authority/policy/schema';
 import type { PolicyRule } from '@authority/policy/schema';
-import type { ConformanceFinding } from '@authority/replay/schema';
+import type { ConformanceFinding, ConformanceFindingKind } from '@authority/replay/schema';
 
-const EFFECT_FOR_KIND = {
-  over_asked: 'ask',
-  under_asked: 'allow',
-  violation: 'allow',
-} as const;
-
-const RATIONALE_FOR_KIND = {
-  over_asked:
-    'Drafted from a Conformance Finding: this capability and zone were allowed in the Policy Version but the runtime prompted.',
-  under_asked:
-    'Drafted from a Conformance Finding: this capability and zone were asked in the Policy Version but the runtime auto-executed.',
-  violation:
-    'Drafted from a Conformance Finding: this capability and zone were denied in the Policy Version but the Action executed.',
-} as const;
+/** Whether `effect` is allowed for this Conformance Finding kind. */
+export function isEffectAllowedForFinding(kind: ConformanceFindingKind, effect: Effect): boolean {
+  switch (kind) {
+    case 'over_asked':
+      return effect === 'ask' || effect === 'deny';
+    case 'under_asked':
+      return effect === 'allow' || effect === 'ask' || effect === 'deny';
+    case 'violation':
+      return effect === 'ask' || effect === 'deny';
+  }
+}
 
 /**
- * A Rule whose match is the finding's Capability and Zone. Effect follows the
- * observed runtime: over_asked tightens to ask; under_asked and violation
- * draft an allow the Principal still has to reconcile with existing Rules.
+ * A Rule whose match is the finding's Capability and Zone. The caller supplies
+ * Effect; adoption is decided in Change Review.
  */
 export function ruleDraftFromFinding(
-  finding: Pick<ConformanceFinding, 'findingKey' | 'kind' | 'capability' | 'zone'>,
+  finding: Pick<ConformanceFinding, 'findingKey' | 'capability' | 'zone'>,
+  effect: Effect,
   existingRuleIds: readonly string[],
 ): PolicyRule {
   const existing = new Set(existingRuleIds);
@@ -42,7 +40,7 @@ export function ruleDraftFromFinding(
       reversibility: null,
       analyzability: null,
     },
-    effect: EFFECT_FOR_KIND[finding.kind],
-    rationale: RATIONALE_FOR_KIND[finding.kind],
+    effect,
+    rationale: `review candidate created from finding ${finding.findingKey}; adoption is decided in change review.`,
   });
 }

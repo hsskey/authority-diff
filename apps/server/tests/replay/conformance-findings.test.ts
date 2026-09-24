@@ -157,22 +157,25 @@ describe('PUT /api/v1/conformance-findings/:id', () => {
 
 describe('POST /api/v1/conformance-findings/:id/policy-drafts', () => {
   test('creates a draft Policy Version from the finding', async () => {
-    const received: string[] = [];
+    const received: { findingKey: string; effect: string }[] = [];
     const app = buildApp(makeModule(), {
-      createPolicyDraftFromFinding: (findingKey) => {
-        received.push(findingKey);
+      createPolicyDraftFromFinding: (findingKey, effect) => {
+        received.push({ findingKey, effect });
         return Promise.resolve(ok(sampleDraft()));
       },
     });
 
     const res = await app.request(
       `/api/v1/conformance-findings/${FINDING_KEY}/policy-drafts`,
-      authed({ method: 'POST' }),
+      authed({
+        method: 'POST',
+        body: JSON.stringify({ effect: 'ask' }),
+      }),
     );
 
     expect(res.status).toBe(201);
     expect(PolicyVersionResponseSchema.parse(await res.json()).status).toBe('draft');
-    expect(received).toEqual([FINDING_KEY]);
+    expect(received).toEqual([{ findingKey: FINDING_KEY, effect: 'ask' }]);
   });
 
   test('maps draft_exists to 409', async () => {
@@ -191,7 +194,10 @@ describe('POST /api/v1/conformance-findings/:id/policy-drafts', () => {
 
     const res = await app.request(
       `/api/v1/conformance-findings/${FINDING_KEY}/policy-drafts`,
-      authed({ method: 'POST' }),
+      authed({
+        method: 'POST',
+        body: JSON.stringify({ effect: 'ask' }),
+      }),
     );
 
     expect(res.status).toBe(409);
@@ -214,10 +220,42 @@ describe('POST /api/v1/conformance-findings/:id/policy-drafts', () => {
 
     const res = await app.request(
       `/api/v1/conformance-findings/${FINDING_KEY}/policy-drafts`,
-      authed({ method: 'POST' }),
+      authed({
+        method: 'POST',
+        body: JSON.stringify({ effect: 'ask' }),
+      }),
     );
 
     expect(res.status).toBe(404);
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('replay.finding_not_found');
+  });
+
+  test('maps finding_effect_not_allowed to 422', async () => {
+    const app = buildApp(makeModule(), {
+      createPolicyDraftFromFinding: () =>
+        Promise.resolve(
+          err({
+            code: 'replay.finding_effect_not_allowed',
+            message:
+              'a violation is a target for fixing the runtime configuration, not for relaxing the policy',
+            isRetryable: false,
+            details: null,
+            cause: null,
+          }),
+        ),
+    });
+
+    const res = await app.request(
+      `/api/v1/conformance-findings/${FINDING_KEY}/policy-drafts`,
+      authed({
+        method: 'POST',
+        body: JSON.stringify({ effect: 'allow' }),
+      }),
+    );
+
+    expect(res.status).toBe(422);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(
+      'replay.finding_effect_not_allowed',
+    );
   });
 });

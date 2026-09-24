@@ -5,6 +5,7 @@ import {
   ChangeReviewResponseSchema,
   ConformanceFindingResponseSchema,
   CreateDecisionRequestSchema,
+  CreatePolicyDraftFromFindingRequestSchema,
   CreateReplayRunRequestSchema,
   CreateRuntimeObservationsRequestSchema,
   ErrorEnvelopeSchema,
@@ -226,5 +227,12 @@ describe('contracts DTO round-trip', () => {
       sampleActionKeys: [HASH],
     });
     expect([parsed.status, parsed.note]).toEqual(['open', '']);
+  });
+
+  test('a policy draft from a finding requires an Effect', () => {
+    expect(CreatePolicyDraftFromFindingRequestSchema.parse({ effect: 'ask' })).toEqual({
+      effect: 'ask',
+    });
+    expect(CreatePolicyDraftFromFindingRequestSchema.safeParse({}).success).toBe(false);
   });
 });

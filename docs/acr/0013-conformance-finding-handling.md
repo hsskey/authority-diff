@@ -21,16 +21,20 @@ The `{id}` in V1 is `findingKey` (sha256), matching Action Key and Group Key rat
   Missing values on a stored row parse as `open` and `""`.
 - `PUT /conformance-findings/{id}` takes `{ status: "acknowledged", note }` and is idempotent.
   `{id}` is the `findingKey` of a finding on that latest run. Unknown or malformed keys are `replay.finding_not_found` (404).
-- `POST /conformance-findings/{id}/policy-drafts` creates a new draft Policy Version from the run's candidate, then adds one Rule whose match is that finding's Capability and Zone.
-  The Rule's Effect follows observed runtime: `over_asked` → `ask`, `under_asked` and `violation` → `allow`.
+- `POST /conformance-findings/{id}/policy-drafts` takes `{ effect }` with no default and creates a new draft Policy Version from the run's candidate, then adds one Rule whose match is that finding's Capability and Zone.
+  Allowed Effect by kind: `over_asked` → `ask` or `deny`; `under_asked` → `allow`, `ask`, or `deny`; `violation` → `ask` or `deny`.
+  `violation` with `allow` is `replay.finding_effect_not_allowed` (422): a violation is a target for fixing the runtime configuration, not for relaxing the policy.
+  An `under_asked` draft with `allow` is widening; Change Review still requires a Verdict.
   An open draft still yields `policy.draft_exists` (409).
+  The Rule rationale is `review candidate created from finding {findingKey}; adoption is decided in change review.`
 - Acknowledgement lives in `replay`. Draft-from-finding lives in `review`, which already depends on replay and policy.
 
 ## Alternatives
 
 - A `cfnd_` ULID as `{id}`: V1 identifies grouped replay results by content hash (`findingKey`, `groupKey`, `actionKey`).
 - Copying acknowledgement onto a later run with the same `findingKey`: findings remain per run; a new run starts `open`.
-- Editing the existing matching Rule instead of appending: evaluation is most-restrictive, so a new Rule is a draft the Principal then edits. Tightening (`over_asked` → `ask`) takes effect immediately; loosening still needs the existing Rule changed.
+- Mapping Effect from finding kind automatically: the Principal names Effect on the request.
+- Editing the existing matching Rule instead of appending: evaluation is most-restrictive, so a new Rule is a draft the Principal then edits. Tightening (`ask` or `deny` on an `over_asked` finding) takes effect immediately; an `allow` Rule on a finding that already matches `ask` still needs the existing Rule changed.
 
 ## Consequences
 

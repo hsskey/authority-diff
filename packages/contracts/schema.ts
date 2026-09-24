@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
+import { EffectSchema, IsoTimestampSchema, Sha256Schema } from '@authority/kernel';
 import { AnalyzabilitySchema, CapabilitySchema, RuntimeSchema } from '@authority/action/schema';
 import {
   ActivityOverviewSchema,
@@ -361,6 +361,14 @@ export const AcknowledgeConformanceFindingRequestSchema = z.object({
 });
 export type AcknowledgeConformanceFindingRequest = z.infer<
   typeof AcknowledgeConformanceFindingRequestSchema
+>;
+
+// POST /conformance-findings/{id}/policy-drafts. `effect` is required.
+export const CreatePolicyDraftFromFindingRequestSchema = z.object({
+  effect: EffectSchema,
+});
+export type CreatePolicyDraftFromFindingRequest = z.infer<
+  typeof CreatePolicyDraftFromFindingRequestSchema
 >;
 
 export const ListConformanceFindingsResponseSchema = z.object({

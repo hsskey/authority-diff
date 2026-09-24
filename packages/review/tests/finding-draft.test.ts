@@ -171,7 +171,7 @@ describe('createPolicyDraftFromFinding', () => {
       },
     });
 
-    const result = await module.createPolicyDraftFromFinding(FINDING_KEY);
+    const result = await module.createPolicyDraftFromFinding(FINDING_KEY, 'ask');
     if (!result.ok) {
       throw new Error(result.error.code);
     }
@@ -185,6 +185,7 @@ describe('createPolicyDraftFromFinding', () => {
         reversibility: null,
         analyzability: null,
       },
+      rationale: `review candidate created from finding ${FINDING_KEY}; adoption is decided in change review.`,
     });
     expect(result.value.document.rules).toHaveLength(DEFAULT_POLICY_DOCUMENT.rules.length + 1);
   });
@@ -224,7 +225,7 @@ describe('createPolicyDraftFromFinding', () => {
       },
     });
 
-    const result = await module.createPolicyDraftFromFinding(FINDING_KEY);
+    const result = await module.createPolicyDraftFromFinding(FINDING_KEY, 'ask');
     if (!result.ok) {
       throw new Error(result.error.code);
     }
@@ -234,7 +235,7 @@ describe('createPolicyDraftFromFinding', () => {
 
   test.each([
     ['under_asked', 'allow'],
-    ['violation', 'allow'],
+    ['violation', 'ask'],
   ] as const)('a %s finding drafts an %s Rule', async (kind, effect) => {
     const finding = sampleFinding({ kind });
     const copied = sampleVersion({
@@ -262,12 +263,36 @@ describe('createPolicyDraftFromFinding', () => {
       },
     });
 
-    const result = await module.createPolicyDraftFromFinding(FINDING_KEY);
+    const result = await module.createPolicyDraftFromFinding(FINDING_KEY, effect);
     if (!result.ok) {
       throw new Error(result.error.code);
     }
 
     expect(result.value.document.rules[0]?.effect).toBe(effect);
+  });
+
+  test('rejects violation with allow', async () => {
+    const module = makeModule({
+      replay: {
+        getConformanceFinding: () =>
+          Promise.resolve(
+            ok({
+              finding: sampleFinding({ kind: 'violation' }),
+              policyVersionId: VERSION_ID,
+            }),
+          ),
+      },
+    });
+
+    const result = await module.createPolicyDraftFromFinding(FINDING_KEY, 'allow');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('replay.finding_effect_not_allowed');
+      expect(result.error.message).toBe(
+        'a violation is a target for fixing the runtime configuration, not for relaxing the policy',
+      );
+    }
   });
 
   test('passes through finding_not_found and draft_exists', async () => {
@@ -313,8 +338,8 @@ describe('createPolicyDraftFromFinding', () => {
       },
     });
 
-    const notFound = await missing.createPolicyDraftFromFinding(FINDING_KEY);
-    const exists = await conflict.createPolicyDraftFromFinding(FINDING_KEY);
+    const notFound = await missing.createPolicyDraftFromFinding(FINDING_KEY, 'ask');
+    const exists = await conflict.createPolicyDraftFromFinding(FINDING_KEY, 'ask');
 
     expect(notFound.ok).toBe(false);
     if (!notFound.ok) {

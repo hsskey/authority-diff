@@ -10,6 +10,7 @@ import {
   ConformanceFindingResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
+  CreatePolicyDraftFromFindingRequestSchema,
   CreatePolicyRequestSchema,
   CreatePolicyResponseSchema,
   CreatePolicyVersionRequestSchema,
@@ -148,8 +149,9 @@ export const routes = {
     AcknowledgeConformanceFindingRequestSchema,
     ConformanceFindingResponseSchema,
   ),
-  createPolicyDraftFromFinding: postNoBody(
+  createPolicyDraftFromFinding: post(
     `${API}/conformance-findings/:id/policy-drafts`,
+    CreatePolicyDraftFromFindingRequestSchema,
     PolicyVersionResponseSchema,
   ),
 

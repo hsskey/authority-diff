@@ -24,6 +24,7 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'policy.document_invalid': 422,
   'platform.database_unavailable': 503,
   'replay.finding_not_found': 404,
+  'replay.finding_effect_not_allowed': 422,
   'internal.unexpected': 500,
 };
 

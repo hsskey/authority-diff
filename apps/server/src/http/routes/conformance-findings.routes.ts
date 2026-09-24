@@ -3,6 +3,7 @@ import { Sha256Schema } from '@authority/kernel';
 import {
   AcknowledgeConformanceFindingRequestSchema,
   ConformanceFindingResponseSchema,
+  CreatePolicyDraftFromFindingRequestSchema,
   ListConformanceFindingsResponseSchema,
   PolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
@@ -54,7 +55,12 @@ export function registerConformanceFindingDraftRoutes(
     if (!id.success) {
       return respondError(c, findingNotFound());
     }
-    const result = await review.createPolicyDraftFromFinding(id.data);
+    const body: unknown = await c.req.json().catch(() => null);
+    const parsed = CreatePolicyDraftFromFindingRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return respondError(c, validationInvalidRequest({ issues: parsed.error.issues }));
+    }
+    const result = await review.createPolicyDraftFromFinding(id.data, parsed.data.effect);
     if (!result.ok) {
       return respondError(c, result.error);
     }
