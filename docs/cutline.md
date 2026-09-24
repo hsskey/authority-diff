@@ -649,8 +649,8 @@ Authority Diff는 Agent 권한 정책 변경을 과거 작업 기록에 대입�
 
 7b. scripts/prove-lint.ts 와 `pnpm lint:prove`. 같은 방식으로 위 lint 규칙 19건 각각이 기대한 Oxlint 규칙으로 실패하는지 증명한다.
 
-8. root script: typecheck, lint, format, format:check, lint:prove, lint:boundaries, lint:boundaries:prove, test,
-   check(= typecheck + lint + format:check + lint:boundaries + lint:prove + test).
+8. root script: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, test,
+   check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + test).
 
 9. CI: pnpm install --frozen-lockfile, pnpm check, pnpm lint:boundaries:prove.
 
