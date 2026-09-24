@@ -71,7 +71,9 @@ async function createProvider(provider: 'fixture' | 'jev'): Promise<DecisionProv
   if (provider === 'jev') {
     return createJevDecisionProvider();
   }
-  const fixturePath = fileURLToPath(new URL('./fixtures/recorded-responses.json', import.meta.url));
+  const fixturePath = fileURLToPath(
+    new URL('./tests/fixtures/recorded-responses.json', import.meta.url),
+  );
   const parsed = z.array(RecordedResponseSchema).parse(await readJson(fixturePath));
   const responses: readonly RecordedResponse[] = parsed;
   return createFixtureDecisionProvider(responses);
