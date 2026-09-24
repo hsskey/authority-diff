@@ -1,10 +1,12 @@
+import { Panel } from './Panel.tsx';
+
 export function EmptyState({ title, message }: { title: string; message: string }) {
   return (
-    <div className="panel" role="status">
-      <p className="state-message">
+    <Panel role="status">
+      <p className="m-0">
         <strong>{title}</strong>
       </p>
-      <p className="state-message">{message}</p>
-    </div>
+      <p className="m-0">{message}</p>
+    </Panel>
   );
 }

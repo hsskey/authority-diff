@@ -10,6 +10,10 @@ import { callRoute, describeApiError } from '../shared/api-client.ts';
 import { EmptyState } from '../shared/components/EmptyState.tsx';
 import { ErrorState } from '../shared/components/ErrorState.tsx';
 import { LoadingState } from '../shared/components/LoadingState.tsx';
+import { PageTitle } from '../shared/components/PageTitle.tsx';
+import { Panel } from '../shared/components/Panel.tsx';
+import { SectionTitle } from '../shared/components/SectionTitle.tsx';
+import { Stack } from '../shared/components/Stack.tsx';
 import { usePageTitle } from '../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/conformance')({
@@ -31,7 +35,7 @@ function ConformanceFindingListPage() {
 
   return (
     <section>
-      <h1 className="page-title">적합성</h1>
+      <PageTitle>적합성</PageTitle>
       {findingsQuery.isPending ? <LoadingState label="Conformance Finding을 불러오는 중" /> : null}
       {findingsQuery.isError ? (
         <ErrorState
@@ -58,32 +62,30 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
     rows.filter((row) => UNGUARDED_PERMISSION_MODES.includes(row.permissionMode)),
   );
   return (
-    <section className="stack" aria-labelledby="permission-mode-title">
-      <h2 className="section-title" id="permission-mode-title">
-        permission mode별 Action
-      </h2>
+    <Stack as="section" aria-labelledby="permission-mode-title">
+      <SectionTitle id="permission-mode-title">permission mode별 Action</SectionTitle>
       {rows.length === 0 ? (
         <p className="hint">이 run에는 permission mode 집계가 없습니다.</p>
       ) : (
         <>
-          <dl className="meta-grid panel">
+          <Panel as="dl" className="meta-grid">
             <div>
               <dt>guard 없이 실행될 수 있는 Action</dt>
               <dd>
                 {unguarded}건 / {total}건 ({UNGUARDED_PERMISSION_MODES.join(', ')})
               </dd>
             </div>
-          </dl>
-          <div className="table-scroll">
+          </Panel>
+          <div className="overflow-x-auto">
             <table className="data-table">
               <caption>permission mode {rows.length}개, mode가 없는 관측은 unknown</caption>
               <thead>
                 <tr>
                   <th scope="col">permission mode</th>
-                  <th scope="col" className="num">
+                  <th scope="col" className="text-right tabular-nums">
                     Action
                   </th>
-                  <th scope="col" className="num">
+                  <th scope="col" className="text-right tabular-nums">
                     finding Action
                   </th>
                 </tr>
@@ -92,8 +94,8 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
                 {rows.map((row) => (
                   <tr key={row.permissionMode}>
                     <td>{row.permissionMode}</td>
-                    <td className="num">{row.actionCount}</td>
-                    <td className="num">{row.findingCount}</td>
+                    <td className="text-right tabular-nums">{row.actionCount}</td>
+                    <td className="text-right tabular-nums">{row.findingCount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -101,7 +103,7 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
           </div>
         </>
       )}
-    </section>
+    </Stack>
   );
 }
 
@@ -116,8 +118,8 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
   }
 
   return (
-    <div className="stack">
-      <dl className="meta-grid panel">
+    <Stack>
+      <Panel as="dl" className="meta-grid">
         <div>
           <dt>Policy Version</dt>
           <dd className="mono">{findings.run.policyVersionId}</dd>
@@ -132,7 +134,7 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
           <dt>Replay Run</dt>
           <dd className="mono">{findings.run.replayRunId}</dd>
         </div>
-      </dl>
+      </Panel>
 
       <PermissionModeBreakdown rows={findings.run.byPermissionMode} />
 
@@ -142,7 +144,7 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
           message="이 run에서 관측된 모든 Action이 Policy Version과 일치했습니다."
         />
       ) : (
-        <div className="table-scroll">
+        <div className="overflow-x-auto">
           <table className="data-table">
             <caption>finding {findings.items.length}건, 시각은 UTC</caption>
             <thead>
@@ -151,7 +153,7 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
                 <th scope="col">Capability</th>
                 <th scope="col">Zone</th>
                 <th scope="col">Program</th>
-                <th scope="col" className="num">
+                <th scope="col" className="text-right tabular-nums">
                   Action
                 </th>
                 <th scope="col">최초</th>
@@ -165,15 +167,15 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
                   <td>{finding.capability}</td>
                   <td>{finding.zone}</td>
                   <td>{finding.program ?? '-'}</td>
-                  <td className="num">{finding.actionCount}</td>
-                  <td className="nowrap">{minuteOf(finding.firstOccurredAt)}</td>
-                  <td className="nowrap">{minuteOf(finding.lastOccurredAt)}</td>
+                  <td className="text-right tabular-nums">{finding.actionCount}</td>
+                  <td className="whitespace-nowrap">{minuteOf(finding.firstOccurredAt)}</td>
+                  <td className="whitespace-nowrap">{minuteOf(finding.lastOccurredAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+    </Stack>
   );
 }
