@@ -54,7 +54,7 @@ interface Store {
 }
 
 const DOCUMENT = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   environment: {
     credentialPaths: ['~/.synthetic-credentials/**'],
     agentConfigPaths: [],
@@ -73,7 +73,24 @@ const DOCUMENT = {
         analyzability: null,
       },
       effect: 'deny',
+      mandateException: null,
       rationale: 'Reading credentials collapses every other boundary, so it is denied.',
+    },
+    {
+      ruleId: 'ask_external_disclosure',
+      match: {
+        capabilities: ['send', 'push'],
+        zones: ['public_remote', 'unknown_remote'],
+        reversibility: null,
+        analyzability: null,
+      },
+      effect: 'ask',
+      mandateException: {
+        clause:
+          'the Mandate explicitly names the destination and explicitly asks for this send or push',
+      },
+      rationale:
+        'External disclosure is irreversible and an open-ended instruction does not authorize it.',
     },
   ],
 };
@@ -364,6 +381,7 @@ function adoptionSample(): unknown {
         candidateDecision: {
           effect: 'deny',
           decidingOperationIndex: 0,
+          isMandateDependent: false,
           operations: [
             {
               operationIndex: 0,
@@ -372,6 +390,7 @@ function adoptionSample(): unknown {
               matchedRuleIds: ['deny_credentials_access'],
               decidingRuleId: 'deny_credentials_access',
               effect: 'deny',
+              isMandateDependent: false,
             },
           ],
         },
@@ -619,6 +638,11 @@ test('an organization goes from no policy to an accepted first policy, a change 
   await page.getByRole('button', { name: '첫 조직 정책 만들기' }).click();
   await expect(page.getByRole('heading', { name: 'Policy Version', level: 1 })).toBeVisible();
   await expect(page.getByText('draft', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      'Mandate Exception: the Mandate explicitly names the destination and explicitly asks for this send or push',
+    ),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: '최초 도입 검토 만들기' })).toBeVisible();
 
   await page.getByRole('button', { name: '최초 도입 검토 만들기' }).click();

@@ -26,13 +26,28 @@ export const RuleMatchSchema = z.object({
 });
 export type RuleMatch = z.infer<typeof RuleMatchSchema>;
 
-export const PolicyRuleSchema = z.object({
+export const PolicyRuleV1Schema = z.object({
   ruleId: z.string().regex(/^[a-z][a-z0-9_]{2,48}$/),
   match: RuleMatchSchema,
   effect: EffectSchema,
   rationale: z.string().min(10).max(500),
 });
-export type PolicyRule = z.infer<typeof PolicyRuleSchema>;
+export type PolicyRuleV1 = z.infer<typeof PolicyRuleV1Schema>;
+
+export const MandateExceptionSchema = z.object({
+  clause: z.string().min(10).max(300),
+});
+export type MandateException = z.infer<typeof MandateExceptionSchema>;
+
+export const PolicyRuleV2Schema = PolicyRuleV1Schema.extend({
+  mandateException: MandateExceptionSchema.nullable(),
+}).refine((rule) => rule.mandateException === null || rule.effect === 'ask', {
+  message: 'mandateException is allowed only when effect is ask',
+  path: ['mandateException'],
+});
+export type PolicyRuleV2 = z.infer<typeof PolicyRuleV2Schema>;
+
+export type PolicyRule = PolicyRuleV1 | PolicyRuleV2;
 
 export const EnvironmentProfileSchema = z.object({
   credentialPaths: z.array(z.string()),
@@ -44,13 +59,31 @@ export const EnvironmentProfileSchema = z.object({
 });
 export type EnvironmentProfile = z.infer<typeof EnvironmentProfileSchema>;
 
-export const PolicyDocumentSchema = z.object({
+/** A schemaVersion 1 document has no Mandate Exception; stored ones are never rewritten, only upgraded into a new draft. */
+export const PolicyDocumentV1Schema = z.object({
   schemaVersion: z.literal(1),
   environment: EnvironmentProfileSchema,
-  rules: z.array(PolicyRuleSchema).max(200),
+  rules: z.array(PolicyRuleV1Schema).max(200),
 });
+export type PolicyDocumentV1 = z.infer<typeof PolicyDocumentV1Schema>;
+
+export const PolicyDocumentV2Schema = z.object({
+  schemaVersion: z.literal(2),
+  environment: EnvironmentProfileSchema,
+  rules: z.array(PolicyRuleV2Schema).max(200),
+});
+export type PolicyDocumentV2 = z.infer<typeof PolicyDocumentV2Schema>;
+
+export const PolicyDocumentSchema = z.discriminatedUnion('schemaVersion', [
+  PolicyDocumentV1Schema,
+  PolicyDocumentV2Schema,
+]);
 export type PolicyDocument = z.infer<typeof PolicyDocumentSchema>;
 
+/**
+ * `isMandateDependent` is recorded on the Decision only: it never enters
+ * `resultHash`, a Diff Group, an Adoption Group, or the Gate.
+ */
 export const OperationDecisionSchema = z.object({
   operationIndex: z.number().int().nonnegative(),
   zone: ZoneSchema,
@@ -58,12 +91,14 @@ export const OperationDecisionSchema = z.object({
   matchedRuleIds: z.array(z.string()),
   decidingRuleId: z.string().nullable(),
   effect: EffectSchema,
+  isMandateDependent: z.boolean(),
 });
 export type OperationDecision = z.infer<typeof OperationDecisionSchema>;
 
 export const DecisionSchema = z.object({
   effect: EffectSchema,
   decidingOperationIndex: z.number().int().nonnegative(),
+  isMandateDependent: z.boolean(),
   operations: z.array(OperationDecisionSchema).min(1),
 });
 export type Decision = z.infer<typeof DecisionSchema>;
@@ -113,7 +148,9 @@ export type ResolveZone = (operation: Operation, environment: EnvironmentProfile
  * Evaluates an Action independently of Rule order.
  *
  * Effects use `deny > ask > allow`; no matching Rule yields `ask`. An empty
- * Operation list is excluded and yields null.
+ * Operation list is excluded and yields null. A Mandate Exception is not
+ * evaluated: an Operation is Mandate-dependent when its Effect is `ask` and
+ * every matched `ask` Rule has one, and an Action when every `ask` Operation is.
  *
  * A Rule matches only when its capabilities, zones, reversibility, and
  * analyzability conditions all match. `*` and null mean no condition.

@@ -11,10 +11,12 @@ import {
   createPolicyRepository,
   DEFAULT_POLICY_DOCUMENT,
   EMPTY_POLICY_DOCUMENT,
+  upgradePolicyDocument,
   type PolicyRepository,
 } from '../index.ts';
-import { PolicyVersionIdSchema } from '../schema.ts';
+import { PolicyDocumentSchema, PolicyVersionIdSchema } from '../schema.ts';
 import { expectErr, expectOk } from './support/result.ts';
+import baselinePolicyFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
 
 // Matches docker-compose.test.yml, run via `pnpm test:int`.
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
@@ -22,6 +24,7 @@ const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_te
 // Each test uses a fresh unique policy name so the shared database needs no
 // truncation between tests; rows are isolated by their generated policy id.
 const names = createUlidGenerator();
+const SCHEMA_VERSION_1_DOCUMENT = PolicyDocumentSchema.parse(baselinePolicyFixture);
 const uniqueName = (): string => names.next('policy');
 
 let database: Database;
@@ -153,6 +156,23 @@ describe('policy store', () => {
     expect(draft.baseVersionId).toBe(initialVersion.id);
     expect(draft.document).toEqual(initialVersion.document);
     expect(draft.contentHash).toBe(initialVersion.contentHash);
+  });
+
+  test('createDraftVersion upgrades a schemaVersion 1 base into a new draft and leaves the base as stored', async () => {
+    const { policy, version } = expectOk(
+      await repository.seedAcceptedPolicy({
+        name: uniqueName(),
+        document: SCHEMA_VERSION_1_DOCUMENT,
+      }),
+    );
+
+    const draft = expectOk(await repository.createDraftVersion(policy.id, version.id));
+    const base = expectOk(await repository.getVersion(version.id));
+
+    expect({ draft: draft.document, base: [base.document, base.contentHash] }).toEqual({
+      draft: upgradePolicyDocument(SCHEMA_VERSION_1_DOCUMENT),
+      base: [SCHEMA_VERSION_1_DOCUMENT, version.contentHash],
+    });
   });
 
   test('listVersions returns the versions in version order and pages by versionNumber', async () => {

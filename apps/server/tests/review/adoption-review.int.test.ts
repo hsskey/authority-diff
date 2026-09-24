@@ -75,6 +75,7 @@ const INITIAL_POLICY: PolicyDocument = {
         analyzability: null,
       },
       effect: 'deny',
+      mandateException: null,
       rationale: 'test fixture: credentials reads are denied so the preview has a deny group',
     },
   ],

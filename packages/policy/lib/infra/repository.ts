@@ -17,6 +17,7 @@ import {
 import { DEFAULT_POLICY_DOCUMENT } from '../domain/default-policy-document.ts';
 import { EMPTY_POLICY_DOCUMENT } from '../domain/empty-policy-document.ts';
 import { nextStatus, type PolicyTransition } from '../domain/transition.ts';
+import { upgradePolicyDocument } from '../domain/upgrade-policy-document.ts';
 import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
 import { policies, policyActivations, policyVersions } from './tables.ts';
 
@@ -64,6 +65,7 @@ export interface PolicyRepository {
     limit: number,
   ): Promise<Result<PolicyVersionPage, AppError>>;
   getVersion(id: PolicyVersionId): Promise<Result<PolicyVersion, AppError>>;
+  /** A new draft from the base version's document upgraded to schemaVersion 2; the base version is never rewritten. */
   createDraftVersion(
     policyId: PolicyId,
     baseVersionId: PolicyVersionId,
@@ -285,6 +287,7 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
             return err(versionNotFound(baseVersionId));
           }
           const base = toVersion(baseRow);
+          const document = upgradePolicyDocument(base.document);
 
           const [openDraft] = await tx
             .select({ id: policyVersions.id })
@@ -313,8 +316,8 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
               policyId,
               versionNumber: (highest?.value ?? 0) + 1,
               status: 'draft',
-              document: base.document,
-              contentHash: base.contentHash,
+              document,
+              contentHash: contentHash(document),
               baseVersionId,
               createdAt: now,
               updatedAt: now,
