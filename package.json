@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks && git config blame.ignoreRevsFile .git-blame-ignore-revs",
+    "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; git config core.hooksPath .githooks && git config blame.ignoreRevsFile .git-blame-ignore-revs",
     "typecheck": "turbo run typecheck && tsc -p scripts/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
     "lint": "oxlint --type-aware",
     "lint:prove": "tsx scripts/prove-lint.ts",

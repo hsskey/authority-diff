@@ -371,6 +371,10 @@ function conformance(): unknown {
       windowFrom: TS,
       windowTo: TS,
       unpairedPermissionRequests: 0,
+      byPermissionMode: [
+        { permissionMode: 'bypassPermissions', actionCount: 12, findingCount: 1 },
+        { permissionMode: 'default', actionCount: 318, findingCount: 0 },
+      ],
     },
     items: [
       {
@@ -494,7 +498,7 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     name: 'change-review',
     path: `/change-reviews/${CHANGE_REVIEW_ID}`,
     ready: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+      await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Widening group (1)' })).toBeVisible();
     },
   },

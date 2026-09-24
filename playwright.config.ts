@@ -8,8 +8,8 @@ const baseURL = `http://localhost:${PORT}`;
 
 // Visual screenshots pin rasterization to fonts shipped in the version-matched
 // Playwright image (mcr.microsoft.com/playwright:v1.63.0-noble): Liberation Sans
-// and Unifont. Capture and compare inside that image. The visual project is not
-// part of `pnpm test:e2e` and has no CI job until baselines exist.
+// and Unifont. Capture and compare inside that image, on linux/amd64 like the
+// `e2e-visual` CI job. The visual project is not part of `pnpm test:e2e`.
 export default defineConfig({
   testDir: 'apps/web/tests/e2e',
   fullyParallel: true,
