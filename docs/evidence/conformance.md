@@ -1,16 +1,16 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; conformance resultHash `7710c06c…8689`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.4; measured 2026-09-24; conformance resultHash `269a53d2…dd23`
 <!-- evidence-numbers
 snapshot.sessions: 1,036
 snapshot.actions: 34,940
 snapshot.duplicates: 196
-conformance.resultHash: 7710c06c…8689
+conformance.resultHash: 269a53d2…dd23
 -->
 
 # Conformance (policy A)
 
 Conformance replay compares the accepted policy A against observed runtime Disposition over a fixed window.
 <!-- remeasure:conformance-intro -->
-Every number in the main sections is labelled **classifier 0.2.3, policy A** (measured 2026-09-24); the earlier 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
+Every number in the main sections is labelled **classifier 0.2.4, policy A** (measured 2026-09-24); the earlier 0.2.3, 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
 <!-- /remeasure:conformance-intro -->
 No repository names, host paths, or raw command text appear below.
 
@@ -21,7 +21,7 @@ No repository names, host paths, or raw command text appear below.
 - Window: 2026-09-22T12:00:00.000Z .. 2026-09-23T05:10:14.000Z, the same as the earlier runs.
 - Import: 1,036 sessions, 34,940 Actions accepted, 196 duplicates, 0 failed (the NUL fix is on this build, so the 7 sessions that failed in 0.2.1 imported; their 904 Actions are outside the window).
 - Spool: copies of the hook observation files flushed from an isolated scratch home; the live file was cut at the same instant as the first run so the observation set is identical (3,789 lines: pre_tool_use 3,666, session_end 121, permission_request 2). Only the copies were renamed.
-- The run was requested through the API; V1 has no screen that starts a conformance run. Completed; classifierVersion 0.2.3; resultHash `7710c06cadf9148e3a4a0d261bd42160770311cec7ac3b4afff4a6c83ac28689`.
+- The run was requested through the API; V1 has no screen that starts a conformance run. Completed; classifierVersion 0.2.4; resultHash `269a53d23b5cdea6a95aafbfc0d4b828ea0c21ae5d1ced8afdf85b71f122dd23`.
 <!-- /remeasure:conformance-method -->
 
 ## Findings by kind
@@ -30,13 +30,13 @@ No repository names, host paths, or raw command text appear below.
 | kind | groups | Actions |
 | --- | ---: | ---: |
 | violation | 3 | 6 |
-| under_asked | 89 | 1,369 |
+| under_asked | 84 | 1,069 |
 | over_asked | 0 | 0 |
 
-Stats: total 4,440 window Actions, evaluated 3,189, excluded 1,251, changed 1,379.
-Transitions (observed Disposition Effect → candidate Effect): allow→allow 1,810, allow→ask 1,369, allow→deny 3, deny→ask 7, all others 0.
+Stats: total 4,440 window Actions, evaluated 3,189, excluded 1,251, changed 1,079.
+Transitions (observed Disposition Effect → candidate Effect): allow→allow 2,110, allow→ask 1,069, allow→deny 3, deny→ask 7, all others 0.
 <!-- /remeasure:conformance-findings -->
-The violations are the same 6 Actions as in every earlier run; the under_asked volume changed with classifier 0.2.3 (see the change note under "Previous version").
+The violations are the same 6 Actions as in every earlier run; the under_asked volume changed with the classifier (see the change note under "Previous version").
 
 ## Violations (6 Actions)
 
@@ -48,6 +48,103 @@ See `conformance-limitations.md` for the first-run narrative and hook-outage con
 ## under_asked
 
 <!-- remeasure:conformance-under-asked -->
+| zone | Actions |
+| --- | ---: |
+| host | 963 |
+| public_remote | 43 |
+| workspace | 20 |
+| protected | 19 |
+| unknown_remote | 13 |
+| agent_config | 11 |
+
+| capability | Actions |
+| --- | ---: |
+| execute | 413 |
+| read | 397 |
+| write | 158 |
+| fetch | 70 |
+| delete | 23 |
+| send | 4 |
+| rewrite | 3 |
+| push | 1 |
+<!-- /remeasure:conformance-under-asked -->
+
+Top five under_asked groups account for 422 / 1,069 Actions (39%): `execute · host` via StructuredOutput (111 Actions, 88 sessions), `execute · host` via one local tool (98, 8), `read · host` via cd (93, 14), `read · host` via cat (60, 18), `read · host` via ls (60, 25).
+
+### Why host under_asked stays at 963
+
+Both the default template and policy A ask on read, write, and execute outside the workspace and on `execute` whose effect could not be determined, and the `workspace` Zone is the Action's workspace root, not the remote lists.
+Paths under the Session's own `~` workspace root now count as `workspace`, and a script named by a path inside the workspace is an `execute` that the policy allows, so what stays in `host` is `execute` of local tools and of scripts outside the workspace (413 Actions) and reads, writes, and deletes across sibling worktrees and other directories outside the workspace root (550); `docs/evidence/replay-limitations.md` records the path comparison that keeps those Operations in `host`.
+An organization that needs this volume to drop must narrow the runtime or widen the spec; that is an environment-profile or Zone-rule change, not a re-run artifact.
+
+## over_asked (0)
+
+`over_asked` remains structurally 0.
+The PermissionRequest hook input carries no `toolUseId`, so no `permission_request` observation can pair with an Action (`conformance-limitations.md`, ACR-0007).
+
+## Disposition (window Actions)
+
+| Disposition | count |
+| --- | ---: |
+| auto_executed | 3,202 |
+| executed_prompt_unknown | 1,231 |
+| blocked | 7 |
+| prompted | 0 |
+| hook_approved | 0 |
+
+Identical to the earlier runs. Sidechain Actions in the window (69) remain executed_prompt_unknown.
+
+## Previous version: classifier 0.2.3 (not re-run)
+
+The section below is the conformance run as measured on classifier 0.2.3, policy A, on 2026-09-24 and is kept as the record of that measurement.
+Its `resultHash` is not comparable with the 0.2.4 value above.
+No repository names, host paths, or raw command text appear below.
+
+### Change from classifier 0.2.3
+
+| measure | 0.2.3 | 0.2.4 |
+| --- | ---: | ---: |
+| violation groups / Actions | 3 / 6 | 3 / 6 |
+| under_asked groups / Actions | 89 / 1,369 | 84 / 1,069 |
+| under_asked in `host` | 1,269 | 963 |
+| under_asked `execute` | 770 | 413 |
+| allow→allow | 1,810 | 2,110 |
+| changed Actions | 1,379 | 1,079 |
+
+The window, the observations, and the Dispositions are the same; only the classifier changed.
+Classifier 0.2.4 classifies a command named by a path, and a shell given a script file, as `execute` on that file with analyzability `partial`, so `allow_workspace_execute` allows a workspace-internal script without reading it (`docs/evidence/classifier-hardening-4.md`).
+under_asked falls by 300 Actions and allow→allow rises by the same 300; 263 of the 289 Actions of the local orchestration script that led the list are among them.
+The runtime ran these Actions without a prompt; the Policy now allows them too because the classifier recognizes more commands, not because they were shown to be safe, so this is an auto-allow increase, not a conservative recovery.
+
+### Method
+
+- Candidate is policy A from the v2 environment profile, adopted as version 1 through the first-policy journey (`docs/evidence/adoption-preview.md`) on a fresh volume.
+- Window: 2026-09-22T12:00:00.000Z .. 2026-09-23T05:10:14.000Z, the same as the earlier runs.
+- Import: 1,036 sessions, 34,940 Actions accepted, 196 duplicates, 0 failed (the NUL fix is on this build, so the 7 sessions that failed in 0.2.1 imported; their 904 Actions are outside the window).
+- Spool: copies of the hook observation files flushed from an isolated scratch home; the live file was cut at the same instant as the first run so the observation set is identical (3,789 lines: pre_tool_use 3,666, session_end 121, permission_request 2). Only the copies were renamed.
+- The run was requested through the API; V1 has no screen that starts a conformance run. Completed; classifierVersion 0.2.3; resultHash `7710c06cadf9148e3a4a0d261bd42160770311cec7ac3b4afff4a6c83ac28689`.
+
+### Findings by kind
+
+| kind | groups | Actions |
+| --- | ---: | ---: |
+| violation | 3 | 6 |
+| under_asked | 89 | 1,369 |
+| over_asked | 0 | 0 |
+
+Stats: total 4,440 window Actions, evaluated 3,189, excluded 1,251, changed 1,379.
+Transitions (observed Disposition Effect → candidate Effect): allow→allow 1,810, allow→ask 1,369, allow→deny 3, deny→ask 7, all others 0.
+The violations are the same 6 Actions as in every earlier run; the under_asked volume changed with classifier 0.2.3 (see the change note under "Previous version").
+
+### Violations (6 Actions)
+
+- 3 credential-path reads via grep (1 Action) and ls (2 Actions).
+- 3 shared-remote rewrites via git (3 Actions in 2 sessions), all `--force-with-lease` pushes to the agent's own pull request feature branch.
+
+See `conformance-limitations.md` for the first-run narrative and hook-outage context.
+
+### under_asked
+
 | zone | Actions |
 | --- | ---: |
 | host | 1,269 |
@@ -67,22 +164,21 @@ See `conformance-limitations.md` for the first-run narrative and hook-outage con
 | send | 4 |
 | rewrite | 3 |
 | push | 1 |
-<!-- /remeasure:conformance-under-asked -->
 
 Top five under_asked groups account for 614 / 1,369 Actions (45%): `execute · host` via one local orchestration script (289 Actions, 3 sessions), `execute · host` via StructuredOutput (111, 88), `execute · host` via a second local tool (98, 8), `read · host` via cat (58, 18), `read · host` via ls (58, 25).
 
-### Why host under_asked stays at 1,269
+#### Why host under_asked stays at 1,269
 
 Both the default template and policy A ask on read, write, and execute outside the workspace and on `execute` whose effect could not be determined, and the `workspace` Zone is the Action's workspace root, not the remote lists.
 Paths under the Session's own `~` workspace root now count as `workspace`, so what stays in `host` is `execute` of local tools and scripts (770 Actions) and reads, writes, and deletes across sibling worktrees and other directories outside the workspace root (499); `docs/evidence/replay-limitations.md` records the path comparison that keeps those Operations in `host`.
 An organization that needs this volume to drop must narrow the runtime or widen the spec; that is an environment-profile or Zone-rule change, not a re-run artifact.
 
-## over_asked (0)
+### over_asked (0)
 
 `over_asked` remains structurally 0.
 The PermissionRequest hook input carries no `toolUseId`, so no `permission_request` observation can pair with an Action (`conformance-limitations.md`, ACR-0007).
 
-## Disposition (window Actions)
+### Disposition (window Actions)
 
 | Disposition | count |
 | --- | ---: |
