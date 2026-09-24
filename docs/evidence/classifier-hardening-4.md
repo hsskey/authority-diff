@@ -39,6 +39,11 @@ Operations: 177,690 (unchanged).
 3,060 Actions leave `none`.
 5,140 Operations leave `none`.
 
+Under policy A this move is an auto-allow increase from wider recognition, not a conservative recovery.
+A workspace-internal script is now `execute` on a workspace path at `partial`, so `allow_workspace_execute` allows it although the rule never reads the script and its effect stays unknown.
+Of the 3,060 Actions, 2,267 move from ask to allow (1,991 of them `execute · workspace`), the other 793 still ask, and no Action moves to a stricter Effect (`docs/evidence/adoption-preview.md`).
+Allowing workspace-internal script execution without reading the script is decided by the default template Rule `allow_workspace_execute`; if an organization narrows it to analyzability `full` only, those 1,991 Actions return to ask, so this shift is a Policy choice, not a classifier judgment.
+
 ### Moves by rule
 
 | rule | Operations | Actions | `none` Operations on 0.2.3 (estimate) |
@@ -66,7 +71,7 @@ The probe does not read classifier output, and its tests pass unchanged.
 ## Follow-up
 
 - A command name taken from a variable (`$G api ...`) still classifies as an empty unrecognized program (`docs/evidence/classifier-backlog.md`).
-- The Gate 2, adoption preview, and conformance documents were not re-run in this round.
+- The Gate 2, adoption preview, and conformance documents were re-run on 0.2.4 after this round (`docs/evidence/gate2-replay.md`, `docs/evidence/adoption-preview.md`, `docs/evidence/conformance.md`).
 
 ## Result
 

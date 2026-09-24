@@ -23,17 +23,18 @@ import → activity overview → first Policy (draft) → adoption preview → r
 ## Result of the recorded journey
 
 <!-- evidence-numbers
-classifier: 0.2.3
+classifier: 0.2.4
 snapshot.sessions: 1,036
 snapshot.actions: 34,940
 snapshot.evaluated: 34,490
-policy-a.allow: 15,242
-policy-a.ask: 19,228
+policy-a.allow: 17,509
+policy-a.ask: 16,961
 policy-a.deny: 20
 adoption.groups: 24
-bp-scene.actions: 7
+bp-scene.actions: 9
 -->
-Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.3 and the corrected environment profile (policy A).
+Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.4 and the corrected environment profile (policy A).
+Each figure follows the classifier version stamped on the first line of its evidence document; figures from earlier classifier versions stay only under that document's "Previous version" sections.
 Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
 
 ### Adoption preview (first Policy)
@@ -41,19 +42,20 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 <!-- remeasure:readme-adoption -->
 | evaluated Actions | allow | ask | deny | Adoption Groups |
 | ---: | ---: | ---: | ---: | --- |
-| 34,490 | 15,242 (44.2%) | 19,228 (55.7%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
+| 34,490 | 17,509 (50.8%) | 16,961 (49.2%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
 <!-- /remeasure:readme-adoption -->
 
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
+The allow share includes scripts named by a path inside the workspace, which `allow_workspace_execute` allows without reading them; that part is auto-allow from wider command recognition, not a sign the scripts are safe.
 That is what the Policy says about this corpus, reported as-is.
 Reviewing the whole preview took 24 Verdicts, one per Adoption Group.
-The fresh-volume re-run of the journey, scripted through the API and repeated in the browser, showed the same figures, and `verify-audit` found the Decision Record chain intact; the deny tile rounds to `0.1%` because tiles show one decimal, and the count 20 is exact.
+The fresh-volume re-run of the journey, scripted through the API, showed the same figures, and `verify-audit` found the Decision Record chain intact; on screen the deny tile rounds to `0.1%` because tiles show one decimal, and the count 20 is exact.
 
 ### Change Review (github.com/** scene)
 
 The core scene is fetches to other owners' repositories after `trustedRemotes` is widened with a host-wide GitHub pattern.
 
-That scene is **7 Actions** (3 `git` fetches from one repository, 4 `gh` fetches, one to each of four other repositories).
+That scene is **9 Actions** (5 `git` fetches from one repository, 4 `gh` fetches, one to each of four other repositories).
 Zone moves `unknown_remote` → `trusted_remote`. Effect moves ask → allow. Severity is critical.
 Named remotes used outside the Action workspace do not resolve a Remote Key, so they stay `unknown_remote` even under that pattern.
 
