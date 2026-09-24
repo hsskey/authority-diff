@@ -314,7 +314,7 @@ function ValidationResult({ result }: { result: ValidatePolicyVersionResponse })
         검증: {result.isValid ? '통과' : `문제 ${result.issues.length}건`}
       </SectionTitle>
       {result.issues.length > 0 ? (
-        <ul className="issue-list">
+        <ul className="issue-list list-disc">
           {result.issues.map((issue, index) => (
             <li key={`${issue.code}-${issue.ruleId ?? 'document'}-${index}`}>
               <span className="mono">{issue.ruleId ?? 'document'}</span> · {issue.code} ·{' '}

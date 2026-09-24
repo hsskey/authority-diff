@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { checkCssPolicy } from '../check-css-policy.ts';
 
-const allowedAppCss = `@import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/utilities" layer(utilities);
+const allowedAppCss = `@import "tailwindcss";
 
 @theme {
   --color-surface: #f6f7f9;
@@ -79,8 +78,7 @@ describe('checkCssPolicy', () => {
   it('rejects @layer utilities', () => {
     const result = checkCssPolicy({
       cssFiles: ['styles/app.css'],
-      appCss: `@import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/utilities" layer(utilities);
+      appCss: `@import "tailwindcss";
 @theme { --color-surface: #f6f7f9; }
 @layer utilities {
   .card { display: grid; }
@@ -95,29 +93,32 @@ describe('checkCssPolicy', () => {
     expect(result.failures.some((failure) => failure.includes('utilities'))).toBe(true);
   });
 
-  it('rejects a Preflight-enabling Tailwind import', () => {
+  it.each([
+    '@import "tailwindcss/theme" layer(theme);',
+    '@import "tailwindcss/utilities" layer(utilities);',
+    '@import "tailwindcss/preflight" layer(base);',
+    '@import "tailwindcss" layer(base);',
+    '@import "./tokens.css";',
+  ])('rejects %s, which is not the full Preflight-enabling import', (statement) => {
     const result = checkCssPolicy({
       cssFiles: ['styles/app.css'],
-      appCss: `@import "tailwindcss";
+      appCss: `${statement}
 @theme { --color-surface: #f6f7f9; }
-@layer base {
-  :root { color-scheme: light dark; }
-}
 `,
       sourceFiles: [{ path: 'main.tsx', source: "import './styles/app.css';\n" }],
     });
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(result.failures.some((failure) => failure.includes('Preflight'))).toBe(true);
+    expect(result).toEqual({
+      ok: false,
+      failures: [
+        `styles/app.css @import must be "tailwindcss" with no layer or condition, so Preflight stays on; got ${statement}`,
+      ],
+    });
   });
 
   it('rejects @apply', () => {
     const result = checkCssPolicy({
       cssFiles: ['styles/app.css'],
-      appCss: `@import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/utilities" layer(utilities);
+      appCss: `@import "tailwindcss";
 @theme { --color-surface: #f6f7f9; }
 @layer base {
   .layout { @apply min-h-screen; }

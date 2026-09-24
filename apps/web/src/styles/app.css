@@ -1,4 +1,4 @@
-@import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss';
 
 @theme {
   --font-sans: system-ui, -apple-system, sans-serif;
@@ -102,6 +102,15 @@
   button,
   input {
     font: inherit;
+  }
+
+  select {
+    font: revert;
+    letter-spacing: revert;
+  }
+
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert;
   }
 
   .layout {
@@ -704,8 +713,3 @@
     }
   }
 }
-
-/* Imported last so the utilities layer is declared after base. First-appearance
-   layer order is theme, base, utilities, which lets utilities win over base rules.
-   Do not move this above @layer base. */
-@import 'tailwindcss/utilities' layer(utilities);

@@ -65,7 +65,7 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
     <Stack as="section" aria-labelledby="permission-mode-title">
       <SectionTitle id="permission-mode-title">permission mode별 Action</SectionTitle>
       {rows.length === 0 ? (
-        <p className="hint">이 run에는 permission mode 집계가 없습니다.</p>
+        <p className="hint my-[1em]">이 run에는 permission mode 집계가 없습니다.</p>
       ) : (
         <>
           <Panel as="dl" className="meta-grid">

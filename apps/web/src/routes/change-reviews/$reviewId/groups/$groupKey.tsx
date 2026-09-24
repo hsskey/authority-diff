@@ -131,7 +131,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 }
 
 function IssueList({ children }: { children: ReactNode }) {
-  return <ul className="m-0 grid gap-[0.35rem] pl-5 text-[0.9rem]">{children}</ul>;
+  return <ul className="m-0 grid list-disc gap-[0.35rem] pl-5 text-[0.9rem]">{children}</ul>;
 }
 
 function RedactedInput({ children }: { children: ReactNode }) {

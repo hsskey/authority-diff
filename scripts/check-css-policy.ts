@@ -5,8 +5,7 @@ import { fileURLToPath } from 'node:url';
 export const ALLOWED_CSS_FILE = 'styles/app.css';
 export const ALLOWED_CSS_IMPORTER = 'main.tsx';
 
-const THEME_IMPORT = 'tailwindcss/theme';
-const UTILITIES_IMPORT = 'tailwindcss/utilities';
+const TAILWIND_IMPORT = 'tailwindcss';
 
 export type CssPolicyInput = {
   readonly cssFiles: readonly string[];
@@ -96,7 +95,7 @@ function normalizeImportHref(href: string): string {
 
 function parseImportStatement(
   statement: string,
-): { readonly href: string; readonly layer: string | undefined } | null {
+): { readonly href: string; readonly conditions: string } | null {
   const trimmed = statement.trim().replace(/;$/u, '').trim();
   if (!trimmed.startsWith('@import')) {
     return null;
@@ -118,12 +117,11 @@ function parseImportStatement(
     return null;
   }
   const href = rest.slice(1, end);
-  const after = rest
+  const conditions = rest
     .slice(end + 1)
     .replace(/^\)/u, '')
     .trim();
-  const layerMatch = /^layer\(\s*([^)]+?)\s*\)\s*$/u.exec(after);
-  return { href, layer: layerMatch?.[1] };
+  return { href, conditions };
 }
 
 function checkAppCss(source: string, failures: string[]): void {
@@ -151,20 +149,10 @@ function checkAppCss(source: string, failures: string[]): void {
         i = end + 1;
         continue;
       }
-      const href = normalizeImportHref(parsed.href);
-      const layer = parsed.layer;
-      const themeOk = href === THEME_IMPORT && layer === 'theme';
-      const utilitiesOk = href === UTILITIES_IMPORT && layer === 'utilities';
-      if (!themeOk && !utilitiesOk) {
-        if (href === 'tailwindcss' || href.startsWith('tailwindcss/preflight')) {
-          failures.push(
-            'styles/app.css must not import Tailwind Preflight; use tailwindcss/theme and tailwindcss/utilities only',
-          );
-        } else {
-          failures.push(
-            `styles/app.css @import must be tailwindcss/theme layer(theme) or tailwindcss/utilities layer(utilities); got ${statement.trim()}`,
-          );
-        }
+      if (normalizeImportHref(parsed.href) !== TAILWIND_IMPORT || parsed.conditions !== '') {
+        failures.push(
+          `styles/app.css @import must be "${TAILWIND_IMPORT}" with no layer or condition, so Preflight stays on; got ${statement.trim()}`,
+        );
       }
       i = end + 1;
       continue;
