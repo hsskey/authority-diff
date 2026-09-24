@@ -188,7 +188,7 @@ function HeaderCell({
 }) {
   const base =
     scope === 'row'
-      ? 'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top font-semibold tracking-normal dark:border-gray-700'
+      ? 'border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-xs font-semibold tracking-normal dark:border-gray-700'
       : 'whitespace-nowrap border-b border-gray-200 px-[0.6rem] py-2 text-left align-top text-xs uppercase tracking-[0.04em] text-muted dark:border-gray-700';
   return (
     <th scope={scope} className={numeric ? `${base} text-right tabular-nums` : base}>
