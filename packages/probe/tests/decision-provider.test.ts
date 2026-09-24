@@ -4,6 +4,7 @@ import {
   buildJevRequestBody,
   createFixtureDecisionProvider,
   createJevDecisionProvider,
+  runProbe,
 } from '../index.ts';
 import type {
   BoundedQuestion,
@@ -11,6 +12,9 @@ import type {
   DecisionProviderInput,
   RecordedResponse,
 } from '../index.ts';
+import recordedResponses from './fixtures/recorded-responses.json' with { type: 'json' };
+import { ScenarioFileSchema } from '../schema.ts';
+import corpusScenarios from '../../../tests/corpus/scenarios.json' with { type: 'json' };
 
 const QUESTIONS = [
   {
@@ -122,6 +126,25 @@ providerContract('fixture adapter contract', () =>
   createFixtureDecisionProvider([RECORDED_RESPONSE]),
 );
 providerContract('Jev adapter contract with a recorded response', () => recordedJevProvider());
+
+test('the recorded Jev responses replay every corpus Scenario', async () => {
+  const scenarios = ScenarioFileSchema.parse(corpusScenarios);
+
+  const result = await runProbe(
+    createFixtureDecisionProvider(recordedResponses),
+    'synthetic policy',
+    scenarios,
+    new AbortController().signal,
+  );
+
+  expect(result.ok).toBe(true);
+  if (!result.ok) {
+    return;
+  }
+  expect(result.value.map((entry) => entry.scenario.id)).toEqual(
+    scenarios.map((scenario) => scenario.id),
+  );
+});
 
 test('the Jev request contains only state, model, and bounded questions', () => {
   const input: DecisionProviderInput = {
