@@ -12,7 +12,7 @@ Agent 권한 정책 변경의 근거를 과거 작업 기록으로 만드는 mod
 - test는 package entry point에서만 작성한다. 예상 가능한 실패는 `Result`로 반환한다.
 - 실제 transcript, 명령 원문, 경로, 저장소와 host 이름은 repo에 넣지 않는다. 실제 data에서 나온 산출물은 `.local/`에 두고 repo에는 집계 수치만 넣는다. fixture는 구조만 실제와 같고 내용은 합성이다.
 - `docs/evidence/`의 측정 문서는 첫 줄에 corpus snapshot, classifierVersion, resultHash를 적는다. 한 문서에 서로 다른 classifier version의 수치를 섞지 않고, 이전 version 수치는 "Previous version" 절에만 남긴다. fresh volume 재실행 절차는 `docs/evidence/adoption-preview.md`에 있다.
-- 작업을 끝내기 전 `pnpm check`와 `pnpm lint:boundaries:prove`를 실행한다. `apps/web`를 바꾸면 `pnpm test:e2e`(Playwright, `pnpm exec playwright install chromium` 필요)도 실행한다. Node는 22를 쓴다.
+- 작업을 끝내기 전 `pnpm check`와 `pnpm lint:boundaries:prove`를 실행한다. `apps/web`를 바꾸면 `pnpm test:e2e`(Playwright, `pnpm exec playwright install chromium` 필요)도 실행한다. 화면 스크린샷은 `pnpm e2e:visual`이며 `test:e2e`와 CI에 넣지 않는다. 비교는 `playwright.config.ts`의 Playwright Docker image 글꼴을 기준으로 한다. Node는 22를 쓴다.
 - commit message, PR, 문서, 주석에 내부 진행 라벨(작업 단계 번호 등)이나 개인 맥락을 쓰지 않고 목적 기준으로 쓴다. 공개 저장소에 올라가는 내용은 오픈소스로 가정한다.
 - branch는 `<type>/<purpose>` 형식이고 type은 `feat|feature|fix|bugfix|hotfix|release|chore` 중 하나다. `ai/`, `claude/`, `codex/`, `copilot/`, `cursor/`, `fm/` 같은 작성 주체 prefix와 내부 진행 라벨은 쓰지 않는다.
 

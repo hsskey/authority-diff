@@ -6,6 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 5173;
 const baseURL = `http://localhost:${PORT}`;
 
+// Visual screenshots pin rasterization to fonts shipped in the version-matched
+// Playwright image (mcr.microsoft.com/playwright:v1.63.0-noble): Liberation Sans
+// and Unifont. Capture and compare inside that image. The visual project is not
+// part of `pnpm test:e2e` and has no CI job until baselines exist.
 export default defineConfig({
   testDir: 'apps/web/tests/e2e',
   fullyParallel: true,
@@ -17,7 +21,32 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  expect: {
+    toHaveScreenshot: {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.001,
+      threshold: 0.2,
+    },
+  },
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /visual\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'visual',
+      testMatch: /visual\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 1,
+        locale: 'en-US',
+        timezoneId: 'UTC',
+      },
+    },
+  ],
   webServer: {
     command: 'pnpm --filter @authority/web dev',
     url: baseURL,
