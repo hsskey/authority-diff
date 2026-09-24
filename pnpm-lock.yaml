@@ -466,6 +466,9 @@ importers:
       '@authority/action':
         specifier: workspace:*
         version: link:../../packages/action
+      '@authority/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@authority/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
