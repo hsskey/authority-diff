@@ -392,6 +392,10 @@ function conformance(): unknown {
       windowFrom: TS,
       windowTo: TS,
       unpairedPermissionRequests: 0,
+      byPermissionMode: [
+        { permissionMode: 'bypassPermissions', actionCount: 2, findingCount: 2 },
+        { permissionMode: 'default', actionCount: 5, findingCount: 0 },
+      ],
     },
     items: [
       {

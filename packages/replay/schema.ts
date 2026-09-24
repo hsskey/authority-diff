@@ -42,6 +42,32 @@ export const AnalyzabilityCountsSchema = z.object({
 });
 export type AnalyzabilityCounts = z.infer<typeof AnalyzabilityCountsSchema>;
 
+/**
+ * A conformance run's Actions counted by the runtime permission mode their
+ * observations carried: `actionCount` is every Action of the run in that
+ * mode, and `findingCount` those of them inside a Conformance Finding. An
+ * Action whose observations carry no mode, or that has no observation, counts
+ * under `unknown`.
+ */
+export const PermissionModeCountSchema = z.object({
+  permissionMode: z.string().min(1),
+  actionCount: z.number().int().nonnegative(),
+  findingCount: z.number().int().nonnegative(),
+});
+export type PermissionModeCount = z.infer<typeof PermissionModeCountSchema>;
+
+export const UNKNOWN_PERMISSION_MODE = 'unknown';
+
+/**
+ * The permission modes in which the runtime runs an Action without asking, so
+ * Actions observed in them are workload that could run without a guard.
+ */
+export const UNGUARDED_PERMISSION_MODES: readonly string[] = ['bypassPermissions', 'auto'];
+
+/**
+ * `byPermissionMode` is set by conformance runs only, sorted by permissionMode
+ * ascending UTF-16; a version_diff run has no observations and omits it.
+ */
 export const ReplayStatsSchema = z.object({
   totalActions: z.number().int().nonnegative(),
   evaluatedActions: z.number().int().nonnegative(),
@@ -49,6 +75,7 @@ export const ReplayStatsSchema = z.object({
   changedActions: z.number().int().nonnegative(),
   transitions: z.array(TransitionSchema).length(9),
   operationWidening: z.array(OperationWideningSchema).default([]),
+  byPermissionMode: z.array(PermissionModeCountSchema).optional(),
 });
 export type ReplayStats = z.infer<typeof ReplayStatsSchema>;
 

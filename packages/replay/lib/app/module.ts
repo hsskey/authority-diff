@@ -17,6 +17,7 @@ import type {
   AuthorityMapCell,
   ConformanceFinding,
   DiffGroup,
+  PermissionModeCount,
   ReplayRun,
   ReplayRunId,
   StoredAdoptionAssignment,
@@ -79,6 +80,7 @@ export interface ConformanceFindingsView {
     readonly windowFrom: IsoTimestamp;
     readonly windowTo: IsoTimestamp;
     readonly unpairedPermissionRequests: number;
+    readonly byPermissionMode: readonly PermissionModeCount[];
   } | null;
   readonly items: readonly ConformanceFinding[];
 }
@@ -515,6 +517,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           windowFrom: run.windowFrom,
           windowTo: run.windowTo,
           unpairedPermissionRequests: run.unpairedPermissionRequests,
+          byPermissionMode: run.byPermissionMode,
         },
         items: await store.listConformanceFindings(run.replayRunId),
       };

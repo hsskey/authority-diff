@@ -161,6 +161,7 @@ export function createTraceStore(database: Database): TraceStore {
           toolName: runtimeObservations.toolName,
           toolInputHash: runtimeObservations.toolInputHash,
           hookDecision: runtimeObservations.hookDecision,
+          permissionMode: runtimeObservations.permissionMode,
           occurredAt: runtimeObservations.occurredAt,
         })
         .from(runtimeObservations)

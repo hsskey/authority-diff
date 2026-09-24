@@ -11,6 +11,7 @@ import type {
   AuthorityMapCell,
   ConformanceFinding,
   DiffGroup,
+  PermissionModeCount,
   ReplayRun,
   ReplayRunId,
   ReplayStats,
@@ -108,6 +109,7 @@ export interface ConformanceRunView {
   readonly windowFrom: IsoTimestamp;
   readonly windowTo: IsoTimestamp;
   readonly unpairedPermissionRequests: number;
+  readonly byPermissionMode: readonly PermissionModeCount[];
 }
 
 /**

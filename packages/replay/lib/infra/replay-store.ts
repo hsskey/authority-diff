@@ -402,6 +402,7 @@ export function createReplayStore(database: Database): ReplayStore {
         windowFrom: run.windowFrom,
         windowTo: run.windowTo,
         unpairedPermissionRequests: diffStatsOf(row.stats)?.unpairedPermissionRequests ?? 0,
+        byPermissionMode: diffStatsOf(row.stats)?.byPermissionMode ?? [],
       };
     },
 

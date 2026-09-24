@@ -302,6 +302,7 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   expect(listed.items).toEqual(local.findings);
   expect(local.findings.map((finding) => finding.kind)).not.toContain('under_asked');
   expect(listed.run?.unpairedPermissionRequests).toBe(1);
+  expect(listed.run?.byPermissionMode).toEqual(local.stats.byPermissionMode);
 });
 
 test('an adoption run persists its groups and assignments, is idempotent, and pages in review order', async () => {

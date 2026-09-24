@@ -131,6 +131,7 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
               toolName,
               toolInputHash,
               hookDecision,
+              permissionMode,
               occurredAt,
             }) => ({
               actionKey,
@@ -139,6 +140,7 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
               toolName,
               toolInputHash,
               hookDecision,
+              permissionMode,
               occurredAt,
             }),
           ),

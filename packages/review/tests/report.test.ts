@@ -11,6 +11,16 @@ const REPLAY_RESULT_HASH = 'e'.repeat(64);
 const TAIL_HASH = 'f'.repeat(64);
 const AUDIT_TAIL = { sequence: 9, hash: TAIL_HASH };
 const TRACE_SOURCES = { transcript: 47, hook: 0, synthetic: 0 };
+const CONFORMANCE = {
+  replayRunId: 'rpl_0123456789abcdefghjkmnpqrs',
+  policyVersionId: 'pver_0123456789abcdefghjkmnpqrs',
+  windowFrom: IsoTimestampSchema.parse('2026-01-15T00:00:00.000Z'),
+  windowTo: IsoTimestampSchema.parse('2026-02-01T00:00:00.000Z'),
+  byPermissionMode: [
+    { permissionMode: 'bypassPermissions', actionCount: 30, findingCount: 12 },
+    { permissionMode: 'default', actionCount: 17, findingCount: 3 },
+  ],
+};
 
 function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
   return {
@@ -37,6 +47,7 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
         verdict: 'expected',
       },
     ],
+    conformance: CONFORMANCE,
     decision: {
       decision: 'accept',
       reviewerName: 'reviewer',
@@ -68,6 +79,20 @@ test('the report lists both content hashes, the window, and each headline', () =
   expect(report).toContain(CANDIDATE_HASH);
   expect(report).toContain('2026-01-01T00:00:00.000Z ~ 2026-02-01T00:00:00.000Z');
   expect(report).toContain("저장소 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.");
+});
+
+test('the report sums the modes that never prompt as the workload that could run without a guard', () => {
+  const report = renderReport(makeInput());
+  expect(report).toContain(
+    'guard 없이 실행될 수 있는 Action(bypassPermissions, auto): 30건 (63.8%)',
+  );
+  expect(report).toContain('| bypassPermissions | 30 | 12 |');
+  expect(report).toContain('rpl_0123456789abcdefghjkmnpqrs');
+});
+
+test('the report says so when no conformance run has completed', () => {
+  const report = renderReport(makeInput({ conformance: null }));
+  expect(report).toContain('완료된 conformance run이 없어 permission mode 표가 없습니다.');
 });
 
 test('the report names the reviewer and decision when decided', () => {

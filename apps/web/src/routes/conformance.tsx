@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import type { ListConformanceFindingsResponse } from '@authority/contracts/schema';
+import { UNGUARDED_PERMISSION_MODES } from '@authority/contracts/schema';
+import type {
+  ListConformanceFindingsResponse,
+  PermissionModeCount,
+} from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
 import { callRoute, describeApiError } from '../shared/api-client.ts';
 import { EmptyState } from '../shared/components/EmptyState.tsx';
@@ -44,6 +48,63 @@ function minuteOf(timestamp: string): string {
   return `${timestamp.slice(0, 10)} ${timestamp.slice(11, 16)}`;
 }
 
+function sumActions(rows: readonly PermissionModeCount[]): number {
+  return rows.reduce((sum, row) => sum + row.actionCount, 0);
+}
+
+function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[] }) {
+  const total = sumActions(rows);
+  const unguarded = sumActions(
+    rows.filter((row) => UNGUARDED_PERMISSION_MODES.includes(row.permissionMode)),
+  );
+  return (
+    <section className="stack" aria-labelledby="permission-mode-title">
+      <h2 className="section-title" id="permission-mode-title">
+        permission mode별 Action
+      </h2>
+      {rows.length === 0 ? (
+        <p className="hint">이 run에는 permission mode 집계가 없습니다.</p>
+      ) : (
+        <>
+          <dl className="meta-grid panel">
+            <div>
+              <dt>guard 없이 실행될 수 있는 Action</dt>
+              <dd>
+                {unguarded}건 / {total}건 ({UNGUARDED_PERMISSION_MODES.join(', ')})
+              </dd>
+            </div>
+          </dl>
+          <div className="table-scroll">
+            <table className="data-table">
+              <caption>permission mode {rows.length}개, mode가 없는 관측은 unknown</caption>
+              <thead>
+                <tr>
+                  <th scope="col">permission mode</th>
+                  <th scope="col" className="num">
+                    Action
+                  </th>
+                  <th scope="col" className="num">
+                    finding Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.permissionMode}>
+                    <td>{row.permissionMode}</td>
+                    <td className="num">{row.actionCount}</td>
+                    <td className="num">{row.findingCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function FindingList({ findings }: { findings: ListConformanceFindingsResponse }) {
   if (findings.run === null) {
     return (
@@ -72,6 +133,8 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
           <dd className="mono">{findings.run.replayRunId}</dd>
         </div>
       </dl>
+
+      <PermissionModeBreakdown rows={findings.run.byPermissionMode} />
 
       {findings.items.length === 0 ? (
         <EmptyState
