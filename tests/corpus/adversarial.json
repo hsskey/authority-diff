@@ -630,6 +630,34 @@
       "expectedEffect": "ask"
     },
     {
+      "name": "tmux-query-chained-send-keys",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "tmux capture-pane -p \\; send-keys 'rm -rf /tmp/synthetic' Enter"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "tmux-query-format-runs-shell",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "tmux list-sessions -F '#(rm -rf /tmp/synthetic)'"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
       "name": "xargs-sh-c-hidden-command",
       "input": {
         "toolName": "Bash",

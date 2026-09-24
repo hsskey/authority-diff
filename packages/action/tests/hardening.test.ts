@@ -206,3 +206,33 @@ describe('hardening round 4: path-form execute and command lookup', () => {
     });
   });
 });
+
+describe('tmux query subcommands', () => {
+  test.each([
+    'tmux capture-pane -p -t work:0',
+    'tmux -L lane capture-pane -pS -200',
+    'tmux -S /tmp/lane.sock list-windows',
+    'tmux ls',
+    'tmux has-session -t work',
+    'tmux display-message -p "#{pane_id}"',
+  ])('%s is read, partial, with no execute', (command) => {
+    const ops = classify(bash(command));
+    expect(ops.map((o) => [o.capability, o.analyzability])).toEqual([['read', 'partial']]);
+  });
+
+  test.each([
+    'tmux new-session -d "make watch"',
+    'tmux capture-pane -p \\; send-keys "rm -rf build" Enter',
+    'tmux list-sessions -F "#(rm -rf build)"',
+    'tmux -c "rm -rf build" ls',
+    'tmux $SUB -t work',
+  ])('%s stays opaque inline execution', (command) => {
+    const op = classify(bash(command)).find((o) => o.program === 'tmux');
+    expect([op?.capability, op?.target.kind, op?.analyzability, op?.signals]).toEqual([
+      'execute',
+      'unknown',
+      'none',
+      ['inline_code'],
+    ]);
+  });
+});

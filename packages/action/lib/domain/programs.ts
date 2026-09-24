@@ -228,6 +228,34 @@ const OPAQUE_EXEC: ReadonlySet<string> = new Set([
   'claude',
   'eval',
 ]);
+/** tmux commands that only report server, session, pane, or buffer state. */
+const TMUX_QUERIES: ReadonlySet<string> = new Set([
+  'capture-pane',
+  'capturep',
+  'list-sessions',
+  'ls',
+  'list-windows',
+  'lsw',
+  'list-panes',
+  'lsp',
+  'list-clients',
+  'lsc',
+  'list-buffers',
+  'lsb',
+  'show-buffer',
+  'showb',
+  'show-options',
+  'show',
+  'show-window-options',
+  'showw',
+  'show-environment',
+  'showenv',
+  'has-session',
+  'has',
+  'display-message',
+  'display',
+]);
+const TMUX_VALUE_FLAGS: ReadonlySet<string> = new Set(['-L', '-S', '-f', '-T']);
 /** Process-signalling programs: affect a running process, not the filesystem. */
 const PROCESS_SIGNALLERS: ReadonlySet<string> = new Set(['kill', 'pkill', 'killall']);
 const PKG_MANAGERS: ReadonlySet<string> = new Set(['pnpm', 'npm', 'yarn', 'bun']);
@@ -292,6 +320,7 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (p === 'cargo' || p === 'go') return cargoGoOps(cmd);
   if (p === 'source' || p === '.') return [runnerDraft('execute', cmd, 'partial')];
   if (SHELLS.has(p)) return shellOps(cmd);
+  if (p === 'tmux' && isTmuxQuery(cmd.args)) return [runnerDraft('read', cmd, 'partial')];
   if (OPAQUE_EXEC.has(p))
     return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['inline_code'])];
   if (PROCESS_SIGNALLERS.has(p)) return [runnerDraft('execute', cmd, 'partial')];
@@ -308,6 +337,26 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (pathForm !== null) return pathForm;
   // Unrecognized program: opaque execution, never a false read.
   return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['program_unrecognized'])];
+}
+
+/**
+ * A single tmux query command. A `;` command list, a `#(...)` format that runs
+ * a shell command, or the `-c` shell-command option keeps it opaque.
+ */
+function isTmuxQuery(args: readonly ShellWord[]): boolean {
+  if (args.some((a) => a.text.includes(';') || a.text.includes('#('))) return false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === undefined || arg.hasExpansion) return false;
+    if (TMUX_VALUE_FLAGS.has(arg.text)) {
+      i += 1;
+      continue;
+    }
+    if (/^-[^-]*c/.test(arg.text)) return false;
+    if (arg.text.startsWith('-')) continue;
+    return TMUX_QUERIES.has(arg.text);
+  }
+  return false;
 }
 
 /** A shell given a script file is execute on that path, like an interpreter. */
