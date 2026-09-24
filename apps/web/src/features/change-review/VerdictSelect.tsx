@@ -43,10 +43,11 @@ export function VerdictSelect({
   });
 
   return (
-    <label className="verdict-select">
+    <label className="inline-grid gap-1">
       <span className="sr-only">판정</span>
       <select
         aria-label={`${groupLabel} 판정`}
+        className="rounded-md border border-border bg-panel px-2 py-[0.3rem] text-inherit dark:border-gray-600 dark:bg-gray-900"
         value={verdict ?? ''}
         disabled={disabled || record.isPending}
         aria-busy={record.isPending}
@@ -67,7 +68,7 @@ export function VerdictSelect({
         ))}
       </select>
       {record.isError ? (
-        <span className="state-message status-error" role="alert">
+        <span className="m-0 text-[#b91c1c]" role="alert">
           {record.error.message}
         </span>
       ) : null}
