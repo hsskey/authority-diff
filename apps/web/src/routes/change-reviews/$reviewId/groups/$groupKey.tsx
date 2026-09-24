@@ -671,7 +671,9 @@ function DecisionView({
       </RowBetween>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[0.9rem]">
-          <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">Operation별 결정</caption>
+          <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">
+            Operation별 결정
+          </caption>
           <thead>
             <tr>
               <TableHeadCell>Op</TableHeadCell>
