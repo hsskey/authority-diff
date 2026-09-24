@@ -18,7 +18,7 @@ The decision tables showed `decidingRuleId`, which names a rule but does not say
 - `targetKeys[i]` is `deriveTargetKey(action.operations[i].target)`, the same key the Target Summary uses.
 - `baselineRuleRationales` and `candidateRuleRationales` map `ruleId` to `rationale` for the rules that decided an Operation in that Decision, taken from the Policy Documents the samples are evaluated with.
 - The Operations list shows capability, Zone (baseline to candidate), and Target key only.
-- The decision tables show the rationale; `decidingRuleId` sits behind a "기술 세부" toggle.
+- The decision tables show the rationale; `decidingRuleId` sits behind a <!-- ko-product-output -->"기술 세부" toggle.
 - The fields are required: the server and the web app ship together, and no other client reads the samples route.
 
 ## Alternatives

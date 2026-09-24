@@ -38,7 +38,7 @@ The analyzable share rises because tmux read-only query subcommands are `read` w
 The `github.com/**` scene comes from recorded Actions, not from a `synthetic` fixture: 9 fetch Actions (5 `git` from one repository, 4 `gh` to four others) to other owners' repositories move ask → allow at critical severity under B'.
 No synthetic fixture was imported for the demo, so every Change Review and Evidence Report in the recorded journey covers recorded Actions only.
 
-Journey grade: **medium** (중), under the core journey criteria of `docs/cutline.md` chapter 11.
+Journey grade: **medium**, under the core journey criteria of `docs/cutline.md` chapter 11.
 Real-record Adoption Groups and Widening groups were reviewable and stayed inside the predicted scene.
 The grade is not strong because no Widening outside the expected list was found in the recorded Actions.
 Verdicts and timings were given by an Agent, not a person.

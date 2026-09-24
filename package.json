@@ -26,11 +26,12 @@
     "dev:policy-init": "tsx tools/local-pipeline/policy-init.ts",
     "evidence:remeasure": "tsx tools/local-pipeline/remeasure.ts",
     "check:evidence": "tsx scripts/check-evidence.ts",
+    "check:doc-invariance": "tsx scripts/check-doc-invariance.ts",
     "smoke:journey": "tsx tools/local-pipeline/journey-smoke.ts",
     "authority": "tsx apps/cli/src/main.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "build:cli": "tsup --config apps/cli/tsup.config.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:css && pnpm lint:boundaries && pnpm lint:prove && pnpm check:evidence && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm lint:css && pnpm lint:boundaries && pnpm lint:prove && pnpm check:evidence && pnpm check:doc-invariance && pnpm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

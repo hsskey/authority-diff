@@ -1,21 +1,22 @@
 # Authority Diff
 
-Agent 권한 정책 변경의 근거를 과거 작업 기록으로 만드는 modular monolith.
-현재 범위는 V1(`docs/cutline.md`)이고 `docs/design.md`는 Target Architecture다.
+A modular monolith that turns past work records into the basis for Agent permission-policy changes.
+The current scope is V1 (`docs/cutline.md`); `docs/design.md` is the Target Architecture.
 
-- `docs/cutline.md`가 `docs/design.md`와 다르면 cutline을 따른다. cutline 13장의 code는 작성하지 않는다.
-- 용어는 `CONTEXT.md`의 단어만 쓴다. 파일, symbol, table 이름도 같은 단어를 쓴다.
-- 구조, 이름, 계약을 정해야 할 때: `docs/design.md` 19~28장과 `docs/cutline.md` 6, 15장을 읽는다.
-- package를 추가하거나 다른 package를 import하기 전: `docs/design.md` 21장과 경계 규칙(`.dependency-cruiser.cjs`)을 읽는다.
-- 소유 경로 밖을 고치거나 새 의존성, 새 구조가 필요할 때: `docs/design.md` 33.3 절차로 `docs/acr/`에 ACR을 쓴다.
-- 되돌리기 어려운 결정을 내리거나 바꾸기 전: `docs/adr/`를 읽고, ADR 3조건(되돌리기 어려움, 맥락 없이는 의아함, 실제 대안이 있었음)을 채우면 `docs/adr/NNNN-<slug>.md`를 추가한다.
-- test는 package entry point에서만 작성한다. 예상 가능한 실패는 `Result`로 반환한다.
-- 실제 transcript, 명령 원문, 경로, 저장소와 host 이름은 repo에 넣지 않는다. 실제 data에서 나온 산출물은 `.local/`에 두고 repo에는 집계 수치만 넣는다. fixture는 구조만 실제와 같고 내용은 합성이다.
-- `docs/evidence/`의 측정 문서는 첫 줄에 corpus snapshot, classifierVersion, resultHash를 적는다. 한 문서에 서로 다른 classifier version의 수치를 섞지 않고, 이전 version 수치는 "Previous version" 절에만 남긴다. 다른 문서와 공유하는 수치는 stamp 다음 `<!-- evidence-numbers -->` block에 적고, `pnpm check:evidence`(`scripts/check-evidence.ts`)가 문서 간 불일치와 version 혼용을 검사한다. fresh volume 재실행 절차는 `docs/evidence/adoption-preview.md`에 있다.
-- 작업을 끝내기 전 `pnpm check`와 `pnpm lint:boundaries:prove`를 실행한다. `apps/web`를 바꾸면 `pnpm test:e2e`(Playwright, `pnpm exec playwright install chromium` 필요)도 실행한다. 화면 스크린샷은 `pnpm e2e:visual`이며 `test:e2e`와 분리된 CI `e2e-visual` job이 Playwright Docker image 안에서 baseline과 비교한다. 화면이 바뀌면 같은 image(`playwright.config.ts`, linux/amd64)에서 `--update-snapshots`로 baseline을 다시 찍는다. Node는 22를 쓴다.
-- `apps/web` styles: JSX에는 Tailwind v4 utility만 쓴다. CSS는 `apps/web/src/styles/app.css` 하나(`pnpm lint:css`)이고 `@import "tailwindcss"`(Preflight 포함), `@theme`, `@layer base`만 허용하고 unused class selector는 0이어야 한다. `@apply`와 새 CSS class는 쓰지 않는다. 같은 utility 조합이 세 번 반복되면 React component로 추출한다. 색은 `@theme` token만 쓰고(`bg-surface`, `text-muted`) arbitrary color는 금지한다. 화면이 바뀌는 PR에는 screenshot diff가 필요하다.
-- commit message, PR, 문서, 주석에 내부 진행 라벨(작업 단계 번호 등)이나 개인 맥락을 쓰지 않고 목적 기준으로 쓴다. 공개 저장소에 올라가는 내용은 오픈소스로 가정한다.
-- branch는 `<type>/<purpose>` 형식이고 type은 `feat|feature|fix|bugfix|hotfix|release|chore` 중 하나다. `ai/`, `claude/`, `codex/`, `copilot/`, `cursor/`, `fm/` 같은 작성 주체 prefix와 내부 진행 라벨은 쓰지 않는다.
+- When `docs/cutline.md` differs from `docs/design.md`, follow the cutline. Do not write the code listed in cutline chapter 13.
+- Use only the words in `CONTEXT.md`. File, symbol, and table names use the same words.
+- When you must fix structure, names, or contracts: read `docs/design.md` chapters 19–28 and `docs/cutline.md` chapters 6 and 15.
+- Before adding a package or importing another package: read `docs/design.md` chapter 21 and the boundary rules (`.dependency-cruiser.cjs`).
+- When you would edit outside owned paths, or need a new dependency or a new structure: write an ACR under `docs/acr/` using the procedure in `docs/design.md` 33.3.
+- Before making or changing a hard-to-reverse decision: read `docs/adr/`. If it meets the three ADR conditions (hard to reverse, surprising without context, a real alternative existed), add `docs/adr/NNNN-<slug>.md`.
+- Write tests only at package entry points. Return expected failures as `Result`.
+- Do not put real transcripts, raw commands, paths, repository names, or host names in the repo. Put outputs derived from real data under `.local/` and put only aggregate figures in the repo. Fixtures match real structure; their contents are synthetic.
+- Measurement documents under `docs/evidence/` start with a corpus snapshot, classifierVersion, and resultHash on the first line. Do not mix figures from different classifier versions in one document; keep earlier-version figures only under a "Previous version" section. Figures shared across documents go in an `<!-- evidence-numbers -->` block after the stamp, and `pnpm check:evidence` (`scripts/check-evidence.ts`) checks documents for disagreement and mixed versions. The procedure for re-running a fresh volume is in `docs/evidence/adoption-preview.md`.
+- `docs/design.md` and `docs/cutline.md` keep the same heading list and extracted numeric set; `pnpm check:doc-invariance` (`scripts/check-doc-invariance.ts`) fails if they drift. Product-output quotations in docs stay Korean and are marked `<!-- ko-product-output -->`.
+- Before finishing work, run `pnpm check` and `pnpm lint:boundaries:prove`. If you change `apps/web`, also run `pnpm test:e2e` (Playwright; `pnpm exec playwright install chromium` is required). Screen screenshots are `pnpm e2e:visual`; that is separate from `test:e2e`, and the CI `e2e-visual` job compares against the baseline inside the Playwright Docker image. When the screen changes, retake the baseline with `--update-snapshots` in the same image (`playwright.config.ts`, linux/amd64). Use Node 22.
+- `apps/web` styles: JSX uses Tailwind v4 utilities only. CSS is the single file `apps/web/src/styles/app.css` (`pnpm lint:css`) and may contain only `@import "tailwindcss"` (Preflight included), `@theme`, and `@layer base`; unused class selectors must be 0. Do not use `@apply` or new CSS classes. Extract a React component when the same utility combination appears three times. Use only `@theme` color tokens (`bg-surface`, `text-muted`); arbitrary colors are forbidden. A PR that changes the screen needs a screenshot diff.
+- Write commit messages, PRs, documents, and comments in terms of purpose, not internal progress labels (work-stage numbers and the like) or personal context. Treat anything that lands in the public repository as open source.
+- Branches use `<type>/<purpose>` with type one of `feat|feature|fix|bugfix|hotfix|release|chore`. Do not use author prefixes such as `ai/`, `claude/`, `codex/`, `copilot/`, `cursor/`, `fm/`, or internal progress labels.
 
 ## Maintaining this file
 
