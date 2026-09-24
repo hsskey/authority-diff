@@ -8,7 +8,7 @@
  */
 import type { ShellCommand, ShellParse, ShellWord } from '../shell/ast.ts';
 import type { ToolCall } from '../../schema.ts';
-import { nonFlagArgs, type NormalizedCommand } from './command.ts';
+import { isCommandLookup, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
 import { classifyGit } from './git.ts';
 import { classifyGh } from './gh.ts';
@@ -50,27 +50,28 @@ export function classifyBash(parse: ShellParse, call: ToolCall): OperationDraft[
 
   for (const command of parse.commands) {
     if (command.name === null) continue;
-    const program = basename(command.name.text);
-
-    if (program === 'cd') {
+    if (basename(command.name.text) === 'cd') {
       const result = classifyCd(command, cwd, call.workspaceRoot);
       ops.push(result.op);
-      ops.push(...redirectWrites(command, cwd, call.workspaceRoot, program));
+      ops.push(...redirectWrites(command, cwd, call.workspaceRoot, 'cd'));
       cwd = result.cwd;
       continue;
     }
 
-    const stripped = stripWrappers(program, command.args);
+    const stripped = stripWrappers(command.name, command.args);
     if (stripped === null) {
       // A wrapper with no inner command (for example bare `env`): a read.
+      const program = basename(command.name.text);
       const resolved = resolvePath('.', cwd, call.workspaceRoot);
       ops.push(draft('read', pathTarget(resolved), 'full', program, command.raw));
       ops.push(...redirectWrites(command, cwd, call.workspaceRoot, program));
       continue;
     }
 
+    const program = basename(stripped.name.text);
     const norm: NormalizedCommand = {
-      program: stripped.program,
+      program,
+      invocation: stripped.name,
       args: stripped.args,
       raw: command.raw,
       cwd,
@@ -109,21 +110,23 @@ function classifyCd(command: ShellCommand, cwd: string | null, root: string | nu
 }
 
 interface Stripped {
-  readonly program: string;
+  readonly name: ShellWord;
   readonly args: readonly ShellWord[];
 }
 
-function stripWrappers(program: string, args: readonly ShellWord[]): Stripped | null {
-  let current = program;
+function stripWrappers(name: ShellWord, args: readonly ShellWord[]): Stripped | null {
+  let current = name;
   let rest = args;
-  for (let guard = 0; guard < 6 && WRAPPERS.has(current); guard++) {
-    const inner = skipWrapperArgs(current, rest);
+  for (let guard = 0; guard < 6 && WRAPPERS.has(basename(current.text)); guard++) {
+    const wrapper = basename(current.text);
+    if (wrapper === 'command' && isCommandLookup(rest)) break;
+    const inner = skipWrapperArgs(wrapper, rest);
     const next = inner[0];
     if (next === undefined) return null;
-    current = basename(next.text);
+    current = next;
     rest = inner.slice(1);
   }
-  return { program: current, args: rest };
+  return { name: current, args: rest };
 }
 
 /** Drops the wrapper's own flags (and their values), returning the inner argv. */

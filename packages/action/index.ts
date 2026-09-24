@@ -11,7 +11,7 @@ import { CONTROL_TOOL_NAMES } from './lib/domain/control-tools.ts';
 import { loadBashParser } from './lib/shell/parser.ts';
 
 /** Bumped whenever the classification rules change. */
-export const CLASSIFIER_VERSION = '0.2.3';
+export const CLASSIFIER_VERSION = '0.2.4';
 
 export { CONTROL_TOOL_NAMES };
 
