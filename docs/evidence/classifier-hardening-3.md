@@ -125,6 +125,7 @@ The probe does not read classifier output, and its tests pass unchanged.
 - The skip note in `docs/evidence/classifier-benchmark.md` still describes the refspec miss as open.
 - `gh api graphql` and `gh api` with `-f` fields default to GET, so they are `fetch` rather than `send`.
 - `scp <host>:<path> .` is a download but stays a `send` to the host.
+- `mv` reads its sources but does not emit a `delete` for them, so a Rule on deleting workspace files is not evaluated for `mv`.
 - A `gh api` path that contains a shell expansion anywhere leaves the Remote Key unresolved, even when its owner and repository are literal.
 
 ## Result
