@@ -23,7 +23,8 @@ import {
   AdoptionGroupSchema,
   AnalyzabilityCountsSchema,
   AuthorityMapCellSchema,
-  ConformanceFindingSchema,
+  ConformanceFindingStatusSchema,
+  ConformanceFindingViewSchema,
   DiffGroupSchema,
   PermissionModeCountSchema,
   ReplayRunIdSchema,
@@ -345,8 +346,22 @@ export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 export { PermissionModeCountSchema, UNGUARDED_PERMISSION_MODES };
 export type { PermissionModeCount } from '@authority/replay/schema';
 
-export const ConformanceFindingResponseSchema = ConformanceFindingSchema;
+// status and note default so a listing payload from before acknowledgement
+// still parses; the server always writes both after this contract.
+export const ConformanceFindingResponseSchema = ConformanceFindingViewSchema.extend({
+  status: ConformanceFindingStatusSchema.default('open'),
+  note: z.string().default(''),
+});
 export type ConformanceFindingResponse = z.infer<typeof ConformanceFindingResponseSchema>;
+
+// PUT /conformance-findings/{id}
+export const AcknowledgeConformanceFindingRequestSchema = z.object({
+  status: z.literal('acknowledged'),
+  note: z.string(),
+});
+export type AcknowledgeConformanceFindingRequest = z.infer<
+  typeof AcknowledgeConformanceFindingRequestSchema
+>;
 
 export const ListConformanceFindingsResponseSchema = z.object({
   run: z

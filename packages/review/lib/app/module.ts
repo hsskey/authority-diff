@@ -1,6 +1,11 @@
 import { err, ok } from '@authority/kernel';
 import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
-import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
+import type {
+  PolicyDocument,
+  PolicyId,
+  PolicyVersion,
+  PolicyVersionId,
+} from '@authority/policy/schema';
 import type { ReplayModule } from '@authority/replay';
 import type {
   AdoptionGroup,
@@ -19,6 +24,7 @@ import {
   type VerdictSnapshotEntry,
 } from '../../schema.ts';
 import { computeGate } from '../domain/gate.ts';
+import { ruleDraftFromFinding } from '../domain/rule-draft-from-finding.ts';
 import {
   renderAdoptionReport,
   renderReport,
@@ -44,6 +50,15 @@ export interface PolicyReviewRepository {
     policyId: PolicyId,
   ): Promise<Result<{ id: PolicyVersionId; contentHash: string }, AppError>>;
   submitForReview(id: PolicyVersionId): Promise<Result<void, AppError>>;
+  createDraftVersion(
+    policyId: PolicyId,
+    baseVersionId: PolicyVersionId,
+  ): Promise<Result<PolicyVersion, AppError>>;
+  updateDraftDocument(
+    id: PolicyVersionId,
+    ifMatch: string,
+    document: PolicyDocument,
+  ): Promise<Result<PolicyVersion, AppError>>;
 }
 
 /** `stats` is the diff stats of a change review's run; an adoption run's stats live on the run. */
@@ -148,6 +163,11 @@ export interface ReviewModule {
   withdraw(id: ChangeReviewId): Promise<Result<ChangeReviewView, AppError>>;
   getDecision(id: ChangeReviewId): Promise<Result<ReviewDecision | null, AppError>>;
   getReport(id: ChangeReviewId): Promise<Result<string, AppError>>;
+  /**
+   * Creates a draft Policy Version from the latest conformance run's candidate
+   * and adds a Rule for the finding's Capability and Zone.
+   */
+  createPolicyDraftFromFinding(findingKey: string): Promise<Result<PolicyVersion, AppError>>;
   listDiffGroups(
     id: ChangeReviewId,
     input: ListReviewDiffGroupsInput,
@@ -805,6 +825,30 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       const nextCursor =
         matches.length > limit ? (items[items.length - 1]?.groupKey ?? null) : null;
       return ok({ items, nextCursor });
+    },
+
+    async createPolicyDraftFromFinding(findingKey) {
+      const located = await replay.getConformanceFinding(findingKey);
+      if (!located.ok) {
+        return located;
+      }
+      const { finding, policyVersionId } = located.value;
+      const base = await policy.getVersion(policyVersionId);
+      if (!base.ok) {
+        return base;
+      }
+      const draft = await policy.createDraftVersion(base.value.policyId, base.value.id);
+      if (!draft.ok) {
+        return draft;
+      }
+      const rule = ruleDraftFromFinding(
+        finding,
+        draft.value.document.rules.map((existing) => existing.ruleId),
+      );
+      return policy.updateDraftDocument(draft.value.id, draft.value.contentHash, {
+        ...draft.value.document,
+        rules: [...draft.value.document.rules, rule],
+      });
     },
   };
 }

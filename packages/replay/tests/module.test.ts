@@ -20,7 +20,7 @@ import type { AnalyzabilityCounts, AuthorityMapCell, PolicyReader, ReplayStore }
 import { computeAdoption, computeDiff } from '../diff.ts';
 import { ReplayRunIdSchema, ReplayRunSchema } from '../schema.ts';
 import type {
-  ConformanceFinding,
+  ConformanceFindingView,
   PermissionModeCount,
   ReplayRun,
   StoredAdoptionGroup,
@@ -89,7 +89,7 @@ function makeStore(): FakeStore {
   const adoptionGroups = new Map<string, StoredAdoptionGroup[]>();
   const matrices = new Map<string, readonly AuthorityMapCell[]>();
   const analyzabilityCounts = new Map<string, AnalyzabilityCounts>();
-  const findings = new Map<string, readonly ConformanceFinding[]>();
+  const findings = new Map<string, ConformanceFindingView[]>();
   const unpaired = new Map<string, number>();
   const byPermissionMode = new Map<string, readonly PermissionModeCount[]>();
   const completedNewestFirst = () =>
@@ -134,7 +134,11 @@ function makeStore(): FakeStore {
       adoptionGroups.set(input.replayRunId, [...input.adoptionGroups]);
       findings.set(
         input.replayRunId,
-        input.findings.map(({ replayRunId: _replayRunId, ...finding }) => finding),
+        input.findings.map(({ replayRunId: _replayRunId, ...finding }) => ({
+          ...finding,
+          status: finding.status,
+          note: finding.note,
+        })),
       );
       if ('matrix' in input.stats) {
         matrices.set(input.replayRunId, input.stats.matrix);
@@ -210,6 +214,24 @@ function makeStore(): FakeStore {
       );
     },
     listConformanceFindings: (id) => Promise.resolve(findings.get(id) ?? []),
+    getConformanceFinding: (id, findingKey) =>
+      Promise.resolve(
+        (findings.get(id) ?? []).find((finding) => finding.findingKey === findingKey) ?? null,
+      ),
+    acknowledgeConformanceFinding: (id, findingKey, note) => {
+      const items = findings.get(id) ?? [];
+      const index = items.findIndex((finding) => finding.findingKey === findingKey);
+      const current = items[index];
+      if (current === undefined) {
+        return Promise.resolve(null);
+      }
+      const updated = { ...current, status: 'acknowledged' as const, note };
+      findings.set(
+        id,
+        items.map((finding, i) => (i === index ? updated : finding)),
+      );
+      return Promise.resolve(updated);
+    },
     listCompletedRunsNewestFirst: () =>
       Promise.resolve(
         completedNewestFirst()
@@ -515,6 +537,47 @@ describe('replay module', () => {
     expect(listed.items.map((finding) => [finding.kind, finding.capability])).toEqual([
       ['over_asked', 'push'],
     ]);
+    expect(listed.items.map((finding) => finding.status)).toEqual(['open']);
+  });
+
+  test('acknowledging a finding of the latest run stores the note and is idempotent', async () => {
+    const pushAction = actions[1];
+    if (pushAction === undefined) {
+      throw new Error('fixture has a push Action');
+    }
+    const { module } = makeModule({
+      reader: makeReader({
+        getObservations: () =>
+          Promise.resolve([
+            observation(pushAction, 'pre_tool_use'),
+            observation(pushAction, 'permission_request', null),
+          ]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await requested.value.execution;
+    const listed = await module.listConformanceFindings();
+    const findingKey = listed.items[0]?.findingKey;
+    if (findingKey === undefined) {
+      throw new Error('the run produced a finding');
+    }
+
+    const first = await module.acknowledgeConformanceFinding(findingKey, 'expected in bypass');
+    const second = await module.acknowledgeConformanceFinding(findingKey, 'updated note');
+    const missing = await module.acknowledgeConformanceFinding('a'.repeat(64), 'no such finding');
+
+    expect(first.ok && first.value.status).toBe('acknowledged');
+    expect(first.ok && first.value.note).toBe('expected in bypass');
+    expect(second.ok && second.value.note).toBe('updated note');
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.error.code).toBe('replay.finding_not_found');
+    }
+    expect((await module.listConformanceFindings()).items[0]?.note).toBe('updated note');
   });
 
   test('a conformance run lists its Action counts per permission mode', async () => {

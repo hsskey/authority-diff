@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
+  AcknowledgeConformanceFindingRequestSchema,
   ActivityOverviewQuerySchema,
   ChangeReviewResponseSchema,
+  ConformanceFindingResponseSchema,
   CreateDecisionRequestSchema,
   CreateReplayRunRequestSchema,
   CreateRuntimeObservationsRequestSchema,
@@ -199,5 +201,30 @@ describe('contracts DTO round-trip', () => {
       },
     };
     expect(ErrorEnvelopeSchema.parse(value)).toEqual(value);
+  });
+
+  test('an acknowledgement request requires acknowledged status and a note', () => {
+    expect(
+      AcknowledgeConformanceFindingRequestSchema.parse({ status: 'acknowledged', note: '' }),
+    ).toEqual({ status: 'acknowledged', note: '' });
+    expect(
+      AcknowledgeConformanceFindingRequestSchema.safeParse({ status: 'open', note: '' }).success,
+    ).toBe(false);
+  });
+
+  test('a finding listing item defaults status and note when omitted', () => {
+    const parsed = ConformanceFindingResponseSchema.parse({
+      findingKey: HASH,
+      kind: 'over_asked',
+      capability: 'push',
+      zone: 'public_remote',
+      program: null,
+      actionCount: 1,
+      sessionCount: 1,
+      firstOccurredAt: TS,
+      lastOccurredAt: TS,
+      sampleActionKeys: [HASH],
+    });
+    expect([parsed.status, parsed.note]).toEqual(['open', '']);
   });
 });

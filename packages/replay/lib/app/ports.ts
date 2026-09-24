@@ -9,7 +9,7 @@ import type {
   AdoptionStats,
   AnalyzabilityCounts,
   AuthorityMapCell,
-  ConformanceFinding,
+  ConformanceFindingView,
   DiffGroup,
   PermissionModeCount,
   ReplayRun,
@@ -133,5 +133,14 @@ export interface ReplayStore {
   /** Completed `version_diff` and `adoption` runs; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;
   findLatestConformanceRun(): Promise<ConformanceRunView | null>;
-  listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFinding[]>;
+  listConformanceFindings(id: ReplayRunId): Promise<readonly ConformanceFindingView[]>;
+  getConformanceFinding(
+    id: ReplayRunId,
+    findingKey: string,
+  ): Promise<ConformanceFindingView | null>;
+  acknowledgeConformanceFinding(
+    id: ReplayRunId,
+    findingKey: string,
+    note: string,
+  ): Promise<ConformanceFindingView | null>;
 }

@@ -71,6 +71,13 @@
       "when": 1790169804357,
       "tag": "0009_change_reviews_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790258825042,
+      "tag": "0010_known_talisman",
+      "breakpoints": true
     }
   ]
 }

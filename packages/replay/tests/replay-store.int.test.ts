@@ -16,13 +16,22 @@ import { PolicyDocumentSchema } from '@authority/policy/schema';
 import type { PolicyVersionId } from '@authority/policy/schema';
 import { createTraceModule } from '@authority/trace';
 import type { ActionReader } from '@authority/trace';
-import { ParsedSessionSchema } from '@authority/trace/schema';
-import type { ActionForReplay } from '@authority/trace/schema';
+import {
+  ParsedSessionSchema,
+  ActionForReplaySchema,
+  StoredAgentActionSchema,
+} from '@authority/trace/schema';
+import type {
+  ActionForReplay,
+  ObservationForReplay,
+  StoredAgentAction,
+} from '@authority/trace/schema';
 import { countRowsByRun, createMemoryLogger } from '@authority/platform/testing';
 import { createReplayModule } from '../index.ts';
 import type { PolicyReader } from '../index.ts';
 import { createEvaluator } from '@authority/policy/evaluate';
 import { computeAdoption, computeConformanceWith, computeDiff } from '../diff.ts';
+import actionFixture from '../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import baselineFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
 import candidateFixture from '../../../tests/fixtures/candidate-policy.json' with { type: 'json' };
 import sessionFixture from '../../../tests/fixtures/parsed-session.json' with { type: 'json' };
@@ -299,10 +308,142 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   expect(stored?.kind).toBe('conformance');
   expect(stored?.resultHash).toBe(local.resultHash);
   expect(listed.run?.replayRunId).toBe(requested.value.run.id);
-  expect(listed.items).toEqual(local.findings);
+  expect(listed.items).toEqual(
+    local.findings.map((finding) => ({ ...finding, status: 'open', note: '' })),
+  );
+  const [firstFinding] = listed.items;
+  const unknown = await replay.acknowledgeConformanceFinding('a'.repeat(64), 'noted');
+  expect(unknown.ok).toBe(false);
+  if (!unknown.ok) {
+    expect(unknown.error.code).toBe('replay.finding_not_found');
+  }
+  if (firstFinding !== undefined) {
+    const acknowledged = await replay.acknowledgeConformanceFinding(
+      firstFinding.findingKey,
+      'noted',
+    );
+    if (!acknowledged.ok) {
+      throw new Error(acknowledged.error.code);
+    }
+    expect(acknowledged.value).toMatchObject({
+      findingKey: firstFinding.findingKey,
+      status: 'acknowledged',
+      note: 'noted',
+    });
+    expect((await replay.listConformanceFindings()).items[0]?.status).toBe('acknowledged');
+  }
   expect(local.findings.map((finding) => finding.kind)).not.toContain('under_asked');
   expect(listed.run?.unpairedPermissionRequests).toBe(1);
   expect(listed.run?.byPermissionMode).toEqual(local.stats.byPermissionMode);
+});
+
+test('acknowledging a stored finding persists status and note', async () => {
+  const clock = createSystemClock();
+  const idGenerator = createUlidGenerator();
+  const actions = ActionForReplaySchema.array().parse(actionFixture);
+  const candidateDocument = PolicyDocumentSchema.parse(candidateFixture);
+  const now = IsoTimestampSchema.parse('2026-02-01T00:00:00.000Z');
+  const storedActions: StoredAgentAction[] = actions.map((action) =>
+    StoredAgentActionSchema.parse({
+      ...action,
+      toolName: 'Bash',
+      toolInputRedacted: 'synthetic redacted input',
+      isInputTruncated: false,
+      isSidechain: false,
+      classifierVersion: 'test-classifier-1',
+      recordedAt: now,
+    }),
+  );
+  const pushAction = actions[1];
+  if (pushAction === undefined) {
+    throw new Error('fixture has a push Action');
+  }
+  const observations: ObservationForReplay[] = [
+    {
+      actionKey: pushAction.actionKey,
+      event: 'pre_tool_use',
+      sessionExternalId: pushAction.sessionExternalId,
+      toolName: 'Bash',
+      toolInputHash: 'c'.repeat(64),
+      hookDecision: null,
+      permissionMode: null,
+      occurredAt: pushAction.occurredAt,
+    },
+    {
+      actionKey: null,
+      event: 'permission_request',
+      sessionExternalId: pushAction.sessionExternalId,
+      toolName: 'Bash',
+      toolInputHash: 'c'.repeat(64),
+      hookDecision: null,
+      permissionMode: null,
+      occurredAt: pushAction.occurredAt,
+    },
+  ];
+  const seeded = await createPolicyRepository({
+    db: database.db,
+    clock,
+    idGenerator,
+  }).seedAcceptedPolicy({
+    name: idGenerator.next('policy'),
+    document: candidateDocument,
+  });
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
+  }
+  const reader: ActionReader = {
+    streamActions: async function* () {
+      await Promise.resolve();
+      yield actions;
+    },
+    getActions: (keys) =>
+      Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
+    countStaleClassifications: () => Promise.resolve(0),
+    listObservationSessions: () => Promise.resolve([pushAction.sessionExternalId]),
+    getObservations: () => Promise.resolve(observations),
+  };
+  const replay = createReplayModule({
+    database,
+    reader,
+    policy: {
+      getVersion: (id) =>
+        Promise.resolve(
+          id === seeded.value.version.id
+            ? {
+                document: candidateDocument,
+                contentHash: seeded.value.version.contentHash,
+                status: seeded.value.version.status,
+              }
+            : null,
+        ),
+    },
+    clock,
+    idGenerator,
+    logger: createMemoryLogger(),
+    classifierVersion: 'test-classifier-1',
+  });
+  const requested = await replay.requestConformanceReplay({
+    candidateVersionId: seeded.value.version.id,
+    ...freshWindow(),
+  });
+  if (!requested.ok) {
+    throw new Error(requested.error.code);
+  }
+  await requested.value.execution;
+  const listed = await replay.listConformanceFindings();
+  const [firstFinding] = listed.items;
+  if (firstFinding === undefined) {
+    throw new Error('the fixture produces an over_asked finding');
+  }
+
+  const acknowledged = await replay.acknowledgeConformanceFinding(firstFinding.findingKey, 'noted');
+  if (!acknowledged.ok) {
+    throw new Error(acknowledged.error.code);
+  }
+
+  expect(acknowledged.value.status).toBe('acknowledged');
+  expect(acknowledged.value.note).toBe('noted');
+  expect((await replay.listConformanceFindings()).items[0]?.note).toBe('noted');
 });
 
 test('an adoption run persists its groups and assignments, is idempotent, and pages in review order', async () => {

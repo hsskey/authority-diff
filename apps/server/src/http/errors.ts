@@ -23,6 +23,7 @@ const STATUS_BY_CODE: Record<string, ContentfulStatusCode> = {
   'policy.precondition_required': 428,
   'policy.document_invalid': 422,
   'platform.database_unavailable': 503,
+  'replay.finding_not_found': 404,
   'internal.unexpected': 500,
 };
 

@@ -92,6 +92,9 @@ function makePolicyReviewRepository(
       const result = await repo.transitionVersion(id, 'submit');
       return result.ok ? ok(undefined) : err(result.error);
     },
+    createDraftVersion: (policyId, baseVersionId) =>
+      repo.createDraftVersion(policyId, baseVersionId),
+    updateDraftDocument: (id, ifMatch, document) => repo.updateDraftDocument(id, ifMatch, document),
   };
 }
 
