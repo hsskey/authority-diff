@@ -29,6 +29,18 @@ function parseInstallHooksArgs(args: readonly string[]): {
   return { printOnly, commandOverride };
 }
 
+function parseSpoolFlushArgs(args: readonly string[]): { readonly from?: string } {
+  const fromIndex = args.indexOf('--from');
+  if (fromIndex === -1) {
+    return {};
+  }
+  const from = args[fromIndex + 1];
+  if (from === undefined || from.length === 0) {
+    process.exit(1);
+  }
+  return { from };
+}
+
 const args = process.argv.slice(2);
 
 if (args[0] === 'hook' && args[1] === 'permission-request') {
@@ -49,7 +61,7 @@ if (args[0] === 'hook' && args[1] === 'permission-request') {
   }
   runAsync(runImport(dir).then(() => undefined));
 } else if (args[0] === 'spool-flush') {
-  runAsync(runSpoolFlush());
+  runAsync(runSpoolFlush(parseSpoolFlushArgs(args.slice(1))));
 } else if (args[0] === 'verify-audit') {
   runAsync(runVerifyAudit());
 } else {

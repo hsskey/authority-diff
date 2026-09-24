@@ -90,6 +90,7 @@ Node 22. The intended local path is compose, seed or import, the web journey, th
    ```
 
    `pnpm authority spool-flush` later sends spool files to the server for conformance.
+   `pnpm authority spool-flush --from <dir>` sends a spool directory copied from another machine.
 
 Do not put real transcripts, command text, paths, or host names into this repository. Keep those under `.local/` and publish aggregates only.
 
@@ -106,6 +107,6 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 - **Approximate remote parsing.** A Remote Key comes from the command text and the remotes found on disk at import time. A named remote used outside the Action workspace stays unresolved and falls to `unknown_remote` (`docs/evidence/classifier-limitations.md`, `docs/evidence/replay-limitations.md`).
 - **Real-record demo, no synthetic fixture.** The `github.com/**` scene in the recorded journey comes from recorded Actions. No `synthetic` fixture was imported, and no Widening outside the expected list appeared. Metrics, provenance, and grade are in `docs/evidence/v1-metrics.md`.
 - **Not built in V1.** Policy activation and rollback, settings export, a job queue, API tokens and roles, provider calibration, a Codex parser, and the other work listed in `docs/cutline.md` chapter 13 are out of scope.
-- **Node path.** `install-hooks` prefers a stable Node symlink over a Homebrew Cellar path, because a Cellar path disappears on upgrade. If no symlink resolves to the same binary, the Cellar path remains and hooks break after upgrade.
+- **Node path.** `install-hooks` prefers a stable Node path over a versioned one, because a versioned path disappears on upgrade. It uses a Homebrew symlink that resolves to the same Cellar binary, or the vite-plus, Volta, or nvm shim. If neither exists, the versioned path remains and hooks break after upgrade.
 
 Classifier details, Zone publish counts, and hook spool behavior are in `docs/evidence/`. Range is `docs/cutline.md`. Target architecture is `docs/design.md`. Terms are `CONTEXT.md`.

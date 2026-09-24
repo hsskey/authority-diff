@@ -151,8 +151,45 @@ describe('selectNodePath', () => {
       },
       expected: CELLAR_NODE,
     },
+    {
+      name: 'uses the vite-plus shim instead of a versioned runtime',
+      execPath: '/home/u/.vite-plus/js_runtime/node/22.9.0/bin/node',
+      links: { '/home/u/.vite-plus/bin/node': '/home/u/.vite-plus/0.2.1/bin/vp' },
+      expected: '/home/u/.vite-plus/bin/node',
+    },
+    {
+      name: 'uses the volta shim instead of a versioned image',
+      execPath: '/home/u/.volta/tools/image/node/22.9.0/bin/node',
+      links: { '/home/u/.volta/bin/node': '/home/u/.volta/bin/volta-shim' },
+      expected: '/home/u/.volta/bin/node',
+    },
+    {
+      name: 'uses the nvm current symlink instead of a versioned install',
+      execPath: '/home/u/.nvm/versions/node/v22.9.0/bin/node',
+      links: {
+        '/home/u/.nvm/current/bin/node': '/home/u/.nvm/versions/node/v24.1.0/bin/node',
+      },
+      expected: '/home/u/.nvm/current/bin/node',
+    },
+    {
+      name: 'keeps the versioned path when the version manager has no shim',
+      execPath: '/home/u/.nvm/versions/node/v22.9.0/bin/node',
+      links: {},
+      expected: '/home/u/.nvm/versions/node/v22.9.0/bin/node',
+    },
   ])('$name', ({ execPath, links, expected }) => {
     expect(selectNodePath(execPath, fakeRealpath(links)).path).toBe(expected);
+  });
+
+  test('explains a version-manager shim choice in one line', () => {
+    const versioned = '/home/u/.vite-plus/js_runtime/node/22.9.0/bin/node';
+    const selection = selectNodePath(
+      versioned,
+      fakeRealpath({ '/home/u/.vite-plus/bin/node': '/home/u/.vite-plus/0.2.1/bin/vp' }),
+    );
+    expect(selection.reason).toBe(
+      `/home/u/.vite-plus/bin/node (vite-plus shim instead of versioned ${versioned})`,
+    );
   });
 
   test('explains the choice in one line', () => {
