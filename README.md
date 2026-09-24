@@ -22,7 +22,7 @@ import → activity overview → first Policy (draft) → adoption preview → r
 
 ## Result of the recorded journey
 
-Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.2 and the corrected environment profile (policy A).
+Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.3 and the corrected environment profile (policy A).
 Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
 
 ### Adoption preview (first Policy)
@@ -30,19 +30,19 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 <!-- remeasure:readme-adoption -->
 | evaluated Actions | allow | ask | deny | Adoption Groups |
 | ---: | ---: | ---: | ---: | --- |
-| 34,490 | 8,217 (23.8%) | 26,253 (76.1%) | 20 (0.06%) | 23 (21 ask, 2 deny) |
+| 34,490 | 15,242 (44.2%) | 19,228 (55.7%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
 <!-- /remeasure:readme-adoption -->
 
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 That is what the Policy says about this corpus, reported as-is.
-Reviewing the whole preview took 23 Verdicts, one per Adoption Group.
-The fresh-volume re-run of the journey showed the same figures on screen; the deny tile rounds to `0.1%` because tiles show one decimal, and the count 20 is exact.
+Reviewing the whole preview took 24 Verdicts, one per Adoption Group.
+The fresh-volume re-run of the journey, scripted through the API and repeated in the browser, showed the same figures, and `verify-audit` found the Decision Record chain intact; the deny tile rounds to `0.1%` because tiles show one decimal, and the count 20 is exact.
 
 ### Change Review (github.com/** scene)
 
-The core scene is a fetch to another owner's repository after `trustedRemotes` is widened with a host-wide GitHub pattern.
+The core scene is fetches to other owners' repositories after `trustedRemotes` is widened with a host-wide GitHub pattern.
 
-That scene is **6 Actions** (2 `git` fetch, 4 `gh` fetch).
+That scene is **7 Actions** (3 `git` fetches from one repository, 4 `gh` fetches, one to each of four other repositories).
 Zone moves `unknown_remote` → `trusted_remote`. Effect moves ask → allow. Severity is critical.
 Named remotes used outside the Action workspace do not resolve a Remote Key, so they stay `unknown_remote` even under that pattern.
 

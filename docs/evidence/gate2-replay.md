@@ -1,16 +1,16 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.2; measured 2026-09-24; A vs B resultHash `55592458…c08b`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; A vs B resultHash `2c4577fa…a8d9`
 
 # Gate 2 replay
 
 <!-- remeasure:gate2-intro -->
-Gate 2 evidence from classifier 0.2.2 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm evidence:remeasure` on 2026-09-24.
-Every number in the main sections is labelled **classifier 0.2.2**; the earlier 0.2.1 measurement is kept unchanged under "Previous version" at the end.
+Gate 2 evidence from classifier 0.2.3 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm evidence:remeasure` on 2026-09-24.
+Every number in the main sections is labelled **classifier 0.2.3**; the earlier 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
 <!-- /remeasure:gate2-intro -->
-No repository names, host paths, or raw command text appear below; repo-02 is a GitHub repository of a different owner that is in neither remote list.
+No repository names, host paths, or raw command text appear below; repo-02 to repo-06 are GitHub repositories of other owners that are in neither remote list, and `named-remote-NN` is a git remote name that did not resolve to a Remote Key.
 Remote resolution happens at import or replay time, so these numbers are tied to the snapshot and the disk state of the measurement date (`docs/evidence/replay-limitations.md`).
 
 <!-- remeasure:gate2-comparisons -->
-## Comparisons (classifier 0.2.2)
+## Comparisons (classifier 0.2.3)
 
 Four candidate documents against policy A, each run twice:
 B (`allow_unknown_remote_fetch`), B' (B plus a host-wide `github.com/**` in `trustedRemotes`), P (`push` + `trusted_remote` → allow), P' (P plus the same `github.com/**`).
@@ -20,12 +20,134 @@ All eight runs: total 34,940, evaluated 34,490, excluded 450, analyzability `non
 
 | run | candidate | resultHash (run 1 = run 2) | changed | widening | critical | `diff -rq` |
 | --- | --- | --- | ---: | ---: | ---: | --- |
+| A vs B | policy-b.v2.json | `2c4577fa24f8b0eda4c4f4de042bf5773bfa26d4b01e5b5c264e2db0d2a0a8d9` | 139 | 5 | 5 | identical |
+| A vs B' | policy-bp.v2.json | `3082d2a43c358b7bf1fe0e1c81ef4a91eb3aca9aeb44a0d88d34e916843d1598` | 139 | 7 | 7 | identical |
+| A vs P | policy-p.v2.json | `0680cfd46c9fbfece241da4c2addc15a850f5dbd65271089ff14489dc71c404b` | 0 | 0 | 0 | identical |
+| A vs P' | policy-pp.v2.json | `68446eb4cc48ca66212a174ce45405dff0bb812440562ce61deaf2648293e7f8` | 7 | 2 | 2 | identical |
+
+### Top summary
+
+| run | changed | widening | critical | allow→allow | ask→allow | ask→ask | deny→deny | none / changed |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| A vs B | 139 | 5 | 5 | 15,242 | 139 | 19,089 | 20 | 0 / 139 |
+| A vs B' | 139 | 7 | 7 | 15,242 | 139 | 19,089 | 20 | 0 / 139 |
+| A vs P | 0 | 0 | 0 | 15,242 | 0 | 19,228 | 20 | 0 / 0 |
+| A vs P' | 7 | 2 | 2 | 15,242 | 7 | 19,221 | 20 | 0 / 7 |
+
+All other transition cells are 0 in every run: no narrowing, no allow→ask, and no transition into or out of deny.
+
+### Widening groups: A vs B
+
+| group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| 5f151a90 | git | fetch | unknown_remote → unknown_remote | ask → allow | critical | 46 | 28 | 0 | origin (unresolved)(32), named-remote-01 (unresolved)(4), repo-02(3), named-remote-02 (unresolved)(3), unknown(2) |
+| 9eb5d1f8 | WebFetch | fetch | unknown_remote → unknown_remote | ask → allow | critical | 34 | 11 | 0 | raw.githubusercontent.com(9), code.claude.com(8), developers.figma.com(3), docs.claude.com(3), www.figma.com(3) |
+| 3f356e8f | gh | fetch | unknown_remote → unknown_remote | ask → allow | critical | 32 | 18 | 0 | origin (unresolved)(26), unknown(2), repo-03(1), repo-04(1), repo-05(1) |
+| 0318937f | curl | fetch | unknown_remote → unknown_remote | ask → allow | critical | 15 | 12 | 0 | unknown(6), platform.claude.com(4), raw.githubusercontent.com(2), api.github.com(1), example.com(1) |
+| 56e9d01e | WebSearch | fetch | unknown_remote → unknown_remote | ask → allow | critical | 12 | 4 | 0 | unknown(12) |
+
+Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → unknown_remote 231.
+
+### Widening groups: A vs B'
+
+| group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| 5f151a90 | git | fetch | unknown_remote → unknown_remote | ask → allow | critical | 43 | 27 | 0 | origin (unresolved)(32), named-remote-01 (unresolved)(4), named-remote-02 (unresolved)(3), unknown(2), named-remote-03 (unresolved)(1) |
+| 9eb5d1f8 | WebFetch | fetch | unknown_remote → unknown_remote | ask → allow | critical | 34 | 11 | 0 | raw.githubusercontent.com(9), code.claude.com(8), developers.figma.com(3), docs.claude.com(3), www.figma.com(3) |
+| 3f356e8f | gh | fetch | unknown_remote → unknown_remote | ask → allow | critical | 28 | 16 | 0 | origin (unresolved)(26), unknown(2) |
+| 0318937f | curl | fetch | unknown_remote → unknown_remote | ask → allow | critical | 15 | 12 | 0 | unknown(6), platform.claude.com(4), raw.githubusercontent.com(2), api.github.com(1), example.com(1) |
+| 56e9d01e | WebSearch | fetch | unknown_remote → unknown_remote | ask → allow | critical | 12 | 4 | 0 | unknown(12) |
+| b391c32d | gh | fetch | unknown_remote → trusted_remote | ask → allow | critical | 4 | 2 | 0 | repo-03(1), repo-04(1), repo-05(1), repo-06(1) |
+| b3807c02 | git | fetch | unknown_remote → trusted_remote | ask → allow | critical | 3 | 2 | 0 | repo-02(3) |
+
+Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 14; fetch unknown_remote → unknown_remote 217.
+
+### Widening groups: A vs P
+
+No groups. resultHash `0680cfd4…404b`.
+
+Operation-level widening while the Action Effect is unchanged: push trusted_remote → trusted_remote 3.
+
+### Widening groups: A vs P'
+
+| group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| b391c32d | gh | fetch | unknown_remote → trusted_remote | ask → allow | critical | 4 | 2 | 0 | repo-03(1), repo-04(1), repo-05(1), repo-06(1) |
+| b3807c02 | git | fetch | unknown_remote → trusted_remote | ask → allow | critical | 3 | 2 | 0 | repo-02(3) |
+
+Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 14; push trusted_remote → trusted_remote 3.
+<!-- /remeasure:gate2-comparisons -->
+
+## B' scene (Gate 3 core)
+
+Appending one `github.com/**` line to `trustedRemotes` made unlisted other-owner repositories trusted.
+Under B' and P', seven recorded fetch Actions flip from ask to allow at critical severity, all `unknown_remote → trusted_remote`: 3 git fetches from repo-02 and 4 gh reads of four other repositories (repo-03 to repo-06, one Action each).
+Named remotes used outside the Action workspace still do not resolve a Remote Key and stay `unknown_remote` even under `github.com/**` (the `named-remote-NN` targets of the git group).
+
+<!-- remeasure:gate2-criteria -->
+## Diff review criteria (A vs B, classifier 0.2.3)
+
+| criterion | result | verdict |
+| --- | --- | --- |
+| Effect-changed Actions | 139 (≥ 10) | pass |
+| Widening group count | 5 (≤ 25) | pass |
+| Compression | 5 groups = 139 / 139 = 100% | pass |
+| Understandability | 1 group cannot be fully described without raw commands (WebSearch, target always unknown) | pass (< 3) |
+| Determinism | identical `resultHash` on two runs per case | pass |
+| Changed-action analyzability `none` | 0 / 139 | pass |
+<!-- /remeasure:gate2-criteria -->
+
+## Journey grade
+
+**Medium** (중): real-record Widening groups were reviewable and all fell within the expected range.
+No unexpected Widening group appeared.
+The B' trusted-remote scene is real-record, not synthetic.
+Verdicts and timing in the recorded journey were given by an Agent, not a person.
+
+## Previous version: classifier 0.2.2 (not re-run)
+
+The section below is the Gate 2 evidence as measured on classifier 0.2.2 with `pnpm evidence:remeasure` on 2026-09-24 and is kept as the record of that measurement.
+Its `resultHash` values are not comparable with the 0.2.3 values above (see "Change from classifier 0.2.2" below).
+Its tables print every unresolved named remote as `named remote (unresolved)`; the main sections number them.
+
+### Change from classifier 0.2.2
+
+| measure | 0.2.2 | 0.2.3 |
+| --- | ---: | ---: |
+| allow→allow under every candidate | 8,217 | 15,242 |
+| A vs B changed Actions | 132 | 139 |
+| A vs B' changed Actions | 132 | 139 |
+| A vs P changed Actions | 0 | 0 |
+| A vs P' changed Actions | 6 | 7 |
+| widening / critical groups (B, B', P, P') | 5/5, 7/7, 0/0, 2/2 | 5/5, 7/7, 0/0, 2/2 |
+| `git` group 5f151a90 under B | 35 Actions / 21 Sessions | 46 / 28 |
+| `gh` group 3f356e8f under B | 36 / 17 | 32 / 18 |
+| B' trusted-remote scene | 6 (2 git, 4 gh; all repo-02) | 7 (3 git from repo-02; 4 gh, one each to repo-03 to repo-06) |
+
+Classifier 0.2.3 folds each Session's home directory to `~`, so path Operations under a `~` workspace root are now inside the workspace; under policy A, 7,036 Actions move from ask to allow and 11 `cp` reads of an outside source move from allow to ask, which raises allow→allow by 7,025 in every comparison.
+A `gh` command now takes its Remote Key from the repository its arguments name instead of the Session `origin`, so the four gh Actions of the B' scene point at the four repositories they named rather than at repo-02.
+Git refspec operands are no longer read as remote URLs (`docs/evidence/classifier-hardening-3.md`).
+Every group keeps its identity (same signature and group key); the WebFetch, curl, and WebSearch groups are unchanged in Actions and Sessions.
+
+No repository names, host paths, or raw command text appear below; repo-02 is a GitHub repository of a different owner that is in neither remote list.
+Remote resolution happens at import or replay time, so these numbers are tied to the snapshot and the disk state of the measurement date (`docs/evidence/replay-limitations.md`).
+
+### Comparisons (classifier 0.2.2)
+
+Four candidate documents against policy A, each run twice:
+B (`allow_unknown_remote_fetch`), B' (B plus a host-wide `github.com/**` in `trustedRemotes`), P (`push` + `trusted_remote` → allow), P' (P plus the same `github.com/**`).
+All eight runs: total 34,940, evaluated 34,490, excluded 450, analyzability `none` share of changed = 0.
+
+#### Run identity
+
+| run | candidate | resultHash (run 1 = run 2) | changed | widening | critical | `diff -rq` |
+| --- | --- | --- | ---: | ---: | ---: | --- |
 | A vs B | policy-b.v2.json | `55592458180a8de7cb8fca698b2a70c0c23bf5906e6c9d93a41ebc27ef02c08b` | 132 | 5 | 5 | identical |
 | A vs B' | policy-bp.v2.json | `55a0cb73e6be97e51e12d26aad4f44677ab835692c20608df3499e09eae6cd18` | 132 | 7 | 7 | identical |
 | A vs P | policy-p.v2.json | `3cdec9f51c93453e87d4c1e2ec7370fa016c3968ce8e5f05636d67695f86b517` | 0 | 0 | 0 | identical |
 | A vs P' | policy-pp.v2.json | `e03cf456a1705f99ef46edd94568d1c0ed4b36adc0d1222b914a207799e7191f` | 6 | 2 | 2 | identical |
 
-### Top summary
+#### Top summary
 
 | run | changed | widening | critical | allow→allow | ask→allow | ask→ask | deny→deny | none / changed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -36,7 +158,7 @@ All eight runs: total 34,940, evaluated 34,490, excluded 450, analyzability `non
 
 All other transition cells are 0 in every run: no narrowing, no allow→ask, and no transition into or out of deny.
 
-### Widening groups: A vs B
+#### Widening groups: A vs B
 
 | group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
 | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
@@ -48,7 +170,7 @@ All other transition cells are 0 in every run: no narrowing, no allow→ask, and
 
 Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → unknown_remote 277.
 
-### Widening groups: A vs B'
+#### Widening groups: A vs B'
 
 | group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
 | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
@@ -62,13 +184,13 @@ Operation-level widening while the Action Effect is unchanged: fetch unknown_rem
 
 Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 10; fetch unknown_remote → unknown_remote 267.
 
-### Widening groups: A vs P
+#### Widening groups: A vs P
 
 No groups. resultHash `3cdec9f5…b517`.
 
 Operation-level widening while the Action Effect is unchanged: push trusted_remote → trusted_remote 3.
 
-### Widening groups: A vs P'
+#### Widening groups: A vs P'
 
 | group | program | capability | fromZone → toZone | effect | severity | actions | sessions | none | top targets (masked) |
 | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
@@ -76,16 +198,14 @@ Operation-level widening while the Action Effect is unchanged: push trusted_remo
 | b3807c02 | git | fetch | unknown_remote → trusted_remote | ask → allow | critical | 2 | 2 | 0 | repo-02(2) |
 
 Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 11; push trusted_remote → trusted_remote 3.
-<!-- /remeasure:gate2-comparisons -->
 
-## B' scene (Gate 3 core)
+### B' scene (Gate 3 core)
 
 Appending one `github.com/**` line to `trustedRemotes` made an unlisted other-owner repository trusted.
 Under B' and P', six recorded fetch Actions flip from ask to allow at critical severity: 2 git and 4 gh, all repo-02, `unknown_remote → trusted_remote`.
 The scene is unchanged from 0.2.1: the named remotes used outside the Action workspace still do not resolve a Remote Key and stay `unknown_remote` even under `github.com/**`.
 
-<!-- remeasure:gate2-criteria -->
-## Diff review criteria (A vs B, classifier 0.2.2)
+### Diff review criteria (A vs B, classifier 0.2.2)
 
 | criterion | result | verdict |
 | --- | --- | --- |
@@ -95,9 +215,8 @@ The scene is unchanged from 0.2.1: the named remotes used outside the Action wor
 | Understandability | 1 group cannot be fully described without raw commands (WebSearch, target always unknown) | pass (< 3) |
 | Determinism | identical `resultHash` on two runs per case | pass |
 | Changed-action analyzability `none` | 0 / 132 | pass |
-<!-- /remeasure:gate2-criteria -->
 
-## Journey grade
+### Journey grade
 
 **Medium** (중): real-record Widening groups were reviewable and all fell within the expected range.
 No unexpected Widening group appeared.

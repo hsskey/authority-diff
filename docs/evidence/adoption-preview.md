@@ -1,10 +1,10 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.2; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `f6601304…e3a7` (server), `3c51b552…e157` (local pipeline)
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `8ae52329…a444` (server), `8ae52329…a444` (local pipeline)
 
 # Adoption preview (first Policy)
 
 The adoption preview applies one candidate Policy Version to the recorded Actions with no baseline and asks which Effect each Action would receive (ADR-0010).
 <!-- remeasure:adoption-intro -->
-Every number in the main sections below is labelled **classifier 0.2.2, policy A** (measured 2026-09-24).
+Every number in the main sections below is labelled **classifier 0.2.3, policy A** (measured 2026-09-24).
 <!-- /remeasure:adoption-intro -->
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
@@ -14,6 +14,205 @@ Journey grade: **medium** (중): real-record Adoption Groups were reviewable and
 ## Result
 
 <!-- remeasure:adoption-result -->
+The candidate is policy A: the default template's Rules with the corrected environment profile (credential paths 5, agent-config paths 4, trusted remotes 35, public remotes 40, protected branches 3, production markers 3).
+Actions are built the same way the server builds them for a replay (transcript parse, remote enrichment, classifier 0.2.3, duplicate Action Keys removed) and evaluated with `computeAdoption` from `@authority/replay/diff`.
+
+| item | value |
+| --- | ---: |
+| Sessions | 1,036 |
+| Actions (after dedupe) | 34,940 (196 duplicates) |
+| evaluated | 34,490 |
+| excluded (no Operation) | 450 |
+| allow | 15,242 (44.2%) |
+| ask | 19,228 (55.7%) |
+| deny | 20 (0.06%) |
+| analyzability full / partial / none (Action) | 17,972 / 6,610 / 9,908 |
+| Capability × Zone × Effect cells | 30 |
+| Adoption Groups (ask / deny) | 24 (22 / 2) |
+| ask + deny Actions assigned to a group | 19,248 |
+| Sessions with at least one ask or deny Action | 647 |
+| `computeAdoption` wall time | 443 ms |
+
+The four figures the adoption review shows on screen and that this file locks: **evaluated 34,490, ask 55.7%, deny 20 (0.06%), 24 Adoption Groups**.
+The web renders shares with one decimal, so the deny tile reads `0.1%`; the count 20 is the exact figure.
+<!-- /remeasure:adoption-result -->
+
+## Why the ask share is what it is
+
+The ask share is a property of this Policy on this corpus and is reported as-is.
+
+- 10,936 of the 19,248 ask and deny Actions (56.8%) match no Rule and fall to the default `ask`.
+  The default template allows read, write, and commit only in `workspace` and execute only in `workspace` with `full` or `partial` analyzability; every read, write, or execute outside the Action's workspace root is `host` and asks.
+- `cd` into a directory outside the workspace root is classified as a `read` Operation on that path and is the deciding Operation of 1,190 Actions (6.2% of ask and deny), the second largest program in the `ask · read · host` group after `cat`.
+  Sibling worktrees and the supervisor's home are outside every Session's workspace root in this corpus (`docs/evidence/replay-limitations.md`).
+- 8,048 Actions (41.8%) are `execute` of a program whose effect could not be determined; `ask_unanalyzable` asks by Rule.
+- The remaining Rule matches are small: `ask_irreversible_local` 125, `ask_external_disclosure` 96, `ask_agent_config_change` 23, `deny_credentials_access` 13, `deny_shared_history_rewrite` 7.
+
+Neither the classifier nor the default template was changed to move this number.
+An organization that wants the share to drop declares more of its environment (workspace roots, trusted remotes) or adds Rules; that is a Policy change reviewed in a Change Review.
+
+## Adoption Groups
+
+<!-- remeasure:adoption-groups -->
+Groups are `[effect, capability, zone]` (ADR-0010), in review order (deny first, then ask by Action count).
+The share column is of the 19,248 ask and deny Actions.
+Programs are masked as in the previous rounds: non-standard programs as `<local-tool-NN>`, MCP tools as `<mcp-tool-NN>`.
+
+| # | effect | capability | zone | deciding rule | actions | sessions | share | none | distinct programs | top programs |
+| ---: | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 | deny | read | credentials | deny_credentials_access | 13 | 10 | 0.1% | 0 | 4 | grep 6, ls 4, gh 2, Read 1 |
+| 2 | deny | rewrite | public_remote | deny_shared_history_rewrite | 7 | 5 | 0.0% | 0 | 1 | git 7 |
+| 3 | ask | execute | host | ask_unanalyzable | 8,048 | 617 | 41.8% | 8,048 | 133 | python3 2,061, <local-tool-01> 1,939, <local-tool-02> 660, node 509 |
+| 4 | ask | read | host | none (default ask) | 6,458 | 379 | 33.6% | 0 | 27 | cat 1,386, cd 1,190, ls 1,158, grep 652 |
+| 5 | ask | write | host | none (default ask) | 3,073 | 364 | 16.0% | 0 | 35 | cat 766, echo 589, mkdir 422, Write 217 |
+| 6 | ask | read | agent_config | none (default ask) | 471 | 179 | 2.4% | 0 | 17 | cat 135, Read 125, sed 77, grep 50 |
+| 7 | ask | fetch | public_remote | none (default ask) | 383 | 108 | 2.0% | 0 | 2 | gh 193, git 190 |
+| 8 | ask | fetch | unknown_remote | none (default ask) | 213 | 86 | 1.1% | 0 | 5 | git 81, gh 55, WebFetch 34, curl 31 |
+| 9 | ask | delete | workspace | none (default ask) | 145 | 95 | 0.8% | 0 | 4 | rm 125, git 17, find 2, rmdir 1 |
+| 10 | ask | delete | host | ask_irreversible_local | 105 | 63 | 0.5% | 0 | 2 | rm 103, rmdir 2 |
+| 11 | ask | push | public_remote | ask_external_disclosure | 90 | 74 | 0.5% | 0 | 1 | git 90 |
+| 12 | ask | fetch | protected | none (default ask) | 77 | 18 | 0.4% | 0 | 1 | gh 77 |
+| 13 | ask | execute | unknown_remote | none (default ask) | 60 | 14 | 0.3% | 0 | 17 | <mcp-tool-03> 6, <mcp-tool-04> 6, <mcp-tool-02> 6, <mcp-tool-01> 6 |
+| 14 | ask | fetch | host | none (default ask) | 38 | 23 | 0.2% | 0 | 1 | git 38 |
+| 15 | ask | write | agent_config | ask_agent_config_change | 21 | 11 | 0.1% | 0 | 8 | Write 7, Edit 5, cat 2, ln 2 |
+| 16 | ask | rewrite | workspace | ask_irreversible_local | 20 | 17 | 0.1% | 0 | 1 | git 20 |
+| 17 | ask | send | protected | none (default ask) | 7 | 1 | 0.0% | 0 | 1 | gh 7 |
+| 18 | ask | install | unknown_remote | none (default ask) | 4 | 2 | 0.0% | 0 | 2 | brew 3, npm 1 |
+| 19 | ask | push | protected | none (default ask) | 3 | 3 | 0.0% | 0 | 2 | git 2, gh 1 |
+| 20 | ask | send | public_remote | ask_external_disclosure | 3 | 3 | 0.0% | 0 | 1 | gh 3 |
+| 21 | ask | execute | trusted_remote | none (default ask) | 3 | 2 | 0.0% | 0 | 1 | npm 3 |
+| 22 | ask | send | unknown_remote | ask_external_disclosure | 3 | 1 | 0.0% | 0 | 1 | curl 3 |
+| 23 | ask | delete | agent_config | ask_agent_config_change | 2 | 1 | 0.0% | 0 | 1 | rm 2 |
+| 24 | ask | commit | agent_config | none (default ask) | 1 | 1 | 0.0% | 0 | 1 | git 1 |
+
+- Group sizes: 1,000+ Actions 3 groups, 100 to 999 5, 20 to 99 6, 5 to 19 3, 2 to 4 6, single Action 1.
+  The largest group holds 41.8% of ask and deny Actions, the top 3 hold 91.3%, the top 10 hold 99%.
+- Every group has exactly one deciding Rule (the default `ask` counted as one); no group mixes Rules.
+- Distinct programs per group: 133, 35, 27, 17, 17, 8, 5, 4, 4, 2, 2, 2, 2, then 1 in the remaining 11 groups.
+  The Program Summary inside each group is what makes an `expected` Verdict on `ask · execute · host` a decision about 133 programs rather than about a key.
+- Review units: 24 Verdicts, one per group, to open the gate.
+<!-- /remeasure:adoption-groups -->
+
+## Determinism and consistency with the Change Review baseline
+
+<!-- remeasure:adoption-determinism -->
+- Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `8ae52329dd61bdb900f61075fd75c4eb66232fa3ff370245df6b1baec752a444` (443 ms and 435 ms).
+- Two server runs over the imported Actions gave the same `resultHash` `8ae52329dd61bdb900f61075fd75c4eb66232fa3ff370245df6b1baec752a444`, equal to the local value.
+- The preview agrees with the Gate 2 A vs B replay on the same classifier: allow→allow 15,242 = allow; ask→allow 139 + ask→ask 19,089 = 19,228 = ask; deny→deny 20 = deny; evaluated 34,490 and excluded 450 in both (`docs/evidence/gate2-replay.md`).
+<!-- /remeasure:adoption-determinism -->
+- The `resultHash` covers stats, the groups in group-key order (Program Summary included, Headline excluded), and the (actionKey, groupKey, effect) assignments in action-key order.
+
+## Scripted fresh-volume journey
+
+`pnpm evidence:remeasure` runs the twelve steps against the API of a compose project of its own with an empty volume, a server built from the working tree, and the frozen spool copies, then removes the project and its volume.
+Every check below is asserted by the command; a failed check stops it before any document is written.
+It reads what the server returns, not what the screens render; the screen checks stay in the re-run procedure below.
+
+<!-- remeasure:adoption-journey -->
+| step | via | result |
+| --- | --- | --- |
+| 1 import | `authority import` | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
+| 2 overview, no Policy | activity overview | no Policy; Action 34,940, evaluable 34,490; analyzability 17,972 / 6,610 / 9,908 |
+| 3 first Policy | policy version | draft version 1 from the default template replaced with policy A (content hash `f96ed41d…beb8`), validation passed |
+| 4 adoption preview | change review, replay run | kind `adoption`, no baseline; evaluated 34,490; allow 15,242, ask 19,228, deny 20; 22 ask and 2 deny groups; stats and group keys equal the local computation; resultHash `8ae52329…a444` on two runs |
+| 5 group detail | adoption group samples | `deny · read · credentials` and `ask · execute · host` return a Headline and samples |
+| 6 verdicts | verdicts | 24 groups set to `expected`; `adoption_unreviewed` blocks the gate until the last one, then the gate opens |
+| 7 adopt | decision | review `accepted`, version 1 `accepted` |
+| 8 report | Evidence Report | adoption Evidence Report carries resultHash `8ae52329…a444` |
+| 9 conformance | `authority spool-flush`, replay run | 2 spool copies sent; conformance run for version 1 completed with 92 findings, resultHash `7710c06c…8689` |
+| 10 change review B' | policy version, change review | draft version 2 with B' (`ebea9a23…0cc9`), kind `change`, baseline version 1; changed 139, Widening group 7; resultHash `3082d2a4…1598` equals the local Gate 2 run |
+| 11 unexpected, reject, B, accept | verdicts, decisions | 5 groups `expected`, 2 `unexpected` → `widening_unexpected` blocks and accept is refused; rejected; draft version 3 with B (`45197245…6515`): changed 139, Widening group 5, resultHash `2c4577fa…a8d9` equals the local Gate 2 run; all `expected` → accepted |
+| 12 audit | `authority verify-audit` | intact, 3 decision records |
+<!-- /remeasure:adoption-journey -->
+
+## Fresh-volume journey re-run
+
+Run on 2026-09-24 on a compose project of its own with an empty volume and its own ports, server image built from the working tree that carries classifier 0.2.3, and the web app served from `apps/web` against that server.
+The maintainer's stack was not used.
+Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
+
+| step | screen | result |
+| --- | --- | --- |
+| 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
+| 2 overview, no Policy | `/` | Session 665 (30-day window), Action 34,940, evaluable 34,490; analyzability 17,972 / 6,610 / 9,908 (52.1% / 19.2% / 28.7%); Capability, Target Kind, top program, and remote host tables; "아직 조직 정책이 없습니다" with "첫 조직 정책 만들기". No repository name on the screen |
+| 3 first Policy | version editor | draft version 1 from the default template; document replaced with policy A (content hash `f96ed41d…beb8`), "draft 저장", "검증: 통과" |
+| 4 adoption preview | review, `/` | review kind `adoption`, "기준 VERSION 없음 (최초 도입)", "판정 대기"; 평가한 action 34490 (전체 34940, 제외 450); tiles 허용 15242 44.2%, 확인 필요 19228 55.7%, 차단 20 0.1%; "확인 필요 group (22)", "차단 group (2)" |
+| 5 group detail | deny `read · credentials`, ask `execute · host` | Headlines "자격 증명에서의 읽기 13건이 이 정책에서 '차단' 대상이 됩니다." and "호스트에서의 실행 8048건이 이 정책에서 '확인 필요' 대상이 됩니다."; "Program 구성: 서로 다른 program 4개 / 133개"; outside the sample panel and the "기술 세부" toggle: 0 ruleId, 0 home path (checked on the DOM with those two removed) |
+| 6 verdicts | review | 24 selects set to 의도한 제한 one by one; the blocker counted down ("판정하지 않은 group 23개" … "1개"), then "Gate: 열림 / 승인을 막는 blocker가 없습니다."; "최초 정책 채택" stays disabled until a reviewer name is entered |
+| 7 adopt | review, `/` | status 채택됨, 결정 "최초 정책 채택", 24 selects disabled, sentence "채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다."; version 1 `accepted` via the API. `/` shows "채택된 정책: version #1" with the Effect distribution of the adoption run (허용 15242 44.2%) |
+| 8 report | download | adoption Evidence Report: candidate hash `f96ed41d…beb8`, Replay inputsHash, resultHash `8ae52329…a444`, 분석 규모, 정책 적용 결과, the two group tables with Verdicts, 결정, Audit chain, 고지; 0 ruleId, 0 home path |
+| 9 conformance | API + `/conformance` | spool copies flushed from a scratch home (2 files sent, 0 failed); `conformance` run for the accepted version 1 completed on classifier 0.2.3 with resultHash `7710c06c…8689`; `/conformance` lists 92 findings (3 violation, 89 under_asked). Figures in `docs/evidence/conformance.md` |
+| 10 change review B' | version 2, review | draft 2 from the accepted version 1, document B' (`ebea9a23…0cc9`), "검증: 통과", "변경 검토 만들기"; kind `change`, 평가 34490, 넓어진 139, widening group 7, resultHash `3082d2a4…1598` (same as the local Gate 2 value); the two `unknown_remote → trusted_remote` groups critical (gh 4 / 2 Sessions, git 3 / 2), each Headline naming where the fetches went; 0 ruleId, 0 home path outside the sample panel |
+| 11 unexpected, reject, B, accept | review, version 3 | 5 groups 예상된 변화, the 2 trusted-remote groups 예상 밖 → "Gate: blocker 1건 / 예상 밖으로 판정된 group 2개. 정책을 고쳐 새 review를 만드세요", accept disabled; 정책 변경 반려 with a reason → 반려됨; draft 3 from version 2 with B (`45197245…6515`) → 넓어진 139, group 5, resultHash `2c4577fa…a8d9`; all 예상된 변화 → "Gate: 열림" → 정책 변경 수락 → 채택됨. Loop from the first unexpected Verdict to the accept: 59 s (Agent) |
+| 12 audit | CLI, `/` | `verify-audit` `{"isIntact": true, "checkedCount": 3, "firstBrokenSequence": null}`; the B change report carries both content hashes, inputsHash, resultHash, the `none` share (0 of 139), the Operation section, and audit chain sequence 3; `/` shows "채택된 정책: version #3" with the Effect distribution of the version 3 run (허용 15381 44.6%, 확인 필요 19089 55.3%, 차단 20) |
+
+The four figures match the measurement above: evaluated 34,490, ask 55.7%, deny 20 (rendered 0.1%), 24 Adoption Groups.
+Server and local agreement: the adoption run on the server gave the local `resultHash` `8ae52329…a444`.
+
+Findings from this run (none blocks the journey):
+
+- After "token 저장" on `/login`, the app moves to `/` and loads the data, but the header still shows "로그인" until the page is reloaded; after a reload it shows "로그아웃".
+- The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
+
+## Re-run procedure (fresh volume)
+
+`pnpm evidence:remeasure` reruns the four Gate 2 comparisons, the adoption preview, and the policy A conformance run on the frozen snapshot, runs the twelve steps through the API (see "Scripted fresh-volume journey"), and rewrites the stamps and the measured blocks (`<!-- remeasure:<name> -->`) of `gate2-replay.md`, this file, `conformance.md`, and the README numbers table.
+It reads `.local/evidence-remeasure.json` (`--config` for another file): `snapshot`, `snapshotDate`, `policies` (`A`, `B`, `B'`, `P`, `P'`), `spool` (the cut spool copies), `conformanceWindow`, and `legend`, the private map from real program, repository, and host names to their masked labels; a name missing from the legend gets the next label of its kind.
+Prose outside the blocks is left to people.
+When the classifier version changed, the command first moves each document's main sections under a new "Previous version" section and prints the prose lines with numbers to re-check.
+Raw results, the adoption Evidence Report, and the compose file go to `.local/remeasure/<time>/`.
+
+The browser run below also checks the screens.
+The adoption stage comes first; the change-review stage is the Gate 3 journey unchanged.
+
+Stack: a compose project of its own with an empty volume and its own ports, built from the commit under test; the maintainer's running stack is not used.
+The web app runs from `apps/web` with `/api` proxied to that server.
+Commands below omit the corpus and policy file paths; they live under `.local/` and never enter the repository.
+
+Adoption stage:
+
+1. `pnpm authority import <snapshot>` into the fresh stack. Expected: 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed.
+2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "아직 조직 정책이 없습니다".
+3. "첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft 저장" (the content hash becomes `f96ed41d…beb8`), "검증" reads "검증: 통과".
+4. "최초 도입 검토 만들기". The review is kind `adoption`, "기준 VERSION 없음 (최초 도입)". Confirm on the review and on `/` ("도입 preview"): evaluated 34,490; 허용 15,242 (44.2%); 확인 필요 19,228 (55.7%); 차단 20 (the tile rounds to 0.1%); "확인 필요 group (22)", "차단 group (2)".
+5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "기술 세부" toggle.
+6. Set every one of the 24 groups to 의도한 제한. "Gate: 열림" appears only after the last one; before that the blocker reads "판정하지 않은 group N개" and "최초 정책 채택" is disabled.
+7. Enter a reviewer name and "최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says 적용됨, 활성, or enforced. `/` now shows "채택된 정책: version #1" with the Effect distribution.
+8. Download the Evidence Report: policy hash, window, scale, allow/ask/deny counts and shares, the two group tables with Verdicts, the decision, the Decision Record hash, the notice that the figures apply the Policy to past behavior and do not recover past runtime approvals. No path or command text in it.
+
+Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "변경 검토 만들기", then Gate 3 items 3 to 7 (the two `unknown_remote → trusted_remote` groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
+
+Conformance stage: copy the hook spool files into a scratch home, `spool-flush` them to the fresh server, request a `conformance` run for the accepted version over the observation window, and read `/conformance`.
+
+Tear the stack down with `down -v` when done.
+
+## Previous version: classifier 0.2.2 (not re-run)
+
+The section below is the adoption preview as measured on classifier 0.2.2, policy A, on 2026-09-24, including the browser pass over the screens, and is kept as the record of that measurement.
+Its `resultHash` values are not comparable with the 0.2.3 values above.
+No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
+
+Judge: Agent. No person has recorded a Verdict on these groups.
+Journey grade: **medium** (중): real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
+
+### Change from classifier 0.2.2
+
+| measure | 0.2.2 | 0.2.3 |
+| --- | ---: | ---: |
+| allow | 8,217 (23.8%) | 15,242 (44.2%) |
+| ask | 26,253 (76.1%) | 19,228 (55.7%) |
+| deny | 20 | 20 |
+| Adoption Groups (ask / deny) | 23 (21 / 2) | 24 (22 / 2) |
+| `ask · read · host` Actions | 14,515 | 6,458 |
+| `ask · execute · host` Actions | 6,322 | 8,048 |
+| server and local `resultHash` | differ by one Session count | equal |
+
+Classifier 0.2.3 folds each Session's home directory to `~`, so paths under a `~` workspace root are inside the workspace: 7,036 Actions move from ask to allow and 11 `cp` reads of an outside source move from allow to ask (`docs/evidence/classifier-hardening-3.md`).
+An Action that was in `ask · read · host` because of a path now inside the workspace either allows (5,544) or moves to the group of its next asking Operation: 1,701 to `ask · execute · host`, 777 to `ask · write · host`, and smaller counts elsewhere.
+The one new group, `ask · send · unknown_remote` (3 `curl` Actions), is made of three such Actions.
+
+### Result
+
 The candidate is policy A: the default template's Rules with the corrected environment profile (credential paths 5, agent-config paths 4, trusted remotes 35, public remotes 40, protected branches 3, production markers 3).
 Actions are built the same way the server builds them for a replay (transcript parse, remote enrichment, classifier 0.2.2, duplicate Action Keys removed) and evaluated with `computeAdoption` from `@authority/replay/diff`.
 
@@ -35,9 +234,8 @@ Actions are built the same way the server builds them for a replay (transcript p
 
 The four figures the adoption review shows on screen and that this file locks: **evaluated 34,490, ask 76.1%, deny 20 (0.06%), 23 Adoption Groups**.
 The web renders shares with one decimal, so the deny tile reads `0.1%`; the count 20 is the exact figure.
-<!-- /remeasure:adoption-result -->
 
-## Why the ask share is what it is
+### Why the ask share is what it is
 
 The ask share is a property of this Policy on this corpus and is reported as-is.
 
@@ -51,9 +249,8 @@ The ask share is a property of this Policy on this corpus and is reported as-is.
 Neither the classifier nor the default template was changed to move this number.
 An organization that wants the share to drop declares more of its environment (workspace roots, trusted remotes) or adds Rules; that is a Policy change reviewed in a Change Review.
 
-## Adoption Groups
+### Adoption Groups
 
-<!-- remeasure:adoption-groups -->
 Groups are `[effect, capability, zone]` (ADR-0010), in review order (deny first, then ask by Action count).
 The share column is of the 26,273 ask and deny Actions.
 Programs are masked as in the previous rounds: non-standard programs as `<local-tool-NN>`, MCP tools as `<mcp-tool-NN>`.
@@ -90,24 +287,20 @@ Programs are masked as in the previous rounds: non-standard programs as `<local-
 - Distinct programs per group: 117, 28, 23, 17, 16, 8, 5, 4, 2, 2, 2, 2, then 1 in the remaining 11 groups.
   The Program Summary inside each group is what makes an `expected` Verdict on `ask · execute · host` a decision about 117 programs rather than about a key.
 - Review units: 23 Verdicts, one per group, to open the gate.
-<!-- /remeasure:adoption-groups -->
 
-## Determinism and consistency with the Change Review baseline
+### Determinism and consistency with the Change Review baseline
 
-<!-- remeasure:adoption-determinism -->
 - Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `3c51b5522a40cc88ad0b6b555b3fddc203aa68811b6c3d4aa6f3f404ad94e157` (510 ms and 476 ms).
 - Two server runs over the imported Actions gave the same `resultHash` `f6601304932d2c6dd1b3a9d1b61b6cb18501467bb53c20e8f72cf448607ee3a7`; the one-Session difference from the local value is explained under "Fresh-volume journey re-run".
 - The preview agrees with the Gate 2 A vs B replay on the same classifier: allow→allow 8,217 = allow; ask→allow 132 + ask→ask 26,121 = 26,253 = ask; deny→deny 20 = deny; evaluated 34,490 and excluded 450 in both (`docs/evidence/gate2-replay.md`).
-<!-- /remeasure:adoption-determinism -->
 - The `resultHash` covers stats, the groups in group-key order (Program Summary included, Headline excluded), and the (actionKey, groupKey, effect) assignments in action-key order.
 
-## Scripted fresh-volume journey
+### Scripted fresh-volume journey
 
 `pnpm evidence:remeasure` runs the twelve steps against the API of a compose project of its own with an empty volume, a server built from the working tree, and the frozen spool copies, then removes the project and its volume.
 Every check below is asserted by the command; a failed check stops it before any document is written.
 It reads what the server returns, not what the screens render; the screen checks stay in the re-run procedure below.
 
-<!-- remeasure:adoption-journey -->
 | step | via | result |
 | --- | --- | --- |
 | 1 import | `authority import` | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
@@ -122,9 +315,8 @@ It reads what the server returns, not what the screens render; the screen checks
 | 10 change review B' | policy version, change review | draft version 2 with B' (`ebea9a23…0cc9`), kind `change`, baseline version 1; changed 132, Widening group 7; resultHash `55a0cb73…cd18` equals the local Gate 2 run |
 | 11 unexpected, reject, B, accept | verdicts, decisions | 5 groups `expected`, 2 `unexpected` → `widening_unexpected` blocks and accept is refused; rejected; draft version 3 with B (`45197245…6515`): changed 132, Widening group 5, resultHash `55592458…c08b` equals the local Gate 2 run; all `expected` → accepted |
 | 12 audit | `authority verify-audit` | intact, 3 decision records |
-<!-- /remeasure:adoption-journey -->
 
-## Fresh-volume journey re-run
+### Fresh-volume journey re-run
 
 Run on 2026-09-24 on a compose project of its own with an empty volume, server image built from the commit that carries classifier 0.2.2 and the chunked replay inserts, and the web app served from `apps/web` against that server.
 The maintainer's stack was not used.
@@ -160,38 +352,6 @@ Findings from this run (none blocks the journey):
   Since fixed for display: both Evidence Reports and the review screens fold `/Users/<name>` and `/home/<name>` (and the `Users/<name>` Target key form) to `~`; stored Target keys and every hash are unchanged, so a stored key in the local database can still contain the user name.
 - The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
 - The candidate stays `in_review` after a replay failure and returns to `draft` on the next read; the measured build had no withdraw control; the review screen now withdraws a computing or ready review (`docs/evidence/review-limitations.md`).
-
-## Re-run procedure (fresh volume)
-
-`pnpm evidence:remeasure` reruns the four Gate 2 comparisons, the adoption preview, and the policy A conformance run on the frozen snapshot, runs the twelve steps through the API (see "Scripted fresh-volume journey"), and rewrites the stamps and the measured blocks (`<!-- remeasure:<name> -->`) of `gate2-replay.md`, this file, `conformance.md`, and the README numbers table.
-It reads `.local/evidence-remeasure.json` (`--config` for another file): `snapshot`, `snapshotDate`, `policies` (`A`, `B`, `B'`, `P`, `P'`), `spool` (the cut spool copies), `conformanceWindow`, and `legend`, the private map from real program, repository, and host names to their masked labels; a name missing from the legend gets the next label of its kind.
-Prose outside the blocks is left to people.
-When the classifier version changed, the command first moves each document's main sections under a new "Previous version" section and prints the prose lines with numbers to re-check.
-Raw results, the adoption Evidence Report, and the compose file go to `.local/remeasure/<time>/`.
-
-The browser run below also checks the screens.
-The adoption stage comes first; the change-review stage is the Gate 3 journey unchanged.
-
-Stack: a compose project of its own with an empty volume and its own ports, built from the commit under test; the maintainer's running stack is not used.
-The web app runs from `apps/web` with `/api` proxied to that server.
-Commands below omit the corpus and policy file paths; they live under `.local/` and never enter the repository.
-
-Adoption stage:
-
-1. `pnpm authority import <snapshot>` into the fresh stack. Expected: 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed.
-2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "아직 조직 정책이 없습니다".
-3. "첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft 저장" (the content hash becomes `f96ed41d…beb8`), "검증" reads "검증: 통과".
-4. "최초 도입 검토 만들기". The review is kind `adoption`, "기준 VERSION 없음 (최초 도입)". Confirm on the review and on `/` ("도입 preview"): evaluated 34,490; 허용 8,217 (23.8%); 확인 필요 26,253 (76.1%); 차단 20 (the tile rounds to 0.1%); "확인 필요 group (21)", "차단 group (2)".
-5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "기술 세부" toggle.
-6. Set every one of the 23 groups to 의도한 제한. "Gate: 열림" appears only after the last one; before that the blocker reads "판정하지 않은 group N개" and "최초 정책 채택" is disabled.
-7. Enter a reviewer name and "최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says 적용됨, 활성, or enforced. `/` now shows "채택된 정책: version #1" with the Effect distribution.
-8. Download the Evidence Report: policy hash, window, scale, allow/ask/deny counts and shares, the two group tables with Verdicts, the decision, the Decision Record hash, the notice that the figures apply the Policy to past behavior and do not recover past runtime approvals. No path or command text in it.
-
-Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "변경 검토 만들기", then Gate 3 items 3 to 7 (two repo-02 groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
-
-Conformance stage: copy the hook spool files into a scratch home, `spool-flush` them to the fresh server, request a `conformance` run for the accepted version over the observation window, and read `/conformance`.
-
-Tear the stack down with `down -v` when done.
 
 ## Previous version: composition versus classifier 0.2.1
 
