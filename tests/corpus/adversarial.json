@@ -1106,8 +1106,7 @@
           "remoteKey": "github.com/acme/toolkit"
         }
       ],
-      "expectedEffect": "ask",
-      "skip": "refspec operand matches looksLikeRemoteUrl; see docs/evidence/classifier-limitations.md"
+      "expectedEffect": "ask"
     },
     {
       "name": "push-refspec-is-not-a-remote",
@@ -1122,8 +1121,129 @@
           "remoteKey": "github.com/acme/toolkit"
         }
       ],
-      "expectedEffect": "ask",
-      "skip": "refspec operand matches looksLikeRemoteUrl; see docs/evidence/classifier-limitations.md"
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "gh-api-path-names-another-repository",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "gh api -X DELETE repos/victim/archive"
+      },
+      "mustInclude": [
+        {
+          "capability": "send",
+          "targetKind": "vcs_remote",
+          "remoteKey": "github.com/victim/archive"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "gh-repo-flag-names-another-repository",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "gh pr merge 7 --repo victim/archive"
+      },
+      "mustInclude": [
+        {
+          "capability": "push",
+          "targetKind": "vcs_remote",
+          "remoteKey": "github.com/victim/archive"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "gh-api-graphql-is-not-the-session-origin",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "gh api graphql -f query=q"
+      },
+      "mustInclude": [
+        {
+          "capability": "fetch",
+          "targetKind": "vcs_remote",
+          "remoteKey": null
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "force-push-refspec-is-not-a-remote",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "git push origin +HEAD:refs/heads/main"
+      },
+      "mustInclude": [
+        {
+          "capability": "rewrite",
+          "targetKind": "vcs_remote",
+          "remoteKey": "github.com/acme/toolkit"
+        }
+      ],
+      "expectedEffect": "deny"
+    },
+    {
+      "name": "home-folded-path-escapes-workspace-by-dotdot",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cat ~/work/repo/../../.aws/credentials",
+        "workspaceRoot": "~/work/repo"
+      },
+      "mustInclude": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        }
+      ],
+      "expectedEffect": "deny"
+    },
+    {
+      "name": "home-folded-sibling-prefix-is-outside-workspace",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "rm -rf ~/work/repo-backup",
+        "workspaceRoot": "~/work/repo"
+      },
+      "mustInclude": [
+        {
+          "capability": "delete",
+          "targetKind": "path"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "copy-reads-credential-source",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cp ~/.ssh/id_rsa key.txt"
+      },
+      "mustInclude": [
+        {
+          "capability": "read",
+          "targetKind": "path"
+        },
+        {
+          "capability": "write",
+          "targetKind": "path"
+        }
+      ],
+      "expectedEffect": "deny"
+    },
+    {
+      "name": "cargo-add-installs-a-package",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "cargo add serde"
+      },
+      "mustInclude": [
+        {
+          "capability": "install",
+          "targetKind": "package"
+        }
+      ],
+      "expectedEffect": "ask"
     }
   ]
 }

@@ -78,11 +78,33 @@ interface BuiltInput {
 
 const MAX_INPUT_LENGTH = 16000;
 
+const HOME_PREFIX = /^\/(?:Users|home)\/[^/]+|^\/root(?=\/|$)/;
+
+/** The home directory a transcript cwd lies under, or null for a cwd outside any home. */
+function sessionHome(cwd: string): string | null {
+  return HOME_PREFIX.exec(cwd)?.[0] ?? null;
+}
+
+/**
+ * Rewrites the Session's own home directory to `~` wherever it starts a path in
+ * the input, the same form the recorded workspace root takes, so classified
+ * Targets compare against that root and stored keys carry no OS user name.
+ * Only this home is folded; another user's home stays absolute.
+ */
+function foldSessionHome(text: string, home: string | null): string {
+  if (home === null) {
+    return text;
+  }
+  const escaped = home.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(?<![\\w./~-])${escaped}(?![\\w.-])`, 'g'), '~');
+}
+
 // Bash keeps its command string verbatim (then redacted). Every other tool is
 // canonicalized after string values longer than 500 characters are elided; the
-// elision marker is not truncation. Only a final string over 16,000 characters
-// is cut, and only that cut sets isInputTruncated.
-function buildToolInput(toolName: string, input: unknown): BuiltInput {
+// elision marker is not truncation. Both then fold the Session home. Only a
+// final string over 16,000 characters is cut, and only that cut sets
+// isInputTruncated.
+function buildToolInput(toolName: string, input: unknown, home: string | null): BuiltInput {
   let text: string;
   let redactions: readonly RedactionCount[];
   if (toolName === 'Bash' && isRecord(input) && typeof input.command === 'string') {
@@ -94,6 +116,7 @@ function buildToolInput(toolName: string, input: unknown): BuiltInput {
     text = canonicalJson(elideLongStrings(masked.value));
     redactions = masked.redactions;
   }
+  text = foldSessionHome(text, home);
   const isInputTruncated = text.length > MAX_INPUT_LENGTH;
   const toolInputRedacted = isInputTruncated ? text.slice(0, MAX_INPUT_LENGTH) : text;
   return { toolInputRedacted, isInputTruncated, redactions };
@@ -142,6 +165,7 @@ interface RawToolUse {
   readonly block: Record<string, unknown>;
   readonly occurredAt: string;
   readonly workspaceRoot: string | null;
+  readonly home: string | null;
   readonly gitBranch: string | null;
   readonly isSidechain: boolean;
 }
@@ -156,6 +180,7 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
   let unparsedLineCount = 0;
   let runtimeVersion: string | null = null;
   let workspaceRoot: string | null = null;
+  let home: string | null = null;
   let gitBranch: string | null = null;
 
   const rawToolUses: RawToolUse[] = [];
@@ -181,8 +206,10 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
     runtimeVersion ??= nonEmptyString(parsed.version);
     const lineWorkspaceRaw = nonEmptyString(parsed.cwd);
     const lineWorkspace = lineWorkspaceRaw === null ? null : homeToTilde(lineWorkspaceRaw);
+    const lineHome = lineWorkspaceRaw === null ? null : sessionHome(lineWorkspaceRaw);
     const lineBranch = nonEmptyString(parsed.gitBranch);
     workspaceRoot ??= lineWorkspace;
+    home ??= lineHome;
     gitBranch ??= lineBranch;
 
     const lineTimestamp = normalizeTimestamp(parsed.timestamp);
@@ -224,6 +251,7 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
         block,
         occurredAt: lineTimestamp,
         workspaceRoot: lineWorkspace,
+        home: lineHome,
         gitBranch: lineBranch,
         isSidechain,
       });
@@ -234,7 +262,7 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
   const toolCalls = rawToolUses.map((raw, sequence) => {
     const toolUseId = typeof raw.block.id === 'string' ? raw.block.id : null;
     const toolName = typeof raw.block.name === 'string' ? raw.block.name : '';
-    const built = buildToolInput(toolName, raw.block.input);
+    const built = buildToolInput(toolName, raw.block.input, raw.home ?? home);
     for (const redaction of built.redactions) {
       redactionTotals.set(
         redaction.kind,

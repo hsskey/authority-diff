@@ -77,6 +77,45 @@ const FORCE_FLAGS: readonly string[] = [
   '--force-if-includes',
 ];
 
+const FETCH_VALUE_FLAGS: readonly string[] = [
+  '--depth',
+  '--deepen',
+  '-j',
+  '--jobs',
+  '-o',
+  '--server-option',
+  '--upload-pack',
+  '--shallow-since',
+  '--shallow-exclude',
+  '--refmap',
+  '--negotiation-tip',
+  '--filter',
+];
+/** Network subcommand options that consume the next word, so it is not an operand. */
+const REMOTE_VALUE_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  [
+    'clone',
+    new Set([
+      ...FETCH_VALUE_FLAGS,
+      '-b',
+      '--branch',
+      '--origin',
+      '--reference',
+      '--reference-if-able',
+      '-c',
+      '--config',
+      '--template',
+      '--separate-git-dir',
+      '-u',
+      '--bundle-uri',
+    ]),
+  ],
+  ['fetch', new Set(FETCH_VALUE_FLAGS)],
+  ['pull', new Set([...FETCH_VALUE_FLAGS, '-s', '--strategy', '-X', '--strategy-option'])],
+  ['ls-remote', new Set(['-o', '--server-option', '--upload-pack', '--sort'])],
+  ['push', new Set(['-o', '--push-option', '--receive-pack', '--exec', '--repo'])],
+]);
+
 /** git global options (before the subcommand) that consume the next token. */
 const GIT_GLOBAL_VALUE_FLAGS: ReadonlySet<string> = new Set([
   '-C',
@@ -193,38 +232,35 @@ function remoteOp(
   rest: readonly ShellWord[],
   dirMismatch: boolean,
 ): OperationDraft {
-  const positional = nonFlagArgs(rest);
+  // The first operand is the repository, a URL or a remote name; the operands
+  // after it are refspecs (`refs/heads/main`, `+refs/*:refs/*`, `HEAD:main`).
+  const positional = remoteOperands(sub, rest);
   const signals: string[] = [];
 
   const repository = positional[0];
-  const localPath =
-    repository === undefined || repository.hasExpansion
-      ? null
-      : localRepositoryPath(repository.text);
+  const literal = repository === undefined || repository.hasExpansion ? null : repository.text;
+  const localPath = literal === null ? null : localRepositoryPath(literal);
   if (localPath !== null) {
     const resolved = resolvePath(localPath, cmd.cwd, cmd.workspaceRoot);
     return draft(capability, pathTarget(resolved), 'full', 'git', cmd.raw);
   }
 
-  // clone takes a URL directly; push/fetch/pull take a remote name.
-  const urlArg = positional.find((w) => looksLikeRemoteUrl(w.text) && !w.hasExpansion);
   let remoteName: string | null = null;
   let remoteKey: string | null = null;
   let analyzability: 'full' | 'partial' = 'full';
 
-  if (urlArg !== undefined) {
-    const result = normalizeRemote(urlArg.text);
+  if (literal !== null && looksLikeRemoteUrl(literal)) {
+    const result = normalizeRemote(literal);
     remoteKey = result.remoteKey;
     if (result.unparsed) {
       signals.push('remote_unparsed');
       analyzability = 'partial';
     }
-  } else if (sub === 'clone') {
+  } else if (sub === 'clone' || isUnnamedRemote(repository)) {
     analyzability = 'partial';
   } else {
-    const named = positional.find((w) => !w.hasExpansion && !w.text.includes(':'));
-    remoteName = named?.text ?? 'origin';
-    if (named === undefined) analyzability = 'partial';
+    remoteName = literal ?? 'origin';
+    if (literal === null) analyzability = 'partial';
     const url = dirMismatch ? undefined : cmd.repoRemotes?.[remoteName];
     if (dirMismatch) signals.push('remote_dir_mismatch');
     if (url === undefined) {
@@ -248,6 +284,25 @@ function remoteOp(
     branch: sub === 'push' ? pushBranch(positional, cmd.gitBranch) : null,
   };
   return draft(capability, target, analyzability, 'git', cmd.raw, signals);
+}
+
+function remoteOperands(sub: string, rest: readonly ShellWord[]): ShellWord[] {
+  const valueFlags = REMOTE_VALUE_FLAGS.get(sub);
+  const consumed = new Set<ShellWord>();
+  rest.forEach((word, i) => {
+    const value = rest[i + 1];
+    if (valueFlags?.has(word.text) === true && value !== undefined) consumed.add(value);
+  });
+  return nonFlagArgs(rest.filter((word) => !consumed.has(word)));
+}
+
+/**
+ * True when a repository operand is present but names no remote: a shell
+ * expansion or a `host:path` form without a user, which the named-remote
+ * lookup cannot resolve.
+ */
+function isUnnamedRemote(repository: ShellWord | undefined): boolean {
+  return repository !== undefined && (repository.hasExpansion || repository.text.includes(':'));
 }
 
 /**
@@ -289,8 +344,11 @@ function localRepositoryPath(text: string): string | null {
   return local ? text : null;
 }
 
+/** A scheme URL, an scp-like `user@host:path`, or a `host/owner/repo` whose host has a dot. */
 function looksLikeRemoteUrl(text: string): boolean {
   return (
-    /:\/\//.test(text) || /^[^/\s]+@[^/\s]+:/.test(text) || /^[\w.-]+\/[\w.-]+\/[\w.-]+/.test(text)
+    /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(text) ||
+    /^[^/\s]+@[^/\s]+:/.test(text) ||
+    /^[\w-]+(?:\.[\w-]+)+\/[\w.-]+\/[\w.-]+/.test(text)
   );
 }

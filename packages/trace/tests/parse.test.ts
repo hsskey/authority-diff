@@ -461,3 +461,40 @@ describe('parseTranscript line handling', () => {
     );
   });
 });
+
+describe('parseTranscript session home folding', () => {
+  function foldedInput(
+    toolInput: unknown,
+    cwd = '/Users/synth/proj',
+    name = 'Bash',
+  ): string | undefined {
+    const parsed = parseTranscript({
+      sessionExternalId: 's',
+      lines: [
+        assistantLine({ id: 't', name, toolInput, cwd, timestamp: '2026-01-02T03:04:05.000Z' }),
+      ],
+    });
+    return parsed.toolCalls[0]?.toolInputRedacted;
+  }
+
+  test.each([
+    ['cat /Users/synth/proj/a.ts', '/Users/synth/proj', 'cat ~/proj/a.ts'],
+    ['cd /home/synth && ls', '/home/synth/proj', 'cd ~ && ls'],
+    ['cat /root/.bashrc', '/root/proj', 'cat ~/.bashrc'],
+    [
+      'cat /Users/other/a /Users/synth2/b',
+      '/Users/synth/proj',
+      'cat /Users/other/a /Users/synth2/b',
+    ],
+    ['cat /private/Users/synth/a', '/Users/synth/proj', 'cat /private/Users/synth/a'],
+    ['cat /Users/synth/a', '/opt/proj', 'cat /Users/synth/a'],
+  ])('%s under cwd %s becomes %s', (command, cwd, expected) => {
+    expect(foldedInput({ command }, cwd)).toBe(expected);
+  });
+
+  test('folds the home inside a structured tool input', () => {
+    expect(foldedInput({ file_path: '/Users/synth/proj/a.ts' }, '/Users/synth/proj', 'Read')).toBe(
+      '{"file_path":"~/proj/a.ts"}',
+    );
+  });
+});
