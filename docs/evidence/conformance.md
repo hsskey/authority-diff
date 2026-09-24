@@ -3,19 +3,24 @@ corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Ac
 # Conformance (policy A)
 
 Conformance replay compares the accepted policy A against observed runtime Disposition over a fixed window.
+<!-- remeasure:conformance-intro -->
 Every number in the main sections is labelled **classifier 0.2.2, policy A** (measured 2026-09-24); the earlier 0.2.1 measurement is kept unchanged under "Previous version" at the end.
+<!-- /remeasure:conformance-intro -->
 No repository names, host paths, or raw command text appear below.
 
 ## Method
 
+<!-- remeasure:conformance-method -->
 - Candidate is policy A from the v2 environment profile, adopted as version 1 through the first-policy journey (`docs/evidence/adoption-preview.md`) on a fresh volume.
 - Window: 2026-09-22T12:00:00.000Z .. 2026-09-23T05:10:14.000Z, the same as the earlier runs.
 - Import: 1,036 sessions, 34,940 Actions accepted, 196 duplicates, 0 failed (the NUL fix is on this build, so the 7 sessions that failed in 0.2.1 imported; their 904 Actions are outside the window).
 - Spool: copies of the hook observation files flushed from an isolated scratch home; the live file was cut at the same instant as the first run so the observation set is identical (3,789 lines: pre_tool_use 3,666, session_end 121, permission_request 2). Only the copies were renamed.
 - The run was requested through the API; V1 has no screen that starts a conformance run. Completed; classifierVersion 0.2.2; resultHash `61feaa99f8abd6ff4a2378fed8e1439a77654839ff6d8d394ef568d9ed6241f7`.
+<!-- /remeasure:conformance-method -->
 
 ## Findings by kind
 
+<!-- remeasure:conformance-findings -->
 | kind | groups | Actions |
 | --- | ---: | ---: |
 | violation | 3 | 6 |
@@ -24,6 +29,7 @@ No repository names, host paths, or raw command text appear below.
 
 Stats: total 4,440 window Actions, evaluated 3,189, excluded 1,251, changed 2,133.
 Transitions (observed Disposition Effect → candidate Effect): allow→allow 1,056, allow→ask 2,123, allow→deny 3, deny→ask 7, all others 0.
+<!-- /remeasure:conformance-findings -->
 Every figure in this section equals the 0.2.1 measurement: the two classifier changes (local-path fetch operands, home-directory remote resolution) touch no Action inside this window's findings.
 
 ## Violations (6 Actions)
@@ -35,6 +41,7 @@ See `conformance-limitations.md` for the first-run narrative and hook-outage con
 
 ## under_asked
 
+<!-- remeasure:conformance-under-asked -->
 | zone | Actions |
 | --- | ---: |
 | host | 2,030 |
@@ -54,6 +61,7 @@ See `conformance-limitations.md` for the first-run narrative and hook-outage con
 | rewrite | 3 |
 | send | 1 |
 | push | 1 |
+<!-- /remeasure:conformance-under-asked -->
 
 Top five under_asked groups account for 1,235 / 2,123 Actions (58%): `read · host` via the Read tool (599 Actions, 75 sessions), `execute · host` via one local orchestration script (289, 3), `read · host` via cd (127, 21), `execute · host` via StructuredOutput (111, 88), `write · host` via Edit (109, 23).
 

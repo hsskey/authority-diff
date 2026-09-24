@@ -21,6 +21,7 @@
     "dev:measure": "tsx tools/local-pipeline/measure.ts",
     "dev:replay-local": "tsx tools/local-pipeline/replay-local.ts",
     "dev:policy-init": "tsx tools/local-pipeline/policy-init.ts",
+    "evidence:remeasure": "tsx tools/local-pipeline/remeasure.ts",
     "authority": "tsx apps/cli/src/main.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "build:cli": "tsup --config apps/cli/tsup.config.ts",

@@ -27,9 +27,11 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 
 ### Adoption preview (first Policy)
 
+<!-- remeasure:readme-adoption -->
 | evaluated Actions | allow | ask | deny | Adoption Groups |
 | ---: | ---: | ---: | ---: | --- |
 | 34,490 | 8,217 (23.8%) | 26,253 (76.1%) | 20 (0.06%) | 23 (21 ask, 2 deny) |
+<!-- /remeasure:readme-adoption -->
 
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 That is what the Policy says about this corpus, reported as-is.

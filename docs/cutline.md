@@ -188,6 +188,7 @@ flowchart BT
     lp["tools/local-pipeline"] -.->|"순수 entry만"| trace
     lp -.->|"순수 entry만"| policy
     lp -.->|"순수 entry만"| replay
+    lp -.->|"schema.ts만"| contracts
     lp --> action
 ```
 

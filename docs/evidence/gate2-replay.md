@@ -2,11 +2,14 @@ corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Ac
 
 # Gate 2 replay
 
-Gate 2 evidence from classifier 0.2.2 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm dev:replay-local` on 2026-09-24.
+<!-- remeasure:gate2-intro -->
+Gate 2 evidence from classifier 0.2.2 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm evidence:remeasure` on 2026-09-24.
 Every number in the main sections is labelled **classifier 0.2.2**; the earlier 0.2.1 measurement is kept unchanged under "Previous version" at the end.
+<!-- /remeasure:gate2-intro -->
 No repository names, host paths, or raw command text appear below; repo-02 is a GitHub repository of a different owner that is in neither remote list.
 Remote resolution happens at import or replay time, so these numbers are tied to the snapshot and the disk state of the measurement date (`docs/evidence/replay-limitations.md`).
 
+<!-- remeasure:gate2-comparisons -->
 ## Comparisons (classifier 0.2.2)
 
 Four candidate documents against policy A, each run twice:
@@ -73,6 +76,7 @@ Operation-level widening while the Action Effect is unchanged: push trusted_remo
 | b3807c02 | git | fetch | unknown_remote → trusted_remote | ask → allow | critical | 2 | 2 | 0 | repo-02(2) |
 
 Operation-level widening while the Action Effect is unchanged: fetch unknown_remote → trusted_remote 11; push trusted_remote → trusted_remote 3.
+<!-- /remeasure:gate2-comparisons -->
 
 ## B' scene (Gate 3 core)
 
@@ -80,6 +84,7 @@ Appending one `github.com/**` line to `trustedRemotes` made an unlisted other-ow
 Under B' and P', six recorded fetch Actions flip from ask to allow at critical severity: 2 git and 4 gh, all repo-02, `unknown_remote → trusted_remote`.
 The scene is unchanged from 0.2.1: the named remotes used outside the Action workspace still do not resolve a Remote Key and stay `unknown_remote` even under `github.com/**`.
 
+<!-- remeasure:gate2-criteria -->
 ## Diff review criteria (A vs B, classifier 0.2.2)
 
 | criterion | result | verdict |
@@ -90,6 +95,7 @@ The scene is unchanged from 0.2.1: the named remotes used outside the Action wor
 | Understandability | 1 group cannot be fully described without raw commands (WebSearch, target always unknown) | pass (< 3) |
 | Determinism | identical `resultHash` on two runs per case | pass |
 | Changed-action analyzability `none` | 0 / 132 | pass |
+<!-- /remeasure:gate2-criteria -->
 
 ## Journey grade
 
