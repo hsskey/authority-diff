@@ -22,6 +22,7 @@ import {
   traceSourcesLabel,
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
+import { usePageTitle } from '../../../shared/use-page-title.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/')({
   component: ChangeReviewPage,
@@ -34,7 +35,7 @@ type ReviewStatus = ChangeReviewResponse['status'];
 const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
 
 const PAGE_TITLE: Record<ReviewKind, string> = {
-  change: 'Change Review',
+  change: '변경 검토',
   adoption: '최초 도입 검토',
 };
 
@@ -55,7 +56,6 @@ const DECISION_LABEL: Record<ReviewKind, { accept: string; reject: string; title
 function ChangeReviewPage() {
   const { reviewId } = Route.useParams();
   const queryClient = useQueryClient();
-
   const reviewQuery = useQuery({
     queryKey: ['change-review', reviewId],
     queryFn: async () => {
@@ -115,6 +115,7 @@ function ChangeReviewPage() {
 
   const groupsQuery = kind === 'adoption' ? adoptionGroupsQuery : diffGroupsQuery;
   const isPending = reviewQuery.isPending || (kind !== undefined && groupsQuery.isPending);
+  usePageTitle(kind === undefined ? '검토' : PAGE_TITLE[kind]);
 
   return (
     <section>
@@ -167,6 +168,11 @@ function ChangeReviewDetail({
   return (
     <div className="stack">
       <TraceSources review={review} />
+      {review.status === 'computing' ? (
+        <p className="state-message hint panel" role="status">
+          과거 Action에 두 version을 대입하는 중입니다. 완료되면 화면이 갱신됩니다.
+        </p>
+      ) : null}
       <ReviewMeta review={review} />
       <SummaryLines review={review} widening={widening} narrowing={narrowing} />
       <TransitionMatrix review={review} />
@@ -244,7 +250,7 @@ function ReviewMeta({ review }: { review: ChangeReviewResponse }) {
         </dd>
       </div>
       <div>
-        <dt>{review.kind === 'adoption' ? '제안 version' : 'Candidate version'}</dt>
+        <dt>{review.kind === 'adoption' ? '제안 version' : '변경안 version'}</dt>
         <dd className="mono">{review.candidateVersionId}</dd>
       </div>
       <div>
@@ -382,8 +388,10 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
 
   return (
     <div className="stack">
-      <h2 className="section-title">Effect 전이</h2>
-      <table className="data-table transition-matrix">
+      <h2 className="section-title" id="effect-transitions">
+        Effect 전이
+      </h2>
+      <table className="data-table transition-matrix" aria-labelledby="effect-transitions">
         <thead>
           <tr>
             <th scope="col">기준 \ 변경안</th>
@@ -428,12 +436,14 @@ function WideningGroups({
 
   return (
     <div className="stack">
-      <h2 className="section-title">Widening group ({groups.length})</h2>
+      <h2 className="section-title" id="widening-groups">
+        Widening group ({groups.length})
+      </h2>
       {sorted.length === 0 ? (
         <p className="state-message hint">넓어진 group이 없습니다.</p>
       ) : (
         <div className="table-scroll">
-          <table className="data-table">
+          <table className="data-table" aria-labelledby="widening-groups">
             <thead>
               <tr>
                 <th scope="col">Severity</th>
@@ -510,9 +520,11 @@ function NarrowingGroups({
   }
   return (
     <div className="stack">
-      <h2 className="section-title">Narrowing group ({groups.length})</h2>
+      <h2 className="section-title" id="narrowing-groups">
+        Narrowing group ({groups.length})
+      </h2>
       <div className="table-scroll">
-        <table className="data-table">
+        <table className="data-table" aria-labelledby="narrowing-groups">
           <thead>
             <tr>
               <th scope="col">Capability</th>
@@ -565,7 +577,7 @@ function AdoptionGroups({
 }) {
   return (
     <div className="stack">
-      <h2 className="section-title">
+      <h2 className="section-title" id={`adoption-groups-${effect}`}>
         {title} ({groups.length})
       </h2>
       {groups.length === 0 ? (
@@ -574,7 +586,7 @@ function AdoptionGroups({
         </p>
       ) : (
         <div className="table-scroll">
-          <table className="data-table">
+          <table className="data-table" aria-labelledby={`adoption-groups-${effect}`}>
             <thead>
               <tr>
                 <th scope="col">Capability</th>
@@ -631,7 +643,7 @@ function AdoptionGroups({
 function GateBlockers({ review }: { review: ChangeReviewResponse }) {
   const { gate } = review;
   return (
-    <div className={`panel stack ${gate.isOpen ? 'status-ok' : 'status-error'}`}>
+    <div className={`panel stack ${gate.isOpen ? 'status-ok' : 'status-error'}`} role="status">
       <h2 className="section-title">
         Gate: {gate.isOpen ? '열림' : `blocker ${gate.blockers.length}건`}
       </h2>
@@ -740,6 +752,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
         <button
           type="button"
           disabled={!canSubmit || !review.gate.isOpen || review.status !== 'ready'}
+          aria-busy={decide.isPending}
           onClick={() => decide.mutate('accept')}
         >
           {labels.accept}
@@ -748,6 +761,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
           type="button"
           className="button-secondary"
           disabled={!canSubmit || review.status !== 'ready'}
+          aria-busy={decide.isPending}
           onClick={() => decide.mutate('reject')}
         >
           {labels.reject}
@@ -819,6 +833,7 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
           type="button"
           className="button-secondary"
           disabled={withdraw.isPending}
+          aria-busy={withdraw.isPending}
           onClick={() => withdraw.mutate()}
         >
           검토 철회
@@ -851,7 +866,12 @@ function ReportDownload({ reviewId, kind }: { reviewId: string; kind: ReviewKind
         결정 근거로 남길 Evidence Report를 Markdown으로 내려받습니다.
       </p>
       <div className="actions">
-        <button type="button" disabled={download.isPending} onClick={() => download.mutate()}>
+        <button
+          type="button"
+          disabled={download.isPending}
+          aria-busy={download.isPending}
+          onClick={() => download.mutate()}
+        >
           보고서 다운로드
         </button>
       </div>

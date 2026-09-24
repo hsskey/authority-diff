@@ -100,7 +100,7 @@ test('the page polls while computing and enables controls once the review is rea
 
   await page.goto(`/change-reviews/${REVIEW_ID}`);
 
-  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(
     page.getByLabel('execute · workspace → host · 확인 필요 → 허용 · bash 판정'),
   ).toBeDisabled();
@@ -141,7 +141,7 @@ test('once ready, diff-groups are fetched even though they were empty while comp
 
   await page.goto(`/change-reviews/${REVIEW_ID}`);
 
-  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByText('넓어진 group이 없습니다.')).toBeVisible();
 
   await expect(

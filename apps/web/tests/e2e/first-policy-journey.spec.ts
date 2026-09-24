@@ -686,7 +686,7 @@ test('an organization goes from no policy to an accepted first policy, a change 
 
   // 9. a change review compares version 2 against the accepted baseline
   await page.getByRole('button', { name: '변경 검토 만들기' }).click();
-  await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Widening group (1)' })).toBeVisible();
   await expect(page.getByText('넓어진 action')).toBeVisible();
   await page

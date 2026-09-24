@@ -151,7 +151,8 @@ _Avoid_: top targets
 **Change Review**:
 Policy Version 하나의 수락 여부를 결정하는 단위.
 Replay Run, Verdict, 결정 기록을 묶습니다.
-Review Kind가 `adoption`이면 최초 도입 검토라고 부르며 baseline Policy Version이 없습니다.
+화면 라벨은 Review Kind가 `change`면 변경 검토, `adoption`이면 최초 도입 검토입니다.
+Review Kind가 `adoption`이면 baseline Policy Version이 없습니다.
 _Avoid_: approval request, PR
 
 **Review Kind**:

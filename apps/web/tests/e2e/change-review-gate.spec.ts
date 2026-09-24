@@ -72,7 +72,7 @@ for (const { code, text } of WIDENING_BLOCKER_CASES) {
 
     await page.goto(`/change-reviews/${REVIEW_ID}`);
 
-    await expect(page.getByRole('heading', { name: 'Change Review', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
     await expect(page.getByText(text).first()).toBeVisible();
   });
 }
