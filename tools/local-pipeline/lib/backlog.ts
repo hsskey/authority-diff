@@ -12,10 +12,6 @@ export interface NoneRow {
   readonly soleActions: number;
 }
 
-export interface ProgramRow extends NoneRow {
-  readonly operations: number;
-}
-
 export interface TargetKindRow {
   readonly key: string;
   readonly operations: number;
@@ -117,7 +113,10 @@ export interface Backlog {
   readonly operations: number;
   readonly noneOperations: number;
   readonly noneSignals: readonly NoneRow[];
-  readonly programs: readonly ProgramRow[];
+  /** Programs on `program_unrecognized` Operations; resolving one means adding it to the program table. */
+  readonly unrecognizedPrograms: readonly NoneRow[];
+  /** Every harness tool name on a `tool_unrecognized` Operation. */
+  readonly harnessTools: readonly NoneRow[];
   readonly targetKinds: readonly TargetKindRow[];
   readonly candidates: readonly CandidateRow[];
   readonly candidatesCombinedGainActions: number;
@@ -166,13 +165,19 @@ function tallyAction(
   }
 }
 
+/** The program of an Operation carrying `signal`, so each unrecognized name is its own row. */
+function programWith(signal: string) {
+  return (operation: Operation): readonly string[] =>
+    operation.signals.includes(signal) ? [operation.program ?? NO_PROGRAM] : [];
+}
+
 export function computeBacklog(
   actions: readonly ActionForReplay[],
   candidates: readonly Candidate[] = CANDIDATES,
 ): Backlog {
   const signals = new Map<string, Tally>();
-  const programNone = new Map<string, Tally>();
-  const programOperations = new Map<string, number>();
+  const programs = new Map<string, Tally>();
+  const tools = new Map<string, Tally>();
   const kinds = new Map<string, TargetKindRow>();
   let evaluatedActions = 0;
   let noneActions = 0;
@@ -200,8 +205,6 @@ export function computeBacklog(
       for (const { candidate, row } of candidateTallies) {
         row.matchedOperations += candidate.matches(operation) ? 1 : 0;
       }
-      const program = operation.program ?? NO_PROGRAM;
-      programOperations.set(program, (programOperations.get(program) ?? 0) + 1);
       const kind = kinds.get(operation.target.kind) ?? {
         key: operation.target.kind,
         operations: 0,
@@ -222,7 +225,8 @@ export function computeBacklog(
     noneActions++;
     noneOperations += none.length;
     tallyAction(signals, none, (operation) => operation.signals);
-    tallyAction(programNone, none, (operation) => [operation.program ?? NO_PROGRAM]);
+    tallyAction(programs, none, programWith('program_unrecognized'));
+    tallyAction(tools, none, programWith('tool_unrecognized'));
     for (const { candidate, row } of candidateTallies) {
       const matched = none.filter(candidate.matches).length;
       row.noneOperations += matched;
@@ -234,21 +238,24 @@ export function computeBacklog(
     }
   }
 
-  const rows = (tallies: Map<string, Tally>): NoneRow[] =>
-    [...tallies.entries()].map(([key, row]) => ({ key, ...row }));
+  const ranked = (tallies: Map<string, Tally>): NoneRow[] =>
+    [...tallies.entries()]
+      .map(([key, row]) => ({ key, ...row }))
+      .sort(
+        (a, b) =>
+          b.soleActions - a.soleActions ||
+          b.noneActions - a.noneActions ||
+          (a.key < b.key ? -1 : 1),
+      );
 
   return {
     evaluatedActions,
     noneActions,
     operations,
     noneOperations,
-    noneSignals: rows(signals)
-      .sort(byCount((row) => row.noneOperations))
-      .slice(0, 20),
-    programs: rows(programNone)
-      .map((row) => ({ ...row, operations: programOperations.get(row.key) ?? 0 }))
-      .sort(byCount((row) => row.noneOperations))
-      .slice(0, 40),
+    noneSignals: ranked(signals).slice(0, 20),
+    unrecognizedPrograms: ranked(programs).slice(0, 40),
+    harnessTools: ranked(tools),
     targetKinds: [...kinds.values()].sort(byCount((row) => row.operations)),
     candidates: candidateTallies.map(({ row }) => row),
     candidatesCombinedGainActions,

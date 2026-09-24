@@ -51,18 +51,37 @@ describe('computeBacklog', () => {
     ]);
   });
 
-  test('ranks programs by none Operations next to their total Operations', () => {
+  test('ranks unrecognized programs by the Actions that recognizing each alone takes out of none', () => {
     const backlog = computeBacklog([
-      action('a1', [
-        op('node x.js', 'node', [], 'partial', PATH),
-        op('node -e x', 'node', ['inline_code']),
+      action('a1', [op('tool-a', 'tool-a', ['program_unrecognized'])]),
+      action('a2', [
+        op('tool-b', 'tool-b', ['program_unrecognized']),
+        op('tool-b x', 'tool-b', ['program_unrecognized']),
       ]),
-      action('a2', [op('x', null, ['parse_error'])]),
+      action('a3', [
+        op('tool-b', 'tool-b', ['program_unrecognized']),
+        op('python3 -c x', 'python3', ['inline_code']),
+      ]),
     ]);
 
-    expect(backlog.programs).toEqual([
-      { key: '(no program)', operations: 1, noneOperations: 1, noneActions: 1, soleActions: 1 },
-      { key: 'node', operations: 2, noneOperations: 1, noneActions: 1, soleActions: 1 },
+    expect(backlog.unrecognizedPrograms).toEqual([
+      { key: 'tool-b', noneOperations: 3, noneActions: 2, soleActions: 1 },
+      { key: 'tool-a', noneOperations: 1, noneActions: 1, soleActions: 1 },
+    ]);
+  });
+
+  test('lists every unrecognized harness tool apart from unrecognized programs', () => {
+    const backlog = computeBacklog([
+      action('a1', [op('{}', 'ToolA', ['tool_unrecognized'])]),
+      action('a2', [
+        op('{}', 'ToolB', ['tool_unrecognized']),
+        op('tool-c', 'tool-c', ['program_unrecognized']),
+      ]),
+    ]);
+
+    expect(backlog.harnessTools).toEqual([
+      { key: 'ToolA', noneOperations: 1, noneActions: 1, soleActions: 1 },
+      { key: 'ToolB', noneOperations: 1, noneActions: 1, soleActions: 0 },
     ]);
   });
 

@@ -20,7 +20,7 @@ const PUBLIC_PROGRAMS = new Set(
     'npm pnpm npx yarn pip pip3 corepack brew cargo uv uvx bun bunx go pipx playwright',
     'Read Edit Write MultiEdit NotebookEdit Glob Grep LS cd cat ls grep rg sed tail head mkdir rm cp mv echo printf tee touch find wc diff awk strings chmod ln stat sort uniq cut tr jq xargs realpath basename dirname test readlink file du df tree cmp shasum md5 sha256sum rmdir less od xxd base64 date pwd true false sleep export source set unset env which type command',
     'python3 python node bash sh zsh perl tsx deno ruby osascript',
-    'StructuredOutput Monitor Agent Task TodoWrite Skill ToolSearch ScheduleWakeup SendMessage AskUserQuestion ExitPlanMode EnterPlanMode TaskStop TaskOutput KillShell BashOutput ListMcpResourcesTool ReadMcpResourceTool CronCreate Artifact Workflow ArtifactComments ArtifactData EnterWorktree ExitWorktree PushNotification RemoteTrigger DesignSync ReportFindings',
+    'StructuredOutput Monitor Agent Task TodoWrite Skill ToolSearch ScheduleWakeup SendMessage AskUserQuestion ExitPlanMode EnterPlanMode TaskStop TaskOutput KillShell BashOutput ListMcpResourcesTool ReadMcpResourceTool CronCreate Artifact Workflow ArtifactComments ArtifactData EnterWorktree ExitWorktree PushNotification RemoteTrigger DesignSync ReportFindings ListAgents SendFeedback',
     'tmux sqlite3 lsof claude docker make kill pkill open ps timeout tar unzip gzip codex tsc vitest eslint prettier biome psql',
   ].flatMap((line) => line.split(' ')),
 );
