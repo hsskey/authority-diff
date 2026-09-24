@@ -81,6 +81,8 @@ export interface JourneyResult {
   readonly conformanceRun: ReplayRunResponse;
   readonly conformance: ListConformanceFindingsResponse;
   readonly steps: readonly JourneyStep[];
+  /** What the steps state, keyed and formatted like an evidence-numbers block. */
+  readonly figures: ReadonlyMap<string, string>;
 }
 
 interface RouteDef<Res, Req> {
@@ -377,6 +379,12 @@ function sameKeys(a: readonly { groupKey: string }[], b: readonly { groupKey: st
 
 async function journey(api: Api, input: JourneyInput, scratchHome: string): Promise<JourneyResult> {
   const steps: JourneyStep[] = [];
+  const figures = new Map<string, string>();
+  const record = (entries: Readonly<Record<string, number | string>>): void => {
+    for (const [key, value] of Object.entries(entries)) {
+      figures.set(key, typeof value === 'number' ? fmt(value) : value);
+    }
+  };
   const cli = (args: readonly string[], home?: string): string =>
     run('pnpm', ['--silent', 'authority', ...args], {
       cwd: input.repoRoot,
@@ -398,6 +406,12 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     imported.acceptedCount === localAdoption.stats.totalActions,
     'imported Actions differ from the snapshot',
   );
+  record({
+    'snapshot.sessions': imported.sessions,
+    'snapshot.actions': imported.acceptedCount,
+    'snapshot.duplicates': imported.duplicateCount,
+    'snapshot.failed': imported.failedSessions,
+  });
   steps.push({
     step: '1 import',
     via: '`authority import`',
@@ -418,6 +432,11 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     );
   }
   const { full, partial, none } = localAdoption.stats.analyzability;
+  record({
+    'analyzability.full': full,
+    'analyzability.partial': partial,
+    'analyzability.none': none,
+  });
   steps.push({
     step: '2 overview, no Policy',
     via: 'activity overview',
@@ -433,6 +452,7 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
   const savedA = await draftWith(api, v1, input.policyA);
   check(savedA.contentHash === input.policyAContentHash, 'server content hash of policy A differs');
   check(savedA.isValid, 'policy A does not validate');
+  record({ 'policy-a.contentHash': shortHash(savedA.contentHash) });
   steps.push({
     step: '3 first Policy',
     via: 'policy version',
@@ -477,6 +497,15 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
   );
   const { allow, ask, deny } = localAdoption.stats.effectCounts;
   const denyGroups = adoptionGroups.filter((group) => group.effect === 'deny').length;
+  record({
+    'snapshot.evaluated': localAdoption.stats.evaluatedActions,
+    'policy-a.allow': allow,
+    'policy-a.ask': ask,
+    'policy-a.deny': deny,
+    'adoption.ask-groups': adoptionGroups.length - denyGroups,
+    'adoption.deny-groups': denyGroups,
+    'adoption.resultHash': shortHash(adoptionResultHash),
+  });
   steps.push({
     step: '4 adoption preview',
     via: 'change review, replay run',
@@ -529,6 +558,7 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
   await judgeAll(api, adoptionReview.id, [lastGroup?.groupKey ?? ''], () => 'expected');
   const opened = await api.call(routes.getChangeReview, { params: { id: adoptionReview.id } });
   check(opened.gate.isOpen, 'the gate opens once every group is judged');
+  record({ 'adoption.groups': adoptionGroups.length });
   steps.push({
     step: '6 verdicts',
     via: 'verdicts',
@@ -589,6 +619,11 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     conformance.run?.replayRunId === conformanceRun.id,
     'the findings belong to the conformance run',
   );
+  record({
+    'conformance.spool-files': flushed.sentFiles,
+    'conformance.findings': conformance.items.length,
+    'conformance.resultHash': shortHash(conformanceRun.resultHash ?? ''),
+  });
   steps.push({
     step: '9 conformance',
     via: '`authority spool-flush`, replay run',
@@ -620,6 +655,13 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
   );
   const keysB = new Set(input.localB.groups.map((group) => group.groupKey));
   const unexpected = groupsBp.filter((group) => !keysB.has(group.groupKey));
+  record({
+    'change-bp.contentHash': shortHash(savedBp.contentHash),
+    'change-bp.changed': reviewBp.replaySummary.stats?.changedActions ?? 0,
+    'change-bp.widening-groups': groupsBp.length,
+    'change-bp.unexpected-groups': unexpected.length,
+    'change-bp.resultHash': shortHash(reviewBp.replaySummary.resultHash ?? ''),
+  });
   steps.push({
     step: "10 change review B'",
     via: 'policy version, change review',
@@ -682,6 +724,12 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     body: { decision: 'accept', note: '', reviewerName: REVIEWER },
   });
   check(acceptedB.status === 'accepted', 'the B review is accepted');
+  record({
+    'change-b.contentHash': shortHash(savedB.contentHash),
+    'change-b.changed': reviewB.replaySummary.stats?.changedActions ?? 0,
+    'change-b.widening-groups': groupsB.length,
+    'change-b.resultHash': shortHash(reviewB.replaySummary.resultHash ?? ''),
+  });
   steps.push({
     step: '11 unexpected, reject, B, accept',
     via: 'verdicts, decisions',
@@ -694,6 +742,7 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     audit.isIntact && audit.checkedCount === 3,
     'the decision chain is intact with three records',
   );
+  record({ 'audit.checked': audit.checkedCount });
   steps.push({
     step: '12 audit',
     via: '`authority verify-audit`',
@@ -708,7 +757,16 @@ async function journey(api: Api, input: JourneyInput, scratchHome: string): Prom
     conformanceRun,
     conformance,
     steps,
+    figures,
   };
+}
+
+/**
+ * Runs the first-policy and change-review journey against the API of a running
+ * server whose volume holds no data yet.
+ */
+export function runJourneyAt(serverUrl: string, input: JourneyInput): Promise<JourneyResult> {
+  return journey(new Api(serverUrl), input, join(input.runDir, 'scratch-home'));
 }
 
 /**
@@ -725,7 +783,7 @@ export async function runJourney(input: JourneyInput): Promise<JourneyResult> {
   try {
     compose('up', '-d', '--build', '--wait');
     const address = compose('port', 'server', '8787').trim();
-    return await journey(new Api(`http://${address}`), input, join(input.runDir, 'scratch-home'));
+    return await runJourneyAt(`http://${address}`, input);
   } finally {
     compose('down', '-v');
   }

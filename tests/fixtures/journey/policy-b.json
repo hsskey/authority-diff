@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "credentialPaths": ["~/.ssh/**", "**/.env"],
+    "agentConfigPaths": ["~/.claude/**"],
+    "trustedRemotes": ["git.example.test/team/**"],
+    "publicRemotes": [],
+    "protectedBranches": ["main"],
+    "productionMarkers": ["\\bproduction\\b"]
+  },
+  "rules": [
+    {
+      "ruleId": "deny_credentials_access",
+      "match": {
+        "capabilities": "*",
+        "zones": ["credentials"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "deny",
+      "rationale": "Synthetic rule denies credential access."
+    },
+    {
+      "ruleId": "allow_workspace_edit",
+      "match": {
+        "capabilities": ["read", "write", "commit"],
+        "zones": ["workspace"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Synthetic rule allows workspace edits."
+    },
+    {
+      "ruleId": "allow_workspace_execute",
+      "match": {
+        "capabilities": ["execute"],
+        "zones": ["workspace"],
+        "reversibility": null,
+        "analyzability": ["full", "partial"]
+      },
+      "effect": "allow",
+      "rationale": "Synthetic rule allows workspace builds."
+    },
+    {
+      "ruleId": "allow_trusted_fetch",
+      "match": {
+        "capabilities": ["fetch", "install"],
+        "zones": ["trusted_remote"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Synthetic rule allows fetches from the team remote."
+    },
+    {
+      "ruleId": "allow_unknown_remote_fetch",
+      "match": {
+        "capabilities": ["fetch"],
+        "zones": ["unknown_remote"],
+        "reversibility": null,
+        "analyzability": null
+      },
+      "effect": "allow",
+      "rationale": "Synthetic rule allows fetches from unknown remotes."
+    }
+  ]
+}

@@ -86,12 +86,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Start the stack and wait for readiness
         run: docker compose up -d --build --wait
       - name: Probe the readiness endpoint
         run: |
           code=$(curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8787/readyz)
           test "$code" = "200"
+      - name: Run the API journey on the synthetic fixture
+        run: pnpm smoke:journey
       - name: Tear down
         if: always()
         run: docker compose down -v

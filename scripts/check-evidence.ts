@@ -58,12 +58,14 @@ function containsValue(lines: readonly MainLine[], value: string): boolean {
   return lines.some((line) => pattern.test(line.text));
 }
 
-function parseNumbers(
+/** Reads the evidence-numbers block of a document; a document without one has no numbers. */
+export function readEvidenceNumbers(
   path: string,
-  body: string,
+  text: string,
 ): { numbers: Map<string, string>; failures: string[] } {
   const numbers = new Map<string, string>();
   const failures: string[] = [];
+  const body = NUMBERS_BLOCK_RE.exec(text)?.[1] ?? '';
   for (const line of body.split('\n').filter((entry) => entry.trim() !== '')) {
     const match = NUMBER_LINE_RE.exec(line);
     if (match?.[1] === undefined || match[2] === undefined) {
@@ -82,7 +84,7 @@ function parse({ path, text }: EvidenceDocument): ParsedDocument {
   const stamp = STAMP_VERSIONS_RE.exec(lines[0] ?? '');
   const stampVersions = [stamp?.[1], stamp?.[2]].filter((version) => version !== undefined);
   const block = NUMBERS_BLOCK_RE.exec(text);
-  const { numbers, failures } = parseNumbers(path, block?.[1] ?? '');
+  const { numbers, failures } = readEvidenceNumbers(path, text);
 
   const blockStart = block === null ? -1 : text.slice(0, block.index).split('\n').length - 1;
   const blockEnd = block === null ? -1 : blockStart + block[0].split('\n').length - 1;
