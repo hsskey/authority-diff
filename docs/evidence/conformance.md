@@ -30,7 +30,7 @@ No repository names, host paths, or raw command text appear below.
 Stats: total 4,440 window Actions, evaluated 3,189, excluded 1,251, changed 1,379.
 Transitions (observed Disposition Effect → candidate Effect): allow→allow 1,810, allow→ask 1,369, allow→deny 3, deny→ask 7, all others 0.
 <!-- /remeasure:conformance-findings -->
-The violations are the same 6 Actions as in every earlier run; the under_asked volume changed with classifier 0.2.3 (see "Change from classifier 0.2.2").
+The violations are the same 6 Actions as in every earlier run; the under_asked volume changed with classifier 0.2.3 (see the change note under "Previous version").
 
 ## Violations (6 Actions)
 

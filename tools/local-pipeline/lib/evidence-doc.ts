@@ -7,6 +7,8 @@
 
 const BLOCK_RE = /<!-- remeasure:([a-z0-9-]+) -->\n([\s\S]*?)<!-- \/remeasure:\1 -->/g;
 const MARKER_LINE_RE = /^<!-- \/?remeasure:[a-z0-9-]+ -->$/;
+/** Checked by `scripts/check-evidence.ts`; it stays with the main sections. */
+const NUMBERS_BLOCK_RE = /^<!-- evidence-numbers\n[\s\S]*?^-->\n/m;
 const PREVIOUS_HEADING_RE = /^## Previous version/m;
 const STAMP_VERSION_RE = /; classifier (\S+);/;
 
@@ -50,7 +52,7 @@ function splitMain(doc: string): { stamp: string; main: string; previous: string
 
 /** The main sections without the title and block markers, one heading level down. */
 function archive(main: string): string {
-  const lines = main.replace(/^\n+/, '').split('\n');
+  const lines = main.replace(NUMBERS_BLOCK_RE, '').replace(/^\n+/, '').split('\n');
   const withoutTitle = lines[0]?.startsWith('# ') === true ? lines.slice(1) : lines;
   return withoutTitle
     .filter((line) => !MARKER_LINE_RE.test(line))
@@ -78,6 +80,7 @@ export function replaceStamp(doc: string, stamp: string): string {
 export function proseLinesWithDigits(doc: string): string[] {
   const { main } = splitMain(doc);
   return main
+    .replace(NUMBERS_BLOCK_RE, '')
     .replace(BLOCK_RE, '')
     .split('\n')
     .filter((line) => /\d/.test(line));

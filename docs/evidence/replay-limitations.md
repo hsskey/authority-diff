@@ -34,4 +34,4 @@ On the snapshot this moved 302 `git` and `gh` Operations from an unresolved remo
 Two cases stay unresolved by design: a directory that comes from a shell expansion (99 Operations), and a `cd` into another repository (50 Operations).
 One recorded Session had a workspace root below its repository root, so a `cd` to the repository root left the workspace; that single Action stays unresolved because the classifier has no repository root to compare against.
 
-Path Targets compare the same form since classifier 0.2.3: the parser folds the Session home in the tool input to `~`, and a `~/...` path under a `~/...` workspace root is inside the workspace (`docs/evidence/classifier-hardening-3.md`).
+The next classifier version makes Path Targets compare the same form: the parser folds the Session home in the tool input to `~`, and a `~/...` path under a `~/...` workspace root is inside the workspace (`docs/evidence/classifier-hardening-3.md`).
