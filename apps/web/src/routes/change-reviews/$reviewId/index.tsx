@@ -23,6 +23,7 @@ import {
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
 import { usePageTitle } from '../../../shared/use-page-title.ts';
+import { TextLink } from '../../../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/')({
   component: ChangeReviewPage,
@@ -657,12 +658,12 @@ function WideningGroups({
                     />
                   </Cell>
                   <Cell nowrap>
-                    <Link
+                    <TextLink
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
-                    </Link>
+                    </TextLink>
                   </Cell>
                 </tr>
               ))}
@@ -708,12 +709,12 @@ function NarrowingGroups({
                 </Cell>
                 <Cell numeric>{group.actionCount}</Cell>
                 <Cell nowrap>
-                  <Link
+                  <TextLink
                     to="/change-reviews/$reviewId/groups/$groupKey"
                     params={{ reviewId, groupKey: group.groupKey }}
                   >
                     보기
-                  </Link>
+                  </TextLink>
                 </Cell>
               </tr>
             ))}
@@ -777,12 +778,12 @@ function AdoptionGroups({
                     />
                   </Cell>
                   <Cell nowrap>
-                    <Link
+                    <TextLink
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
-                    </Link>
+                    </TextLink>
                   </Cell>
                 </tr>
               ))}

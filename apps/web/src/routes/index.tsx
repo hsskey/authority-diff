@@ -35,6 +35,7 @@ import {
   TwoColumn,
 } from '../features/activity-overview/ui.tsx';
 import { effectLabel, formatShare } from '../features/change-review/format.ts';
+import { TextLink } from '../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/')({
   component: ActivityShapePage,
@@ -489,12 +490,12 @@ function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
         최초 도입 검토가 반려된 상태입니다. 마지막 version에서 새 draft를 만들어 다시 검토하세요.
       </Hint>
       {latest !== null ? (
-        <Link
+        <TextLink
           to="/policies/$policyId/versions/$versionId"
           params={{ policyId: policy.id, versionId: latest.id }}
         >
           version #{latest.versionNumber} 보기
-        </Link>
+        </TextLink>
       ) : null}
     </Panel>
   );
@@ -595,9 +596,9 @@ function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
     return (
       <Hint role="status">
         제안 정책을 과거 Action에 적용하는 중입니다.{' '}
-        <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+        <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           검토 화면 열기
-        </Link>
+        </TextLink>
       </Hint>
     );
   }

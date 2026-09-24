@@ -15,9 +15,11 @@ Keeping the split `tailwindcss/theme` and `tailwindcss/utilities` imports meant 
 ## Decision
 
 - `app.css` has a single `@import "tailwindcss";` with no layer or condition. `@theme` and `@layer base` follow it.
+- `@layer base` holds only reset fixes on top of Preflight, the body background, and the focus ring. It has no class selectors.
 - Two reset fixes keep the current look: `select` reverts to the browser font, and the date-time field wrapper reverts to its browser padding.
 - Lists that show markers opt back in with `list-disc` or `list-decimal`.
 - `scripts/check-css-policy.ts` (`pnpm lint:css`) rejects any other `@import`, including the split theme and utilities imports.
+- `pnpm lint:css` also fails when `app.css` has a class selector that no string literal under `apps/web/src` names, so the unused selector count stays 0. A class built only by template interpolation counts as unused.
 
 ## Alternatives
 

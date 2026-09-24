@@ -8,16 +8,19 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid min-h-screen grid-rows-[auto_1fr]">
-      <a href="#main-content" className="skip-link">
+      <a
+        href="#main-content"
+        className="absolute top-3 left-3 z-10 -translate-y-[200%] rounded-md bg-gray-900 px-3 py-[0.4rem] text-white no-underline focus:translate-y-0"
+      >
         본문으로 건너뛰기
       </a>
-      <header className="layout-header border-b border-border bg-panel px-6 py-4">
+      <header className="border-b border-border bg-panel px-6 py-4">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-8 gap-y-4">
           <Link to="/" className="font-semibold whitespace-nowrap no-underline">
             Authority Diff
           </Link>
           <nav
-            className="layout-nav flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap"
+            className="flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap [&_[aria-current=page]]:font-bold [&_[aria-current=page]]:underline [&_[aria-current=page]]:underline-offset-[0.2em]"
             aria-label="주 메뉴"
           >
             <Link to="/" activeOptions={{ exact: true }} activeProps={{ 'aria-current': 'page' }}>
@@ -35,7 +38,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {hasToken ? (
             <button
               type="button"
-              className="ml-auto"
+              className="ml-auto cursor-pointer rounded-md border border-gray-800 bg-gray-900 px-3 py-2 text-white"
               onClick={() => {
                 clearAuthToken();
                 window.location.assign('/login');
@@ -46,7 +49,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : null}
         </div>
       </header>
-      <main id="main-content" className="layout-main mx-auto w-full max-w-5xl p-6" tabIndex={-1}>
+      <main id="main-content" className="mx-auto w-full max-w-5xl p-6" tabIndex={-1}>
         {children}
       </main>
     </div>

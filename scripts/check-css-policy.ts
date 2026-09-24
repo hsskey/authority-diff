@@ -17,6 +17,10 @@ export type CssPolicyResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly failures: readonly string[] };
 
+const SELECTOR_PRELUDE = /(?<=^|[;{}])([^;{}]*)\{/g;
+const CLASS_SELECTOR = /\.(-?[_a-zA-Z][\w-]*)/g;
+const STRING_LITERAL = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
+const CLASS_TOKEN = /[\w-]+/g;
 const CSS_IMPORT = /(?:^|\n)\s*import\s+(?:[^'"\n]+from\s+)?['"]([^'"]+\.css)['"]/g;
 const DYNAMIC_CSS_IMPORT = /(?:^|\n)\s*import\s*\(\s*['"]([^'"]+\.css)['"]/g;
 
@@ -205,6 +209,38 @@ function checkAppCss(source: string, failures: string[]): void {
   }
 }
 
+function classSelectors(css: string): Set<string> {
+  return new Set(
+    [...stripCssComments(css).matchAll(SELECTOR_PRELUDE)].flatMap(([, prelude = '']) =>
+      [...prelude.matchAll(CLASS_SELECTOR)].map(([, name = '']) => name),
+    ),
+  );
+}
+
+function literalClassTokens(sourceFiles: CssPolicyInput['sourceFiles']): Set<string> {
+  return new Set(
+    sourceFiles.flatMap((file) =>
+      [...file.source.matchAll(STRING_LITERAL)].flatMap(
+        ([literal]) => literal.match(CLASS_TOKEN) ?? [],
+      ),
+    ),
+  );
+}
+
+function checkUnusedClassSelectors(
+  appCss: string,
+  sourceFiles: CssPolicyInput['sourceFiles'],
+  failures: string[],
+): void {
+  const used = literalClassTokens(sourceFiles);
+  const unused = [...classSelectors(appCss)].filter((name) => !used.has(name)).sort();
+  if (unused.length > 0) {
+    failures.push(
+      `styles/app.css has ${unused.length} unused class selector(s): ${unused.map((name) => `.${name}`).join(', ')}`,
+    );
+  }
+}
+
 function checkCssImports(sourceFiles: CssPolicyInput['sourceFiles'], failures: string[]): void {
   for (const file of sourceFiles) {
     const path = posixPath(file.path);
@@ -241,6 +277,7 @@ export function checkCssPolicy(input: CssPolicyInput): CssPolicyResult {
       failures.push(`${ALLOWED_CSS_FILE} could not be read`);
     } else {
       checkAppCss(input.appCss, failures);
+      checkUnusedClassSelectors(input.appCss, input.sourceFiles, failures);
     }
   }
 

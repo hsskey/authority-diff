@@ -21,8 +21,8 @@ const allowedAppCss = `@import "tailwindcss";
     }
   }
 
-  .layout {
-    min-height: 100vh;
+  :focus-visible {
+    outline: 2px solid #2563eb;
   }
 }
 `;
@@ -131,6 +131,60 @@ describe('checkCssPolicy', () => {
       return;
     }
     expect(result.failures.some((failure) => failure.includes('@apply'))).toBe(true);
+  });
+
+  it('rejects class selectors that no source string literal names', () => {
+    const result = checkCssPolicy({
+      cssFiles: ['styles/app.css'],
+      appCss: `${allowedAppCss}
+@layer base {
+  .skeleton, .panel > .hint:hover { color: #6b7280; }
+}
+`,
+      sourceFiles: [
+        { path: 'main.tsx', source: "import './styles/app.css';\n" },
+        { path: 'routes/index.tsx', source: '<p className="panel">skeleton hint</p>;\n' },
+      ],
+    });
+    expect(result).toEqual({
+      ok: false,
+      failures: ['styles/app.css has 2 unused class selector(s): .hint, .skeleton'],
+    });
+  });
+
+  it('accepts a class selector named in a source string literal', () => {
+    const result = checkCssPolicy({
+      cssFiles: ['styles/app.css'],
+      appCss: `${allowedAppCss}
+@layer base {
+  .skeleton { color: #6b7280; }
+}
+`,
+      sourceFiles: [
+        { path: 'main.tsx', source: "import './styles/app.css';\n" },
+        { path: 'shared/LoadingState.tsx', source: "const CLASS = 'h-4 skeleton';\n" },
+      ],
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('counts a class built only by template interpolation as unused', () => {
+    const result = checkCssPolicy({
+      cssFiles: ['styles/app.css'],
+      appCss: `${allowedAppCss}
+@layer base {
+  .effect-deny { color: #b91c1c; }
+}
+`,
+      sourceFiles: [
+        { path: 'main.tsx', source: "import './styles/app.css';\n" },
+        { path: 'routes/index.tsx', source: 'const tone = `effect-${effect}`;\n' },
+      ],
+    });
+    expect(result).toEqual({
+      ok: false,
+      failures: ['styles/app.css has 1 unused class selector(s): .effect-deny'],
+    });
   });
 
   it('rejects a css import outside main.tsx', () => {

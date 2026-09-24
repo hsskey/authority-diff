@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
   UpdatePolicyVersionRequestSchema,
   type ChangeReviewResponse,
@@ -12,11 +12,14 @@ import { callRoute, describeApiError, type ApiClientError } from '../../../../sh
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
 import { PageTitle } from '../../../../shared/components/PageTitle.tsx';
-import { Panel, PanelStack } from '../../../../shared/components/Panel.tsx';
+import { DataTable, Td, Th } from '../../../../shared/components/DataTable.tsx';
+import { MetaGrid, MONO } from '../../../../shared/components/MetaGrid.tsx';
+import { PanelStack } from '../../../../shared/components/Panel.tsx';
 import { SectionTitle } from '../../../../shared/components/SectionTitle.tsx';
 import { Stack } from '../../../../shared/components/Stack.tsx';
 import { effectLabel } from '../../../../features/change-review/format.ts';
 import { usePageTitle } from '../../../../shared/use-page-title.ts';
+import { TextLink } from '../../../../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/policies/$policyId/versions/$versionId')({
   component: PolicyVersionPage,
@@ -32,6 +35,48 @@ const STATUS_LABEL: Record<VersionStatus, string> = {
   accepted: '채택됨',
   rejected: '반려됨',
 };
+
+const STATUS_TONE: Record<VersionStatus, string> = {
+  draft: 'text-amber-700',
+  in_review: 'text-blue-700',
+  accepted: 'text-emerald-700',
+  rejected: 'text-red-700',
+};
+
+const EFFECT_BADGE_TONE: Record<PolicyRule['effect'], string> = {
+  allow: 'bg-emerald-700/12 text-emerald-700',
+  ask: 'bg-amber-700/12 text-amber-700',
+  deny: 'bg-red-700/12 text-red-700',
+};
+
+const FIELD_INPUT =
+  'rounded-md border border-gray-300 bg-white px-[0.6rem] py-[0.4rem] text-inherit dark:border-gray-600 dark:bg-gray-900';
+
+function Hint({ children }: { children: ReactNode }) {
+  return <p className="m-0 text-[0.9rem] text-muted">{children}</p>;
+}
+
+function ErrorMessage({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-red-700" role="alert">
+      {children}
+    </p>
+  );
+}
+
+function Actions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap gap-3">{children}</div>;
+}
+
+function PrimaryButton(props: Omit<ComponentPropsWithoutRef<'button'>, 'className' | 'type'>) {
+  return (
+    <button
+      type="button"
+      className="cursor-pointer rounded-md border border-gray-800 bg-gray-900 px-[0.9rem] py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+      {...props}
+    />
+  );
+}
 
 function PolicyVersionPage() {
   const { policyId, versionId } = Route.useParams();
@@ -159,12 +204,14 @@ function PolicyVersionEditor({
       <PanelStack>
         <div className="flex items-center justify-between gap-4">
           <SectionTitle>정책 문서</SectionTitle>
-          <span className={`status-badge status-${version.status}`}>
+          <span
+            className={`inline-block rounded-full border border-current px-[0.6rem] py-[0.15rem] text-[0.75rem] font-semibold ${STATUS_TONE[version.status]}`}
+          >
             {STATUS_LABEL[version.status]}
           </span>
         </div>
         <textarea
-          className="json-editor"
+          className="min-h-80 w-full resize-y rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-[0.85rem] leading-normal text-gray-900 read-only:opacity-85 dark:border-gray-600 dark:bg-[#0b0d12] dark:text-gray-200"
           spellCheck={false}
           value={draftText}
           onChange={(event) => setDraftText(event.target.value)}
@@ -173,19 +220,14 @@ function PolicyVersionEditor({
           aria-invalid={isDraft && !draft.ok}
         />
         {!isDraft ? (
-          <p className="m-0 hint">
-            draft version만 편집할 수 있습니다. 바꾸려면 이 version에서 draft를 만드세요.
-          </p>
+          <Hint>draft version만 편집할 수 있습니다. 바꾸려면 이 version에서 draft를 만드세요.</Hint>
         ) : draft.ok ? (
-          <p className="m-0 status-ok">문서가 계약과 맞습니다.</p>
+          <p className="m-0 text-emerald-700">문서가 계약과 맞습니다.</p>
         ) : (
-          <p className="m-0 status-error" role="alert">
-            {draft.message}
-          </p>
+          <ErrorMessage>{draft.message}</ErrorMessage>
         )}
-        <div className="actions">
-          <button
-            type="button"
+        <Actions>
+          <PrimaryButton
             disabled={!isDraft || !isDirty || !draft.ok || save.isPending}
             aria-busy={save.isPending}
             onClick={() => {
@@ -195,28 +237,24 @@ function PolicyVersionEditor({
             }}
           >
             {save.isPending ? '저장 중…' : 'draft 저장'}
-          </button>
-          <button
-            type="button"
+          </PrimaryButton>
+          <PrimaryButton
             disabled={validate.isPending || isDirty}
             aria-busy={validate.isPending}
             onClick={() => validate.mutate()}
           >
             {validate.isPending ? '검증 중…' : '검증'}
-          </button>
-          <button
-            type="button"
+          </PrimaryButton>
+          <PrimaryButton
             disabled={createDraft.isPending}
             aria-busy={createDraft.isPending}
             onClick={() => createDraft.mutate()}
           >
             {createDraft.isPending ? '만드는 중…' : '이 version에서 draft 만들기'}
-          </button>
-        </div>
+          </PrimaryButton>
+        </Actions>
         {isDirty ? (
-          <p className="m-0 hint">
-            검증은 저장된 문서를 대상으로 합니다. 검증 전에 draft를 저장하세요.
-          </p>
+          <Hint>검증은 저장된 문서를 대상으로 합니다. 검증 전에 draft를 저장하세요.</Hint>
         ) : null}
         <MutationError label="저장 실패" error={save.error} />
         <MutationError label="검증 요청 실패" error={validate.error} />
@@ -234,20 +272,20 @@ function PolicyVersionEditor({
 
 function VersionMeta({ version }: { version: PolicyVersionResponse }) {
   return (
-    <Panel as="dl" className="meta-grid">
+    <MetaGrid>
       <div>
         <dt>Version</dt>
         <dd>#{version.versionNumber}</dd>
       </div>
       <div>
         <dt>Content hash</dt>
-        <dd className="mono">{version.contentHash}</dd>
+        <dd className={MONO}>{version.contentHash}</dd>
       </div>
       <div>
         <dt>수정 시각</dt>
         <dd>{version.updatedAt}</dd>
       </div>
-    </Panel>
+    </MetaGrid>
   );
 }
 
@@ -256,42 +294,42 @@ function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
     <Stack>
       <SectionTitle id="policy-rules">Rule ({rules.length})</SectionTitle>
       {rules.length === 0 ? (
-        <p className="m-0 hint">
+        <Hint>
           이 문서에는 Rule이 없습니다. Rule이 없으면 모든 Operation의 Effect는 확인 필요입니다.
-        </p>
+        </Hint>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table" aria-labelledby="policy-rules">
-            <thead>
-              <tr>
-                <th scope="col">Rule ID</th>
-                <th scope="col">Capability</th>
-                <th scope="col">Zone</th>
-                <th scope="col">Reversibility</th>
-                <th scope="col">Analyzability</th>
-                <th scope="col">Effect</th>
-                <th scope="col">근거</th>
+        <DataTable aria-labelledby="policy-rules">
+          <thead>
+            <tr>
+              <Th scope="col">Rule ID</Th>
+              <Th scope="col">Capability</Th>
+              <Th scope="col">Zone</Th>
+              <Th scope="col">Reversibility</Th>
+              <Th scope="col">Analyzability</Th>
+              <Th scope="col">Effect</Th>
+              <Th scope="col">근거</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.map((rule) => (
+              <tr key={rule.ruleId}>
+                <Td className={MONO}>{rule.ruleId}</Td>
+                <Td>{describeMatch(rule.match.capabilities)}</Td>
+                <Td>{describeMatch(rule.match.zones)}</Td>
+                <Td>{describeMatch(rule.match.reversibility)}</Td>
+                <Td>{describeMatch(rule.match.analyzability)}</Td>
+                <Td className="whitespace-nowrap">
+                  <span
+                    className={`inline-block rounded-full px-2 py-[0.1rem] text-[0.75rem] font-semibold ${EFFECT_BADGE_TONE[rule.effect]}`}
+                  >
+                    {effectLabel(rule.effect)}
+                  </span>
+                </Td>
+                <Td>{rule.rationale}</Td>
               </tr>
-            </thead>
-            <tbody>
-              {rules.map((rule) => (
-                <tr key={rule.ruleId}>
-                  <td className="mono">{rule.ruleId}</td>
-                  <td>{describeMatch(rule.match.capabilities)}</td>
-                  <td>{describeMatch(rule.match.zones)}</td>
-                  <td>{describeMatch(rule.match.reversibility)}</td>
-                  <td>{describeMatch(rule.match.analyzability)}</td>
-                  <td className="whitespace-nowrap">
-                    <span className={`effect-badge effect-${rule.effect}`}>
-                      {effectLabel(rule.effect)}
-                    </span>
-                  </td>
-                  <td>{rule.rationale}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </DataTable>
       )}
     </Stack>
   );
@@ -307,17 +345,17 @@ function describeMatch(value: '*' | readonly string[] | null): string {
 function ValidationResult({ result }: { result: ValidatePolicyVersionResponse }) {
   return (
     <PanelStack
-      className={result.isValid ? 'status-ok' : 'status-error'}
+      className={result.isValid ? 'text-emerald-700' : 'text-red-700'}
       role={result.isValid ? 'status' : 'alert'}
     >
       <SectionTitle>
         검증: {result.isValid ? '통과' : `문제 ${result.issues.length}건`}
       </SectionTitle>
       {result.issues.length > 0 ? (
-        <ul className="issue-list list-disc">
+        <ul className="m-0 grid list-disc gap-[0.35rem] pl-5 text-[0.9rem]">
           {result.issues.map((issue, index) => (
             <li key={`${issue.code}-${issue.ruleId ?? 'document'}-${index}`}>
-              <span className="mono">{issue.ruleId ?? 'document'}</span> · {issue.code} ·{' '}
+              <span className={MONO}>{issue.ruleId ?? 'document'}</span> · {issue.code} ·{' '}
               {issue.message}
             </li>
           ))}
@@ -409,52 +447,53 @@ function CreateReview({ policyId, version }: { policyId: string; version: Policy
   return (
     <PanelStack>
       <SectionTitle>{title}</SectionTitle>
-      <p className="m-0 hint">
+      <Hint>
         {hasAccepted
           ? '이 candidate와 채택된 기준 version을 같은 기간의 과거 Action에 대입해 달라지는 Effect를 찾습니다.'
           : '이 제안 정책을 과거 Action에 적용하면 각각 허용, 확인 필요, 차단 중 무엇이 되는지 계산합니다. 과거 runtime의 승인 여부는 복원하지 않습니다.'}
-      </p>
+      </Hint>
       {openReview !== null ? (
         <p className="m-0">
           이 version의 검토가 이미 진행 중입니다.{' '}
-          <Link to="/change-reviews/$reviewId" params={{ reviewId: openReview.id }}>
+          <TextLink to="/change-reviews/$reviewId" params={{ reviewId: openReview.id }}>
             {hasAccepted ? '변경 검토 열기' : '최초 도입 검토 열기'}
-          </Link>
+          </TextLink>
         </p>
       ) : null}
-      <div className="window-inputs">
-        <label>
+      <div className="flex flex-wrap gap-4">
+        <label className="grid gap-1 text-[0.85rem]">
           시작
           <input
             type="datetime-local"
+            className={FIELD_INPUT}
             value={window.from}
             onChange={(event) => setWindow((current) => ({ ...current, from: event.target.value }))}
           />
         </label>
-        <label>
+        <label className="grid gap-1 text-[0.85rem]">
           끝
           <input
             type="datetime-local"
+            className={FIELD_INPUT}
             value={window.to}
             onChange={(event) => setWindow((current) => ({ ...current, to: event.target.value }))}
           />
         </label>
       </div>
-      <div className="actions">
-        <button
-          type="button"
+      <Actions>
+        <PrimaryButton
           disabled={create.isPending || !canCreate}
           aria-busy={create.isPending}
           onClick={() => create.mutate()}
         >
           {create.isPending ? '만드는 중…' : title}
-        </button>
-      </div>
+        </PrimaryButton>
+      </Actions>
       {version.status !== 'draft' && openReview === null ? (
-        <p className="m-0 hint">
+        <Hint>
           검토는 draft version에서만 만들 수 있습니다. 이 version은 {STATUS_LABEL[version.status]}{' '}
           상태입니다.
-        </p>
+        </Hint>
       ) : null}
       <MutationError label={`${title} 실패`} error={create.error} />
     </PanelStack>
@@ -484,8 +523,8 @@ function MutationError({ label, error }: { label: string; error: Error | null })
     return null;
   }
   return (
-    <p className="m-0 status-error" role="alert">
+    <ErrorMessage>
       {label}: {error.message}
-    </p>
+    </ErrorMessage>
   );
 }
