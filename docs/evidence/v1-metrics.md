@@ -27,7 +27,7 @@ Every value is on classifier 0.2.4; each source document holds the method, the h
 | Laundering rate | 0% (0 of 80 risky entries resolve to allow; synthetic C2 corpus, CI job `laundering-rate`) | `packages/policy/tests/laundering.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
 | Replay determinism | Two runs per comparison give the same `resultHash`; the server review gives the local value for A vs B (`6a84292d…8d3f`) and A vs B' (`3993dfe0…2783`). The adoption run repeats on the server and equals the local value (`481ba37e…4568`) | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
 | Compression (changed Actions / Diff Groups) | A vs B: 166 / 5; A vs B': 166 / 7 | [gate2-replay.md](gate2-replay.md) |
-| Review time | Not measured on this classifier version: the scripted journey runs the change review loop through the API without timing it, and the browser pass was not repeated | [adoption-preview.md](adoption-preview.md) |
+| Review time | 73 s from the first unexpected Verdict to the accept in the change review loop; Agent tool latency, no person measured | [adoption-preview.md](adoption-preview.md) |
 | Unexpected Widening groups | 0: every Widening group of A vs B and A vs B' was on the expected list. The 2 `unknown_remote → trusted_remote` groups of A vs B' are the predicted `github.com/**` scene; their Verdict `unexpected` means the Policy needs fixing, and that review was rejected | [gate2-replay.md](gate2-replay.md), [adoption-preview.md](adoption-preview.md) |
 | Classifier accuracy | precision 0.926, recall 0.990 (TP 100, FP 8, FN 1; synthetic C1 corpus, 100 entries) | `packages/action/tests/labels.test.ts`; method in [classifier-benchmark.md](classifier-benchmark.md) |
 
