@@ -5,7 +5,7 @@ The transcripts, spool copies, and policies A, B, and B' are synthetic; B' adds 
 When a change moves a figure on purpose, the command prints the block of the run to replace this one.
 
 <!-- evidence-numbers
-classifier: 0.2.3
+classifier: 0.2.4
 snapshot.sessions: 3
 snapshot.actions: 18
 snapshot.duplicates: 0
