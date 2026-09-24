@@ -705,4 +705,7 @@
   }
 }
 
+/* Imported last so the utilities layer is declared after base. First-appearance
+   layer order is theme, base, utilities, which lets utilities win over base rules.
+   Do not move this above @layer base. */
 @import 'tailwindcss/utilities' layer(utilities);
