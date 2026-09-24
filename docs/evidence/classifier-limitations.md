@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3 → 0.2.6; measured 2026-09-24
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24
 
 # Classifier known limitations
 
@@ -15,4 +15,5 @@ Actions imported before this change keep their stored keys until they are import
 
 ## A remote-to-local `scp` is classified as a send
 
-Closed in classifier 0.2.6: `scp`, `rsync`, and `sftp` fetch from every `host:path` source operand and send only to a `host:path` destination, so `scp user@host:/path .` is a `fetch` from that host (`packages/action/lib/domain/programs.ts`, regression cases in `packages/action/tests/regressions.test.ts`).
+`scp user@host:/path .` copies from the remote host to the local directory but is classified as a `send` to that `host`; under the default template a `fetch` and a `send` of `unknown_remote` both resolve to `ask`, so the result is the same but the direction is wrong.
+This is resolved in the 0.2.6 classifier code, where a `host:path` source operand of `scp`, `rsync`, or `sftp` is a `fetch` and only a `host:path` destination is a `send`; the measured values in this document predate that remeasure.
