@@ -476,9 +476,9 @@ async function seed(page: Page): Promise<void> {
   await page.route('**/api/v1/**', fulfillFixture);
 }
 
-async function capture(page: Page, name: string): Promise<void> {
+async function capture(page: Page, name: string, colorScheme: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
-  await expect(page).toHaveScreenshot(`${name}.png`);
+  await expect(page).toHaveScreenshot(`${name}-${colorScheme}.png`);
 }
 
 const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void> }[] = [
@@ -541,7 +541,7 @@ for (const colorScheme of COLOR_SCHEMES) {
         await seed(page);
         await page.goto(screen.path);
         await screen.ready(page);
-        await capture(page, screen.name);
+        await capture(page, screen.name, colorScheme);
       });
     }
   });
