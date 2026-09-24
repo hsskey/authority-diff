@@ -769,6 +769,22 @@ describe('sorting and determinism (I6)', () => {
     );
   });
 
+  test.each(['rejected_by_human', 'blocked_by_runtime', 'unknown'] as const)(
+    'the result is unchanged when every observedOutcome is %s',
+    (outcome) => {
+      const { actions, evaluateBaseline, evaluateCandidate } = scenario(baseCases());
+      const reference = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+
+      const result = computeDiffWith(
+        evaluateBaseline,
+        evaluateCandidate,
+        actions.map((item) => ({ ...item, observedOutcome: outcome })),
+      );
+
+      expect(result).toEqual(reference);
+    },
+  );
+
   test('resultHash covers exactly the projection and excludes each headline', () => {
     const { actions, evaluateBaseline, evaluateCandidate } = scenario(baseCases());
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);

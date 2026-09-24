@@ -480,6 +480,21 @@ describe('ordering and determinism', () => {
     ).not.toBe(result.resultHash);
   });
 
+  test.each(['rejected_by_human', 'blocked_by_runtime', 'unknown'] as const)(
+    'the result is unchanged when every observedOutcome is %s',
+    (outcome) => {
+      const { actions, evaluate } = scenario(reviewCases());
+      const reference = computeAdoptionWith(evaluate, actions);
+
+      const result = computeAdoptionWith(
+        evaluate,
+        actions.map((item) => ({ ...item, observedOutcome: outcome })),
+      );
+
+      expect(result).toEqual(reference);
+    },
+  );
+
   test('resultHash changes when only the program mix inside a group changes', () => {
     const git = computeAdoptionWith(...toArgs(scenario([askPush(1, 'git'), askPush(2, 'git')])));
     const mixed = computeAdoptionWith(...toArgs(scenario([askPush(1, 'git'), askPush(2, 'gh')])));
