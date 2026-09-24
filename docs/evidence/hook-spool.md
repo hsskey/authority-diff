@@ -63,3 +63,19 @@ in this environment the plugin hook auto-approves Bash
 
 plugin은 안전하다고 분류한 Bash Action만 자동으로 `allow`한다.
 이 auto-approve는 user 환경의 실제 V3 관측 case이고 이 문서는 omc plugin config를 바꾸지 않는다.
+
+## Node path pinning
+
+install-hooks는 hook command의 node path를 등록 시점에 고정한다.
+실행 중인 node가 `.vite-plus`, `.volta`, `.nvm` version-manager folder 안의 versioned path이면 그 manager의 shim을 고정한다.
+shim은 `~/.vite-plus/bin/node`, `~/.volta/bin/node`, nvm의 `~/.nvm/current/bin/node`(`NVM_SYMLINK_CURRENT`가 켜진 경우에만 존재)다.
+shim은 hook 실행 시점의 cwd와 manager 설정으로 node version을 고르므로, 등록 시점과 다른 version으로 hook이 실행될 수 있다.
+shim이 없으면 versioned path를 그대로 쓰고, 그 version이 삭제되면 hook은 shell fail-open으로 조용히 멈춘다.
+`authority install-hooks --print`의 `node` line이 고른 path와 이유를 보여 준다.
+Homebrew Cellar 규칙은 `docs/evidence/hook-bundle-startup.md`에 있다.
+
+## 다른 machine의 spool
+
+`authority spool-flush --from <dir>`는 local spool 대신 다른 machine에서 복사한 spool directory를 전송한다.
+전송한 file은 그 directory 안에서 `.sent`로 rename되고, local spool은 건드리지 않는다.
+`<dir>`를 읽을 수 없으면 exit 1로 끝난다.

@@ -31,6 +31,7 @@ export interface NodeSelection {
 }
 
 const HOMEBREW_CELLAR_NODE = /^(.+)\/Cellar\/(node(?:@[^/]+)?)\/[^/]+\/bin\/node$/;
+const VERSION_MANAGER_NODE = /^(.*\/\.(vite-plus|volta|nvm))\/.+\/bin\/node$/;
 
 function tryRealpath(path: string, realpath: (path: string) => string): string | undefined {
   try {
@@ -40,12 +41,40 @@ function tryRealpath(path: string, realpath: (path: string) => string): string |
   }
 }
 
+// A version-manager install path embeds the node version, so removing that version breaks
+// every installed hook; the manager's shim picks an installed version at run time instead.
+function selectVersionManagerShim(
+  nodePath: string,
+  realpath: (path: string) => string,
+): NodeSelection | undefined {
+  const managed = VERSION_MANAGER_NODE.exec(nodePath);
+  if (managed === null) {
+    return undefined;
+  }
+  const [, root = '', manager = ''] = managed;
+  const shim = manager === 'nvm' ? join(root, 'current', 'bin', 'node') : join(root, 'bin', 'node');
+  if (shim === nodePath) {
+    return { path: nodePath, reason: `${nodePath} (${manager} shim)` };
+  }
+  if (tryRealpath(shim, realpath) === undefined) {
+    return {
+      path: nodePath,
+      reason: `${nodePath} (${manager} versioned path; no shim at ${shim}, hooks break when this version is removed)`,
+    };
+  }
+  return { path: shim, reason: `${shim} (${manager} shim instead of versioned ${nodePath})` };
+}
+
 // A Homebrew Cellar path embeds the node version, so `brew upgrade` deletes it and every
 // installed hook breaks; a stable symlink that resolves to the same binary survives upgrades.
 export function selectNodePath(
   nodePath: string = execPath,
   realpath: (path: string) => string = realpathSync,
 ): NodeSelection {
+  const shim = selectVersionManagerShim(nodePath, realpath);
+  if (shim !== undefined) {
+    return shim;
+  }
   const cellar = HOMEBREW_CELLAR_NODE.exec(nodePath);
   if (cellar === null) {
     return { path: nodePath, reason: `${nodePath} (current node, not a Homebrew Cellar path)` };

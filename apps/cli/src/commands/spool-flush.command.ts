@@ -78,8 +78,9 @@ async function postObservations(
 /**
  * Sends every spool file to the server and renames each sent file to `.sent`.
  * A file that fails to send keeps its name so a later flush retries it.
+ * `from` reads a spool copied from another machine instead of the local spool.
  */
-export async function runSpoolFlush(): Promise<void> {
+export async function runSpoolFlush(options?: { readonly from?: string }): Promise<void> {
   const token = authToken();
   if (token === null) {
     writeStderr('AUTHORITY_CLI_TOKEN is not set');
@@ -87,11 +88,16 @@ export async function runSpoolFlush(): Promise<void> {
     return;
   }
 
-  const directory = spoolDirectory();
+  const directory = options?.from ?? spoolDirectory();
   let names: string[];
   try {
     names = readdirSync(directory).filter((name) => name.endsWith('.jsonl'));
   } catch {
+    if (options?.from !== undefined) {
+      writeStderr(`cannot read spool directory: ${directory}`);
+      process.exitCode = 1;
+      return;
+    }
     writeStdout(JSON.stringify({ sentFiles: 0, failedFiles: 0 }, null, 2));
     return;
   }

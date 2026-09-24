@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:http';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { sha256Hex } from '@authority/kernel/hash';
@@ -163,6 +164,33 @@ describe('authority spool-flush fail-open', () => {
     // 4. The good observations actually reached the server, poison lines dropped.
     const received = stub.receivedSessionIds().sort();
     expect(received).toEqual(['sess-a', 'sess-b', 'sess-d']);
+  });
+
+  test('--from sends a spool copied from another machine and leaves the local spool alone', async () => {
+    const home = makeTempHome();
+    writeFileSync(join(spoolDir(home), 'local.jsonl'), `${observationLine('sess-local')}\n`);
+    const copy = mkdtempSync(join(tmpdir(), 'authority-spool-copy-'));
+    writeFileSync(join(copy, 'remote.jsonl'), `${observationLine('sess-remote')}\n`);
+    setEnv({ HOME: home, AUTHORITY_CLI_TOKEN: 'test-token', AUTHORITY_CLI_SERVER_URL: stub.url });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await runSpoolFlush({ from: copy });
+
+    expect({
+      received: stub.receivedSessionIds(),
+      copySent: existsSync(join(copy, 'remote.jsonl.sent')),
+      localKept: existsSync(join(spoolDir(home), 'local.jsonl')),
+    }).toEqual({ received: ['sess-remote'], copySent: true, localKept: true });
+  });
+
+  test('--from fails when the directory cannot be read', async () => {
+    const home = makeTempHome();
+    setEnv({ HOME: home, AUTHORITY_CLI_TOKEN: 'test-token', AUTHORITY_CLI_SERVER_URL: stub.url });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runSpoolFlush({ from: join(home, 'missing') });
+
+    expect(process.exitCode).toBe(1);
   });
 
   test('forwards pre_tool_use and permission_request lines with toolUseId, hookDecision, and permissionMode', async () => {
