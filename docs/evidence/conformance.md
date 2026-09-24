@@ -1,4 +1,10 @@
 corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; conformance resultHash `7710c06c…8689`
+<!-- evidence-numbers
+snapshot.sessions: 1,036
+snapshot.actions: 34,940
+snapshot.duplicates: 196
+conformance.resultHash: 7710c06c…8689
+-->
 
 # Conformance (policy A)
 

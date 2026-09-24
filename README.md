@@ -22,6 +22,17 @@ import → activity overview → first Policy (draft) → adoption preview → r
 
 ## Result of the recorded journey
 
+<!-- evidence-numbers
+classifier: 0.2.3
+snapshot.sessions: 1,036
+snapshot.actions: 34,940
+snapshot.evaluated: 34,490
+policy-a.allow: 15,242
+policy-a.ask: 19,228
+policy-a.deny: 20
+adoption.groups: 24
+bp-scene.actions: 7
+-->
 Every number below is from the frozen corpus (1,036 Sessions, 34,940 Actions after dedupe) with classifier 0.2.3 and the corrected environment profile (policy A).
 Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.md`, `docs/evidence/gate2-replay.md`, and `docs/evidence/conformance.md`.
 

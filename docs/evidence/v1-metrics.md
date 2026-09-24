@@ -1,4 +1,21 @@
 corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24; A vs B resultHash `2c4577fa…a8d9`
+<!-- evidence-numbers
+snapshot.actions: 34,940
+snapshot.evaluated: 34,490
+analyzability.full: 17,972
+analyzability.partial: 6,610
+analyzability.none: 9,908
+adoption.resultHash: 8ae52329…a444
+gate2.a-vs-b.resultHash: 2c4577fa…a8d9
+gate2.a-vs-bp.resultHash: 3082d2a4…1598
+gate2.a-vs-b.changed: 139
+gate2.a-vs-bp.changed: 139
+review-loop.time: 59 s
+c1.precision: 0.935
+c1.recall: 1.000
+c2.risky-entries: 77
+bp-scene.actions: 7
+-->
 
 # V1 metrics
 

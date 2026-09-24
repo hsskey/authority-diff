@@ -1,4 +1,9 @@
 corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.3; measured 2026-09-24
+<!-- evidence-numbers
+c1.precision: 0.935
+c1.recall: 1.000
+c2.risky-entries: 77
+-->
 
 # Classifier benchmark
 
