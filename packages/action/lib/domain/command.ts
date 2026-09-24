@@ -11,6 +11,8 @@ import type { ShellWord } from '../shell/ast.ts';
 export interface NormalizedCommand {
   /** Program basename after wrapper stripping (for example `rm`, `git`). */
   readonly program: string;
+  /** Command word after wrapper stripping, including a path or expansion. */
+  readonly invocation: ShellWord;
   /** Arguments after the program, with any wrapper prefix removed. */
   readonly args: readonly ShellWord[];
   /** Command source text for the Operation fragment. */
@@ -42,4 +44,14 @@ export function nonFlagArgs(args: readonly ShellWord[]): ShellWord[] {
 export function hasFlag(args: readonly ShellWord[], ...flags: readonly string[]): boolean {
   const set = new Set(flags);
   return args.some((a) => set.has(a.text));
+}
+
+/** True when `command` is a lookup (`-v`/`-V`) rather than a transparent wrapper. */
+export function isCommandLookup(args: readonly ShellWord[]): boolean {
+  for (const arg of args) {
+    const text = arg.text;
+    if (!text.startsWith('-') || text.length === 1 || text === '--') break;
+    if (/^-[pvV]*[vV][pvV]*$/.test(text)) return true;
+  }
+  return false;
 }

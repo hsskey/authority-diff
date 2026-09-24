@@ -10,7 +10,7 @@
  */
 import type { Analyzability, Capability, Target } from '../../schema.ts';
 import type { ShellWord } from '../shell/ast.ts';
-import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
+import { hasFlag, isCommandLookup, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, unlessNoEffect, type OperationDraft } from './draft.ts';
 import { scanInline } from './inline.ts';
 import {
@@ -273,6 +273,7 @@ const DEPLOYERS: ReadonlySet<string> = new Set([
 export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   const p = cmd.program;
 
+  if (p === 'command' && isCommandLookup(cmd.args)) return [runnerDraft('read', cmd, 'full')];
   if (INTERPRETERS.has(p)) return interpreterOps(cmd);
   if (PKG_EXEC.has(p)) return pkgExecOps(cmd);
   if (PKG_MANAGERS.has(p)) return pkgManagerOps(cmd);
@@ -290,8 +291,7 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (p === 'wrangler') return wranglerOps(cmd);
   if (p === 'cargo' || p === 'go') return cargoGoOps(cmd);
   if (p === 'source' || p === '.') return [runnerDraft('execute', cmd, 'partial')];
-  if (SHELLS.has(p))
-    return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['inline_code'])];
+  if (SHELLS.has(p)) return shellOps(cmd);
   if (OPAQUE_EXEC.has(p))
     return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['inline_code'])];
   if (PROCESS_SIGNALLERS.has(p)) return [runnerDraft('execute', cmd, 'partial')];
@@ -304,8 +304,64 @@ export function classifyProgram(cmd: NormalizedCommand): OperationDraft[] {
   if (FILE_READERS.has(p) || PATTERN_FIRST.has(p)) {
     return fileOps(cmd, 'read', { patternFirst: PATTERN_FIRST.has(p), destLast: false });
   }
+  const pathForm = pathFormOps(cmd);
+  if (pathForm !== null) return pathForm;
   // Unrecognized program: opaque execution, never a false read.
   return [draft('execute', unknownTarget(), 'none', p, cmd.raw, ['program_unrecognized'])];
+}
+
+/** A shell given a script file is execute on that path, like an interpreter. */
+function shellOps(cmd: NormalizedCommand): OperationDraft[] {
+  if (cmd.heredocBodies.length > 0) {
+    return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
+  }
+  if (hasShellInlineOption(cmd.args)) {
+    return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
+  }
+  const operand = firstShellOperand(cmd.args);
+  if (operand === undefined || operand.text === '-') {
+    return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
+  }
+  return [scriptByPathDraft(cmd, operand)];
+}
+
+function hasShellInlineOption(args: readonly ShellWord[]): boolean {
+  for (const arg of args) {
+    const text = arg.text;
+    if (!text.startsWith('-') || text.length === 1 || text === '--' || arg.hasExpansion) break;
+    if (/^-[A-Za-z]*[cs][A-Za-z]*$/.test(text)) return true;
+  }
+  return false;
+}
+
+function firstShellOperand(args: readonly ShellWord[]): ShellWord | undefined {
+  for (const arg of args) {
+    if (arg.text.startsWith('-') && arg.text.length > 1 && !arg.hasExpansion) continue;
+    return arg;
+  }
+  return undefined;
+}
+
+/** An unrecognized command named by a path runs that file. */
+function pathFormOps(cmd: NormalizedCommand): OperationDraft[] | null {
+  if (!isPathForm(cmd.invocation)) return null;
+  return [scriptByPathDraft(cmd, cmd.invocation)];
+}
+
+function isPathForm(word: ShellWord): boolean {
+  return word.text.includes('/') || word.text.startsWith('~');
+}
+
+function scriptByPathDraft(cmd: NormalizedCommand, word: ShellWord): OperationDraft {
+  if (word.hasExpansion) {
+    return draft('execute', unknownTarget(), 'partial', cmd.program, cmd.raw, [
+      'script_by_variable_path',
+    ]);
+  }
+  const resolved = resolvePath(word.text, cmd.cwd, cmd.workspaceRoot);
+  return draft('execute', pathTarget(resolved), 'partial', cmd.program, cmd.raw, [
+    'script_by_path',
+  ]);
 }
 
 function interpreterOps(cmd: NormalizedCommand): OperationDraft[] {
@@ -554,9 +610,11 @@ function findOps(cmd: NormalizedCommand): OperationDraft[] {
     if (innerProgram.length > 0) {
       // Keep the inner command's capability, but its operands are find's matches,
       // so the target is find's search path with analyzability partial.
+      const innerWord = inner[0];
       const innerCmd: NormalizedCommand = {
         ...cmd,
         program: basename(innerProgram),
+        invocation: innerWord ?? cmd.invocation,
         args: inner.slice(1),
       };
       const caps = [...new Set(classifyProgram(innerCmd).map((o) => o.capability))];

