@@ -45,6 +45,7 @@ Details, masked group tables, and hashes are in `docs/evidence/adoption-preview.
 | 34,490 | 17,801 (51.6%) | 16,669 (48.3%) | 20 (0.06%) | 24 (22 ask, 2 deny) |
 <!-- /remeasure:readme-adoption -->
 
+allow 51.6% and ask 48.3% sum to 99.9% because of rounding; deny is the remaining share (20 Actions; 0.06% in the table, 0.1% on the one-decimal tile).
 The ask share is high because the default template has no Rule that allows read, write, or execute outside the workspace, so those Actions fall to the default ask, and `execute` of unanalyzable programs asks by Rule.
 The allow share includes scripts named by a path inside the workspace, which `allow_workspace_execute` allows without reading them; that part is auto-allow from wider command recognition, not a sign the scripts are safe.
 That is what the Policy says about this corpus, reported as-is.
