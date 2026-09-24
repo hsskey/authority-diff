@@ -1,11 +1,11 @@
 # Authority Diff
 
 Authority Diff is a review tool for an organization's Agent permission Policy.
-It classifies past Agent Actions, applies a Policy Version to them, and shows which Effect (allow, ask, deny) each Action would receive.
+It classifies past Agent Actions, evaluates them under a Policy Version, and shows which Effect (allow, ask, deny) each Action would receive.
 It reviews a first Policy before adoption, and a Policy change against the accepted baseline.
 It does not deploy or enforce a Policy, and it does not claim that a runtime will follow the evaluated Effects.
 
-V1 proves two questions on recorded Actions: what this first Policy would ask or deny, and which Actions a Policy change would move to a different Effect.
+V1 answers two questions on recorded Actions: what this first Policy would ask or deny, and which Actions a Policy change would move to a different Effect.
 
 ## Journey
 
@@ -14,9 +14,9 @@ import → activity overview → first Policy (draft) → adoption preview → r
 1. **Import.** `authority import` loads Claude Code transcripts, redacts secrets, and classifies each tool call into Operations.
 2. **Activity Overview.** With no Policy, `/` shows the imported activity: Sessions, Actions, Capability and Target Kind distribution, analyzability, top programs. No Effect and no Zone yet, because both need a Policy.
 3. **First Policy (draft).** "첫 조직 정책 만들기" creates draft version 1 from the default template. Edit the JSON (Rules and Environment Profile), save, validate. There is one Policy per organization.
-4. **Adoption preview.** "최초 도입 검토 만들기" applies the draft alone to the recorded Actions. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
+4. **Adoption preview.** "최초 도입 검토 만들기" evaluates the recorded Actions under the draft alone. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
 5. **Review and adopt.** Every Adoption Group needs a Verdict (의도한 제한 / 보류 / 정책 수정 필요). Only when all of them are 의도한 제한 does "최초 정책 채택" make version 1 `accepted` and write a Decision Record.
-6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Applying the Policy to a runtime (for example through managed settings) happens outside Authority Diff, and Authority Diff does not record whether it happened.
+6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Changing runtime settings to match the Policy (for example through managed settings) happens outside Authority Diff. Through the API an operator can record a declaration that it happened; Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
 7. **Change review.** A draft made from the accepted version gets a Change Review: the same Actions under both versions, Widening and Narrowing groups, Verdicts, accept or reject, Evidence Report.
 8. **Conformance.** Observation hooks report what the runtime actually did. Conformance compares those Runtime Observations with the accepted Policy and reports violation, under_asked, and over_asked findings. This is the only screen that says anything about runtime behavior.
 
@@ -113,7 +113,7 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 - **Single-person corpus.** Adoption preview, replay, and conformance numbers come from one Principal's Claude Code records.
 - **Single runtime.** Parse, import, and hooks cover Claude Code. There is no Codex adapter.
 - **Agent Verdict.** Adoption Group and Widening group Verdicts in the recorded journey were given by an Agent. A person has not recorded Verdicts on those groups.
-- **Adoption preview is not a runtime baseline.** The preview applies the draft to past Actions. It does not say which of those Actions a runtime approved, and `accepted` does not mean the runtime now behaves this way.
+- **Adoption preview is not a runtime baseline.** The preview evaluates past Actions under the draft. It does not say which of those Actions a runtime approved, and `accepted` does not mean the runtime now behaves this way.
 - **Hook observation gap.** When the hook is down, no Runtime Observation is written. Those Actions get Disposition `executed_prompt_unknown`.
 - **`over_asked` stays near 0.** The PermissionRequest hook input carries no tool use id, so a PermissionRequest pairs to its Action by Session, tool name, and tool input hash, and only when the earlier `pre_tool_use` was observed. This corpus recorded only 2 PermissionRequest observations.
 - **Publish direction.** Zone does not distinguish publish from fetch. `ask_external_disclosure` matches `push` on `public_remote` and `unknown_remote` only. A package publish to a registry listed in `trustedRemotes` is `push` on `trusted_remote` and is not treated as external disclosure.
@@ -124,3 +124,7 @@ Do not put real transcripts, command text, paths, or host names into this reposi
 - **Node path.** `install-hooks` prefers a stable Node path over a versioned one, because a versioned path disappears on upgrade. It uses a Homebrew symlink that resolves to the same Cellar binary, or the vite-plus, Volta, or nvm shim. If neither exists, the versioned path remains and hooks break after upgrade.
 
 Classifier details, Zone publish counts, and hook spool behavior are in `docs/evidence/`. Range is `docs/cutline.md`. Target architecture is `docs/design.md`. Terms are `CONTEXT.md`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
