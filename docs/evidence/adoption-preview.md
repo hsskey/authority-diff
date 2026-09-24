@@ -148,8 +148,32 @@ It reads what the server returns, not what the screens render; the screen checks
 
 ## Fresh-volume journey re-run
 
-The browser pass over the screens was not repeated on this classifier version; the scripted journey above checks the same twelve steps through the API.
-The last browser pass, with its screen findings and the change-review loop time, is kept under "Previous version".
+Run on 2026-09-24 on a compose project of its own with an empty volume and its own ports, server image built from the working tree that carries classifier 0.2.4, and the web app served from `apps/web` against that server.
+The maintainer's stack was not used.
+Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
+
+| step | screen | result |
+| --- | --- | --- |
+| 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
+| 2 overview, no Policy | `/` | Session 665 (30-day window), Action 34,940, evaluable 34,490; analyzability 17,980 / 9,662 / 6,848 (52.1% / 28.0% / 19.9%); Capability, Target Kind, top program, and remote host tables; "아직 조직 정책이 없습니다" with "첫 조직 정책 만들기". No repository name on the screen |
+| 3 first Policy | version editor | draft version 1 from the default template; document replaced with policy A (content hash `f96ed41d…beb8`), "draft 저장", "검증: 통과" |
+| 4 adoption preview | review, `/` | review kind `adoption`, "기준 VERSION 없음 (최초 도입)", "판정 대기"; 평가한 action 34490 (전체 34940, 제외 450); tiles 허용 17509 50.8%, 확인 필요 16961 49.2%, 차단 20 0.1%; "확인 필요 group (22)", "차단 group (2)"; the Program count, Action, and Session columns of all 24 rows equal the Adoption Groups table above; `/` "도입 preview" shows the same three tiles |
+| 5 group detail | deny `read · credentials`, ask `read · host` | Headlines "자격 증명에서의 읽기 13건이 이 정책에서 '차단' 대상이 됩니다." and "호스트에서의 읽기 6611건이 이 정책에서 '확인 필요' 대상이 됩니다."; "Program 구성: 서로 다른 program 4개 / 27개" with the top programs of the table above; outside the sample panel and the "기술 세부" toggle: 0 ruleId, 0 home path (checked on the DOM with those two removed) |
+| 6 verdicts | review | 24 selects set to 의도한 제한 one by one; the blocker counted down ("판정하지 않은 group 23개" … "1개"), then "Gate: 열림 / 승인을 막는 blocker가 없습니다."; "최초 정책 채택" stays disabled until a reviewer name is entered |
+| 7 adopt | review, `/` | status 채택됨, 결정 "최초 정책 채택", 24 selects disabled, sentence "채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다."; no 적용됨, 활성, or enforced on the screen; version 1 `accepted` via the API. `/` shows "채택된 정책: version #1" with the Effect distribution of the adoption run (허용 17509 50.8%) |
+| 8 report | download | "보고서 다운로드" fetches the report route (200); adoption Evidence Report: candidate hash `f96ed41d…beb8`, Replay inputsHash, resultHash `481ba37e…4568`, 분석 규모 (34490, none 6848 19.9%), 정책 적용 결과 (17509 / 16961 / 20), the two group tables with Verdicts, 결정, Audit chain, 고지; 0 ruleId, 0 home path |
+| 9 conformance | API + `/conformance` | spool copies flushed from a scratch home (2 files sent, 0 failed); `conformance` run for the accepted version 1 completed on classifier 0.2.4 with resultHash `269a53d2…dd23`; `/conformance` lists 87 findings (violation 3 groups / 6 Actions, under_asked 84 / 1,069). Figures in `docs/evidence/conformance.md` |
+| 10 change review B' | version 2, review | draft 2 from the accepted version 1, document B' (`ebea9a23…0cc9`), "검증: 통과", "변경 검토 만들기"; kind `change`, 평가 34490, 넓어진 166, widening group 7, transitions allow→allow 17509, ask→allow 166, ask→ask 16795, deny→deny 20; resultHash `3993dfe0…2783` (same as the local Gate 2 value); the seven group rows equal the A vs B' table of `gate2-replay.md`; the two `unknown_remote → trusted_remote` groups critical (git 5 / 2 Sessions, gh 4 / 2), each Headline naming where the fetches went; 0 ruleId, 0 home path outside the sample panel |
+| 11 unexpected, reject, B, accept | review, version 3 | 5 groups 예상된 변화, the 2 trusted-remote groups 예상 밖 → "Gate: blocker 1건 / 예상 밖으로 판정된 group 2개. 정책을 고쳐 새 review를 만드세요", accept disabled; 정책 변경 반려 with a reason → 반려됨; draft 3 from version 2 with B (`45197245…6515`) → 넓어진 166, group 5 (git 73, WebFetch 34, gh 32, curl 15, WebSearch 12), resultHash `6a84292d…8d3f`; all 예상된 변화 → "Gate: 열림" → 정책 변경 수락 → 채택됨. Loop from the first unexpected Verdict to the accept: 73 s (Agent) |
+| 12 audit | CLI, `/` | `verify-audit` `{"isIntact": true, "checkedCount": 3, "firstBrokenSequence": null}`; the B change report carries both content hashes, inputsHash, resultHash, the `none` share (0 of 166), the Operation section (fetch `unknown_remote → unknown_remote` 200), and audit chain sequence 3; `/` shows "채택된 정책: version #3" with the Effect distribution of the version 3 run (허용 17675 51.2%, 확인 필요 16795 48.7%, 차단 20) |
+
+The four figures match the measurement above: evaluated 34,490, ask 49.2%, deny 20 (rendered 0.1%), 24 Adoption Groups.
+Server and local agreement: the adoption run on the server gave the local `resultHash` `481ba37e…4568`.
+
+Findings from this run (none blocks the journey):
+
+- After "token 저장" on `/login`, the header now shows "로그아웃" without a reload; the 0.2.3 finding on this is resolved.
+- The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
 
 ## Re-run procedure (fresh volume)
 
