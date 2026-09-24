@@ -137,22 +137,22 @@ These are candidate `CONTEXT.md` wordings for the five open questions.
 They are not applied: each picks one reading, and choosing it is the contract owner's decision.
 
 1. Effect-free simple command, under **Operation**:
-   "Bash Action의 simple command 하나는 효과가 없어도 Operation 하나가 됩니다. 경로를 받지 않고 상태를 바꾸지 않는 program(`echo`, `printf`, `pwd` 등)은 현재 작업 directory에 대한 `read`입니다."
+   "One simple command in a Bash Action is one Operation even when it has no effect. A program that takes no path and does not change state (`echo`, `printf`, `pwd`, and so on) is a `read` of the current working directory."
    This records design 13.2 and the current classifier.
    Adopting it turns the four `echo` entries into label errors; adding `read/path` to them gives `read` precision 0.909 (30 TP, 3 FP) and overall precision 0.963 and recall 0.990 (104 TP, 4 FP, 1 FN).
 2. Local input file, under **Operation**:
-   "명령이 내용을 읽는 local 입력 파일(복사 원본, archive, 전송 payload)은 그 경로에 대한 `read` Operation입니다."
+   "A local input file whose contents the command reads (copy source, archive, transfer payload) is a `read` Operation on that path."
    `cp-file` already follows this reading in both the label and the classifier.
    The classifier also records the source read for `mv-file`, `scp-upload`, and `rsync-push`, so adopting the wording would relabel them and clear the three false positives above.
    `tar-create`, `tar-extract`, `unzip-archive`, `curl-put`, and `curl-post` do not record a source read, so adopting the wording would add a `read/path` label the classifier misses.
 3. Local save of fetched content, under **Operation**:
-   "원격에서 가져온 내용을 local 파일로 저장하면(`curl -o`, `curl -O`, `wget`, `git clone`) `fetch`와 별도로 그 경로에 대한 `write` Operation이 생깁니다."
+   "When fetched remote content is saved to a local file (`curl -o`, `curl -O`, `wget`, `git clone`), a `write` Operation on that path is created separately from `fetch`."
    The current labels and classifier follow the opposite reading; adopting this one makes `curl-download`, `wget-download`, and `git-clone` label errors and classifier errors.
 4. Runtime tool with no path, under **Target**:
-   "runtime tool이 경로 인자를 생략하면 Target은 `unknown`입니다. runtime의 현재 directory는 Action에 기록되지 않습니다."
+   "When a runtime tool omits a path argument, Target is `unknown`. The runtime's current directory is not recorded on the Action."
    This records the current labels and classifier; the opposite reading, the working directory as Target, makes `glob-tool` a label error and a classifier error.
 5. Path-form command, under **Target**:
-   "`./deploy-local.sh`처럼 경로로 지정해 실행한 program의 Target은 그 script 파일 경로(`execute/path`)입니다. script가 실행하는 program은 Target이 아닙니다."
+   "The Target of a program run by path, such as `./deploy-local.sh`, is that script file path (`execute/path`). Programs the script runs are not the Target."
    This records the current classifier; the opposite reading, an `execute/unknown` because the program a script runs is not known, makes `run-shell-script` match its label.
 
 ### Classifier errors

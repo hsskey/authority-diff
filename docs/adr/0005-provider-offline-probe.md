@@ -1,10 +1,10 @@
-# ADR-0005 의미 판단 provider는 offline probe에만 쓰고 trace를 보내지 않는다
+# ADR-0005 Use a meaning-judgement provider only for offline probe; do not send traces
 
-Status: accepted (Target). V1 상태: probe는 Tier 2. 출처: docs/design.md 34장.
+Status: accepted (Target). V1 status: probe is Tier 2. Source: docs/design.md chapter 34.
 
-- Context: Jev는 빠르고 저렴하지만 early access이고 data를 미국에서 처리한다. 개인 실험에서 효과가 확인된 용도는 정책 문장 점검이었다.
-- Decision: provider가 받는 입력은 정책 산문과 가상 Scenario뿐이다. 경계 밖으로 나가는 개념은 bounded question과 분포뿐이고 provider의 `confidence`는 쓰지 않는다.
-- Alternatives: replay에서 Mandate 범위 판정. 실시간 판정.
-- Consequences: privacy 검토 없이 도입할 수 있고 provider를 바꿔도 다른 module이 영향을 받지 않는다. replay에서 Mandate Exception은 평가하지 못하고 표시만 한다.
-- Reversal trigger: 조직 내부에 둘 수 있는 calibrated 판정 model이 나오고 범위 초과 label이 100건 이상 모였을 때.
-- V1 note: probe와 Mandate/Mandate Exception 개념은 V1 범위 밖이다(docs/cutline.md 12장; mandateException은 schemaVersion 1에서 제외). Tier 2 검토 시점에만 Jev API access를 확인한다.
+- Context: Jev is fast and cheap but early access, and it processes data in the United States. The use that personal experiments confirmed was checking policy sentences.
+- Decision: The provider receives only policy prose and synthetic Scenarios. The only concepts that leave the boundary are bounded questions and distributions; the provider's `confidence` is not used.
+- Alternatives: Judging Mandate scope in replay. Real-time judgement.
+- Consequences: It can be introduced without a privacy review, and swapping the provider does not affect other modules. Replay cannot evaluate Mandate Exception; it only displays it.
+- Reversal trigger: When a calibrated judgement model that can live inside the organization exists and 100 or more out-of-scope labels have been collected.
+- V1 note: Probe and the Mandate / Mandate Exception concepts are outside V1 scope (docs/cutline.md chapter 12; mandateException is excluded from schemaVersion 1). Confirm Jev API access only at the Tier 2 review point.

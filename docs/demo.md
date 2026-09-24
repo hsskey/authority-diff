@@ -20,17 +20,17 @@ Keep every spoken line inside the grade in `docs/evidence/v1-metrics.md`.
 | step | screen | spoken line | figures to highlight |
 | --- | --- | --- | --- |
 | 1 import | terminal, `pnpm authority import` | "We load one person's recorded Claude Code transcripts; secrets are redacted and every tool call is classified into Operations." | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed (`remeasure:adoption-journey`, step 1) |
-| 2 overview, no Policy | `/` | "Before any Policy exists, this is only what the Agents did: which Capabilities, which targets, and how much we could not analyze." | Action 34,940, evaluable 34,490; analyzability full / partial / none 17,972 / 6,610 / 9,908 (`remeasure:adoption-journey`, step 2); "아직 조직 정책이 없습니다" |
-| 3 first Policy | version editor | "The first Policy starts from the default template; we declare our environment and validate it." | "검증: 통과"; content hash of policy A `f96ed41d…beb8` (`remeasure:adoption-journey`, step 3) |
-| 4 adoption preview | review | "Applied to the past with no baseline, this Policy would allow this share, ask for this share, and deny these few." | evaluated 34,490; 허용 15,242 (44.2%), 확인 필요 19,228 (55.7%), 차단 20 (0.06%, rendered `0.1%`); 22 ask and 2 deny groups (`remeasure:adoption-result`); "기준 VERSION 없음 (최초 도입)" |
+| 2 overview, no Policy | `/` | "Before any Policy exists, this is only what the Agents did: which Capabilities, which targets, and how much we could not analyze." | Action 34,940, evaluable 34,490; analyzability full / partial / none 17,972 / 6,610 / 9,908 (`remeasure:adoption-journey`, step 2); "<!-- ko-product-output -->아직 조직 정책이 없습니다" |
+| 3 first Policy | version editor | "The first Policy starts from the default template; we declare our environment and validate it." | "<!-- ko-product-output -->검증: <!-- ko-product-output -->통과"; content hash of policy A `f96ed41d…beb8` (`remeasure:adoption-journey`, step 3) |
+| 4 adoption preview | review | "Applied to the past with no baseline, this Policy would allow this share, ask for this share, and deny these few." | evaluated 34,490; <!-- ko-product-output -->허용 15,242 (44.2%), <!-- ko-product-output -->확인 필요 19,228 (55.7%), <!-- ko-product-output -->차단 20 (0.06%, rendered `0.1%`); 22 ask and 2 deny groups (`remeasure:adoption-result`); "<!-- ko-product-output -->기준 VERSION <!-- ko-product-output -->없음 (<!-- ko-product-output -->최초 도입)" |
 | 5 group detail | one deny group, one ask group | "Each group is one judgement the Policy makes; the headline says it in a sentence, and commands stay in the sample panel." | the Headlines of `deny · read · credentials` (13 Actions) and `ask · execute · host` (8,048 Actions), the largest ask group with 133 distinct programs (`remeasure:adoption-groups`) |
-| 6 verdicts | review, verdict selects | "Nothing is adopted until every group has a Verdict; the blocker counts down as we judge." | "판정하지 않은 group N개" counting down, then "Gate: 열림"; 24 groups (`remeasure:adoption-result`) |
-| 7 adopt | review, then `/` | "Adopting is a review record, not a deployment; applying it to the runtime happens outside Authority Diff." | "채택됨", "채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다.", "채택된 정책: version #1" |
+| 6 verdicts | review, verdict selects | "Nothing is adopted until every group has a Verdict; the blocker counts down as we judge." | "<!-- ko-product-output -->판정하지 않은 group N<!-- ko-product-output -->개" counting down, then "Gate: <!-- ko-product-output -->열림"; 24 groups (`remeasure:adoption-result`) |
+| 7 adopt | review, then `/` | "Adopting is a review record, not a deployment; applying it to the runtime happens outside Authority Diff." | "<!-- ko-product-output -->채택됨", "<!-- ko-product-output -->채택은 검토 기록입니다. runtime <!-- ko-product-output -->설정 반영은 Authority Diff <!-- ko-product-output -->밖에서 이루어집니다.", "<!-- ko-product-output -->채택된 정책: version #1" |
 | 8 report | downloaded Evidence Report | "The report carries the hashes, so anyone can re-run the replay and get the same result." | adoption resultHash `8ae52329dd61bdb900f61075fd75c4eb66232fa3ff370245df6b1baec752a444` (`remeasure:adoption-determinism`); the notice that figures do not recover past runtime approvals |
 | 9 conformance | `/conformance` | "This is the only screen about what the runtime actually did, compared with the Policy we adopted." | 92 findings, conformance resultHash `7710c06c…8689` (`remeasure:adoption-journey`, step 9); violation and under_asked rows |
-| 10 change review | version 2, review | "Now a change: allow fetches from unknown remotes, and, by mistake, trust every GitHub repository with one host-wide pattern." | 139 넓어진 Actions, 7 Widening groups, resultHash `3082d2a4…1598` (`remeasure:adoption-journey`, step 10); the groups whose Zone moves `unknown_remote → trusted_remote`, marked critical |
-| 11 unexpected, reject, fix, accept | review, version 3 | "Trusting another owner's repository was not what we meant, so the Gate blocks; we reject, drop the host-wide pattern, and accept the change without it." | "Gate: blocker 1건", disabled accept, "반려됨"; version 3 changed 139 Actions, 5 Widening groups, resultHash `2c4577fa…a8d9` (`remeasure:adoption-journey`, step 11); "채택됨" |
-| 12 audit | terminal, then `/` | "Every decision is in a hash chain, and the chain verifies intact." | `verify-audit` `isIntact` true, `checkedCount` 3 (`remeasure:adoption-journey`, step 12); "채택된 정책: version #3" with its Effect distribution |
+| 10 change review | version 2, review | "Now a change: allow fetches from unknown remotes, and, by mistake, trust every GitHub repository with one host-wide pattern." | 139 <!-- ko-product-output -->넓어진 Actions, 7 Widening groups, resultHash `3082d2a4…1598` (`remeasure:adoption-journey`, step 10); the groups whose Zone moves `unknown_remote → trusted_remote`, marked critical |
+| 11 unexpected, reject, fix, accept | review, version 3 | "Trusting another owner's repository was not what we meant, so the Gate blocks; we reject, drop the host-wide pattern, and accept the change without it." | "Gate: blocker 1<!-- ko-product-output -->건", disabled accept, "<!-- ko-product-output -->반려됨"; version 3 changed 139 Actions, 5 Widening groups, resultHash `2c4577fa…a8d9` (`remeasure:adoption-journey`, step 11); "<!-- ko-product-output -->채택됨" |
+| 12 audit | terminal, then `/` | "Every decision is in a hash chain, and the chain verifies intact." | `verify-audit` `isIntact` true, `checkedCount` 3 (`remeasure:adoption-journey`, step 12); "<!-- ko-product-output -->채택된 정책: version #3" with its Effect distribution |
 
 Close on step 12.
 Do not add a line about enforcement, blocked attacks, or a person's review time.
@@ -57,7 +57,7 @@ They are the same files `.local/evidence-remeasure.json` names for `pnpm evidenc
 
 3. Load the data, one of two ways.
 
-   Full take, from step 1: import only, so step 2 shows "아직 조직 정책이 없습니다" and step 3 creates the first Policy on screen.
+   Full take, from step 1: import only, so step 2 shows "<!-- ko-product-output -->아직 조직 정책이 없습니다" and step 3 creates the first Policy on screen.
 
    ```sh
    AUTHORITY_CLI_SERVER_URL=http://localhost:8787 \
@@ -65,7 +65,7 @@ They are the same files `.local/evidence-remeasure.json` names for `pnpm evidenc
      pnpm authority import <snapshot>
    ```
 
-   Retake from step 4: seed instead, which imports and creates draft version 1 with policy A in one command. `/` then shows "최초 정책 설정 계속하기".
+   Retake from step 4: seed instead, which imports and creates draft version 1 with policy A in one command. `/` then shows "<!-- ko-product-output -->최초 정책 설정 계속하기".
 
    ```sh
    AUTHORITY_DB_URL=postgres://authority:authority@localhost:55432/authority \
@@ -96,7 +96,7 @@ A retake of any step after one of them needs a new volume from the seed procedur
 
 1. Terminal: step 1 import. Cut the wait between the command and its summary.
 2. Browser: steps 2 to 8 in order.
-   Capture step 6 once before the first Verdict, so the blocker and the disabled "최초 정책 채택" are on screen.
+   Capture step 6 once before the first Verdict, so the blocker and the disabled "<!-- ko-product-output -->최초 정책 채택" are on screen.
 3. Off camera: stage conformance.
    Copy the spool files into `<scratch-home>/.authority/spool/`, flush them, and request the run; V1 has no screen that starts a conformance run.
 

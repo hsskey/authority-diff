@@ -1,10 +1,10 @@
-# ADR-0006 modular monolith, PostgreSQL job queue, 상태 table이 canonical
+# ADR-0006 Modular monolith, PostgreSQL job queue, state tables are canonical
 
-Status: accepted. V1 note: pg-boss와 JobQueue는 V1에 없음(docs/cutline.md 3, 6장). modular monolith와 PostgreSQL 결정은 유지. 출처: docs/design.md 34장.
+Status: accepted. V1 note: pg-boss and JobQueue are absent from V1 (docs/cutline.md chapters 3 and 6). The modular monolith and PostgreSQL decisions stand. Source: docs/design.md chapter 34.
 
-- Context: ingest peak 7건/초, replay 수십 초, 외부 호출 월 2,800건이다.
-- Decision: process 1개, PostgreSQL 1개, pg-boss. event sourcing과 message broker는 쓰지 않는다. audit은 별도 hash chain table이다.
-- Alternatives: 서비스 분리 + Kafka/Redis. SQLite 단일 파일.
-- Consequences: 운영 대상이 2개다. 20배 성장까지 구조 변경이 없다. SQLite를 쓰지 않아 설치가 docker compose를 요구한다.
-- Reversal trigger: 월 Action이 500만 건을 넘거나 replay가 10분을 넘을 때 실행 프로세스 분리와 partition을 넣는다.
-- V1 note: replay는 pg-boss job이 아니라 같은 process 안의 비동기 함수로 실행한다. audit hash chain은 V1에서 별도 `audit_events` table 대신 `review_decisions` 위에 구현한다(docs/acr/0006-review-decision-hash-chain.md).
+- Context: Ingest peaks at 7 per second, replay takes tens of seconds, and external calls are 2,800 per month.
+- Decision: 1 process, 1 PostgreSQL, pg-boss. Do not use event sourcing or a message broker. Audit is a separate hash-chain table.
+- Alternatives: Split services plus Kafka/Redis. A single SQLite file.
+- Consequences: Two operational targets. No structural change until 20× growth. Not using SQLite means install requires docker compose.
+- Reversal trigger: Split the running process and add partitions when monthly Actions exceed 5 million or replay exceeds 10 minutes.
+- V1 note: Replay runs as an async function in the same process, not as a pg-boss job. The audit hash chain in V1 is implemented on `review_decisions` instead of a separate `audit_events` table (docs/acr/0006-review-decision-hash-chain.md).

@@ -1,54 +1,54 @@
-# ADR-0010 최초 도입 review는 baseline 없는 단일 평가이고 Adoption Group은 정책 판단 단위다
+# ADR-0010 First-adoption review is a single evaluation with no baseline, and an Adoption Group is the policy-judgement unit
 
-Status: accepted (V1). 출처: docs/cutline.md 5·6·18장과 최초 도입(Initial Adoption) review 계약. replay core, policy lifecycle, adoption review(gate, decision record), Activity Overview에 걸쳐 확정한 결정을 한 문서에 모았다. 측정은 docs/evidence/adoption-preview.md.
+Status: accepted (V1). Source: docs/cutline.md chapters 5, 6, and 18 and the Initial Adoption review contract. Collects decisions fixed across replay core, policy lifecycle, adoption review (gate, decision record), and Activity Overview. Measurement is docs/evidence/adoption-preview.md.
 
 - Context:
-  V1의 첫 Policy Version은 accepted 상태로 seed됐고 Change Review는 accepted baseline과 candidate를 비교하는 `version_diff`만 있었다.
-  V1이 증명하려던 질문이 "이 정책 변경을 적용하면 어떤 과거 Action의 Effect가 달라지는가"였고, 그 비교에는 baseline이 있어야 했기 때문이다. Gate 2와 Gate 3는 `seedAcceptedPolicy`가 만든 accepted version 1 위에서 돌았고, 첫 정책을 어떻게 검토하고 채택하는지는 정의하지 않았다.
-  조직이 처음 정책을 도입할 때는 baseline이 없고, 과거 runtime이 각 Action을 실제로 승인했는지도 transcript만으로는 알 수 없다.
-  그래서 "과거에 실제로 있었던 Agent 행동에 이 최초 정책을 적용하면 앞으로 각각 allow/ask/deny 중 무엇이 되는가"를 보여 주는 별도의 Replay Run kind가 필요했다.
-  이 preview에서 사람이 판정하는 단위(Adoption Group)의 signature도 정해야 했다.
-  frozen corpus로 사전 측정한 결과 signature A `[effect, capability, zone, program]`은 ask/deny group 237개(1건짜리 67개)를, signature B `[effect, capability, zone]`은 23개(상위 3개가 ask/deny Action의 95.4%)를 만들었고, 두 signature 모두 group마다 deciding Rule이 정확히 1개였다.
+  V1's first Policy Version was seeded already `accepted`, and Change Review only had `version_diff`, which compares an accepted baseline with a candidate.
+  The question V1 set out to prove was "if we apply this policy change, which past Actions get a different Effect", and that comparison needed a baseline. Gate 2 and Gate 3 ran on accepted version 1 created by `seedAcceptedPolicy`, and how to review and adopt the first policy was undefined.
+  When an organization introduces a policy for the first time there is no baseline, and a transcript alone does not say whether the past runtime actually approved each Action.
+  So a separate Replay Run kind was needed to show "if we apply this first policy to past Agent behavior, which of allow/ask/deny each Action becomes going forward".
+  The signature of the unit a person judges in that preview (Adoption Group) also had to be fixed.
+  Pre-measurement on the frozen corpus: signature A `[effect, capability, zone, program]` made 237 ask/deny groups (67 of size 1); signature B `[effect, capability, zone]` made 23 (the top 3 cover 95.4% of ask/deny Actions); both signatures had exactly 1 deciding Rule per group.
 - Decision:
-  `adoption` Replay Run은 candidate Policy Version 하나를 baseline 없이 과거 Action에 대입한 단일 평가다.
-  `baselineVersionId`는 null이고 `inputsHash`는 `['adoption', candidateContentHash, window, classifierVersion, actionCount, lastActionKey]`로 만든다.
-  transcript의 observedOutcome(`executed`, `rejected_by_human`, `blocked_by_runtime`)을 Effect로 바꾸지 않는다. `executed`는 사람이 승인해 실행됐을 수 있으므로 baseline이 될 수 없다.
-  `historical_activity` 같은 Decision Source를 새로 두지 않는다. adoption은 비교가 아니라 candidate 하나의 평가다.
-  Adoption Group의 signature는 B `[effect, capability, zone]`이다. Rule은 program을 보지 않으므로 Policy가 내리는 판단 하나가 group 하나가 되고, "이 제한이 의도한 것인가"라는 adoption verdict의 판정 대상과 일치한다.
-  program은 group key가 아니라 group 안의 근거다. `programSummary`(상위 10개)와 `distinctProgramCount`를 group에 싣고 `resultHash`에 포함한다. group의 `program` field는 항상 null이다.
-  Change Review(`version_diff`)의 Diff Group signature는 그대로 program을 포함한다. 두 review는 다른 질문에 답한다. adoption은 "이 제한이 의도한 것인가"를, change는 "이렇게 넓어진 동작이 예상한 것인가"를 묻고, 후자는 무엇이 넓어졌는지 program까지 구체적이어야 한다. `computeDiffWith`의 signature와 `resultHash`는 바꾸지 않는다.
-  Adoption Group에는 severity가 없다. widening용 `critical`을 재사용하지 않는다. allow Action은 집계만 하고 group으로 만들지 않는다. 정렬은 deny → ask → actionCount 내림차순 → sessionCount 내림차순 → groupKey다.
+  An `adoption` Replay Run is a single evaluation that applies one candidate Policy Version to past Actions with no baseline.
+  `baselineVersionId` is null and `inputsHash` is made from `['adoption', candidateContentHash, window, classifierVersion, actionCount, lastActionKey]`.
+  Do not turn the transcript's observedOutcome (`executed`, `rejected_by_human`, `blocked_by_runtime`) into an Effect. `executed` may have run after a person approved it, so it cannot be a baseline.
+  Do not add a Decision Source such as `historical_activity`. Adoption is not a comparison; it is an evaluation of one candidate.
+  An Adoption Group's signature is B `[effect, capability, zone]`. A Rule does not look at program, so one Policy judgement is one group, which matches what an adoption verdict judges: "is this restriction intended".
+  program is evidence inside the group, not the group key. Put `programSummary` (top 10) and `distinctProgramCount` on the group and include them in `resultHash`. The group's `program` field is always null.
+  A Change Review (`version_diff`) Diff Group signature still includes program. The two reviews answer different questions. Adoption asks "is this restriction intended"; change asks "was this widened behavior expected", and the latter must be concrete through program. Do not change `computeDiffWith`'s signature or `resultHash`.
+  An Adoption Group has no severity. Do not reuse `critical` from widening. `allow` Actions are counted only and are not made into groups. Sort is deny → ask → actionCount descending → sessionCount descending → groupKey.
 - Decision (policy lifecycle):
-  `createPolicy`는 version 1을 `draft`로 만든다. accepted는 review의 결정으로만 생긴다.
-  `getBaseline`은 가장 최근 `accepted` version만 돌려주고, 없으면 `policy.no_accepted_version`이다. version 1으로 대신하지 않는다.
-  조직의 Policy는 하나다. policy module의 `createPolicy`는 Policy가 이미 있으면 `policy.organization_policy_exists`로 거부하고, 여러 개가 있어도 그중 하나를 고르지 않는다.
-  이 invariant는 application 계층(policy module)에 있다. 저장소(`createPolicyRepository`)는 여러 Policy row를 허용하는데, integration test가 공유 database에서 test마다 Policy 하나로 격리하기 때문이다. database 제약은 그 격리 방식을 바꾼 뒤에 둔다.
-  `seedAcceptedPolicy`는 legacy·test 전용이다. 그 경로로 seed된 accepted version 1 row는 그대로 유효하다.
-  `accepted`는 검토 결과이지 배포나 집행 상태가 아니다. lifecycle은 `draft → in_review → accepted → [Authority Diff 밖] managed settings 반영 → runtime 관측 → conformance`로 그린다. 반영은 조직의 설정 배포 도구가 하고 Authority Diff는 반영 여부를 저장하지 않는다. accepted를 active, applied, enforced로 쓰지 않는다.
+  `createPolicy` makes version 1 as `draft`. accepted arises only from a review decision.
+  `getBaseline` returns only the most recent `accepted` version; if there is none, `policy.no_accepted_version`. It does not fall back to version 1.
+  The organization has one Policy. The policy module's `createPolicy` rejects with `policy.organization_policy_exists` when a Policy already exists, and does not pick one even if several exist.
+  This invariant lives in the application layer (policy module). The store (`createPolicyRepository`) allows several Policy rows because integration tests isolate each test to one Policy on a shared database. Put the database constraint after that isolation method changes.
+  `seedAcceptedPolicy` is legacy/test only. An accepted version 1 row seeded on that path remains valid.
+  `accepted` is a review result, not a deployment or enforcement status. Lifecycle is drawn `draft → in_review → accepted → [outside Authority Diff] apply managed settings → runtime observation → conformance`. Application is done by the organization's settings-deployment tooling; Authority Diff does not store whether it was applied. Do not use accepted as active, applied, or enforced.
 - Decision (adoption review):
-  Change Review에 `kind`(`change` | `adoption`)를 저장하고 `baselineVersionId`는 `adoption`일 때만 null이다(migration 0009의 CHECK).
-  요청은 kind를 받지 않는다. server가 derive한다: accepted version이 없으면 `adoption`(adoption run), 있으면 `change`(version_diff run). candidate가 accepted 자체이면 transition 거부로 409다.
-  한 Policy에 열린 review(`computing` 또는 `ready`)는 kind와 무관하게 1개다(`review.open_review_exists`).
-  adoption gate는 모든 ask group과 deny group에 verdict를 요구한다. `expected`만 통과하고 미판정, `investigate`, `unexpected`는 각각 `adoption_unreviewed`, `adoption_investigate`, `adoption_unexpected`로 닫힌다. change kind의 `widening_*` 계산은 그대로다.
-  adoption accept는 candidate를 accepted로 만들고, Decision Record의 `baselineContentHash`는 null이다. audit hash chain은 그 null을 그대로 직렬화하므로 기존 record 검증은 바뀌지 않는다.
-  adoption Evidence Report는 정책 hash, window, 분석 규모, allow/ask/deny 건수와 비율, 확인 필요 group 표, 차단 group 표, verdict, 결정 기록, Decision Record hash, 고정 고지와 "이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다"를 담는다.
+  Store `kind` (`change` | `adoption`) on Change Review; `baselineVersionId` is null only for `adoption` (migration 0009 CHECK).
+  The request does not receive kind. The server derives it: `adoption` (adoption run) when there is no accepted version, `change` (version_diff run) when there is. If the candidate is the accepted version itself, reject the transition with 409.
+  One open review (`computing` or `ready`) per Policy regardless of kind (`review.open_review_exists`).
+  The adoption gate requires a verdict on every ask group and deny group. Only `expected` passes; unreviewed, `investigate`, and `unexpected` close with `adoption_unreviewed`, `adoption_investigate`, and `adoption_unexpected`. The `widening_*` computation for kind `change` is unchanged.
+  Adoption accept makes the candidate accepted, and the Decision Record's `baselineContentHash` is null. The audit hash chain serializes that null as-is, so existing record verification does not change.
+  An adoption Evidence Report carries the policy hash, window, analysis scale, allow/ask/deny counts and shares, the needs-confirmation group table, the deny group table, verdicts, the decision record, the Decision Record hash, the fixed notices, and "these figures apply the policy to past behavior and do not recover whether the past runtime approved".
 - Decision (Activity Overview):
-  Policy가 없는 화면은 가져온 Action만으로 Activity Overview(Session 수, Action 수, Capability와 Target Kind 분포, Analyzability, 상위 program, Remote Key host)를 보여 준다. Environment Profile이 없으므로 Effect와 Zone은 내지 않는다.
-  `/`는 Policy 없음, draft만 있음, accepted 있음의 세 상태를 가진다. Policy가 2개 이상이면 지원하지 않는 상태로 표시하고 자동으로 고르지 않는다.
+  A screen with no Policy shows Activity Overview from imported Actions only (Session count, Action count, Capability and Target Kind distributions, Analyzability, top programs, Remote Key hosts). It does not emit Effect or Zone because there is no Environment Profile.
+  `/` has three states: no Policy, draft only, and accepted present. If there are 2 or more Policies, show an unsupported state and do not pick automatically.
 - Alternatives:
-  signature A. group마다 program이 하나라 가장 구체적이지만 같은 Rule 판단이 최대 117개 group으로 흩어지고, "정책 수정 필요" verdict를 Policy에 반영할 단위(Rule 또는 Zone 설정)와 group이 어긋난다.
-  observedOutcome을 baseline으로 쓰는 `historical_activity` Decision Source. 승인 여부를 복원하지 못한 값으로 전이를 만들게 된다.
-  Policy 하나 제약을 `policies` table의 database 제약으로 두는 것. 공유 test database에서 Policy 단위로 격리하는 integration test 5개 파일을 먼저 바꿔야 한다.
-  요청에 review kind를 받는 것. 같은 Policy 상태에서 두 kind가 모두 가능해져 baseline 없는 change review나 accepted가 있는 adoption review를 막는 검사가 따로 필요하다.
-  Change Review signature를 adoption에 맞춰 program을 빼는 것. Change Review evidence가 아직 적어 판단할 근거가 없다.
+  Signature A. Each group has one program, so it is the most specific, but the same Rule judgement scatters into as many as 117 groups, and the group does not match the unit on which a "policy needs a fix" verdict can be applied to the Policy (a Rule or a Zone setting).
+  A `historical_activity` Decision Source that uses observedOutcome as baseline. That would invent transitions from a value that never recovered approval.
+  Putting the one-Policy constraint on the `policies` table as a database constraint. That requires changing the 5 integration-test files that isolate by Policy on a shared test database first.
+  Receiving review kind on the request. Both kinds would be possible in the same Policy state, so separate checks would be needed to block a change review with no baseline or an adoption review when accepted exists.
+  Dropping program from the Change Review signature to match adoption. Change Review evidence is still too thin to judge.
 - Consequences:
-  review kind별로 grouping 단위가 다르다. UI와 문서는 두 grouping을 구분해 적어야 한다.
-  `/`는 Change Review replay 없이도 Activity Overview로 채워진다. Effect 분포는 accepted version이 생긴 뒤에만 나온다.
-  `ReplayRunSchema`는 kind별 discriminated union이 되고 `adoption` run의 `stats`는 `AdoptionStats`다. 기존 `version_diff`·`conformance` row는 backfill 없이 parse된다.
-  Adoption Group 하나에 program이 여러 개 섞일 수 있다. group detail은 `programSummary`를 보여 줘야 "expected" 판정이 무엇을 승인하는지 드러난다.
-  저장 table `replay_adoption_groups`와 `replay_adoption_assignments`가 추가된다(migration 0008).
-  `change_reviews.kind`와 nullable `baseline_version_id`, nullable `review_decisions.baseline_content_hash`가 추가된다(migration 0009). 기존 review row는 `change`다.
+  Grouping units differ by review kind. UI and documents must write the two groupings apart.
+  `/` fills with Activity Overview even without a Change Review replay. Effect distribution appears only after an accepted version exists.
+  `ReplayRunSchema` becomes a discriminated union by kind, and an `adoption` run's `stats` is `AdoptionStats`. Existing `version_diff` and `conformance` rows parse with no backfill.
+  One Adoption Group can mix several programs. Group detail must show `programSummary` so an "expected" verdict reveals what it is endorsing.
+  Store tables `replay_adoption_groups` and `replay_adoption_assignments` are added (migration 0008).
+  `change_reviews.kind` and nullable `baseline_version_id`, nullable `review_decisions.baseline_content_hash` are added (migration 0009). Existing review rows are `change`.
 - Reversal trigger:
-  Change Review evidence가 충분히 쌓여 program이 Diff Group 판정에 실제로 필요하지 않다고 확인되면 두 signature를 B로 통일한다.
-  반대로 adoption verdict가 program 단위로 갈리는 사례가 실제 corpus에서 반복되면 Adoption Group signature에 program을 넣는 것을 다시 검토한다.
-  어느 쪽이든 groupKey와 resultHash가 바뀌므로 저장된 run과 verdict의 호환을 먼저 정한다.
+  Unify both signatures on B if Change Review evidence accumulates enough to confirm program is not actually needed for Diff Group judgement.
+  Conversely, revisit putting program on the Adoption Group signature if cases where an adoption verdict splits by program repeat in the real corpus.
+  Either way, groupKey and resultHash change, so compatibility of stored runs and verdicts must be fixed first.

@@ -1,220 +1,221 @@
 # Authority Diff - V1 glossary
 
-이 파일은 용어집 역할만 하고 구현 세부는 담지 않습니다.
-파일, symbol, table, HTTP 이름도 여기 단어를 씁니다.
-출처는 `docs/design.md` 13.1이며, V1 범위(`docs/cutline.md`)에 맞춰 Tier 2/3 개념을 뺐습니다.
-Target Architecture 전용 용어(Mandate, Mandate Exception, Scenario, Precedent, Probe Run, Decision Provider)는 V1 용어집에 없습니다.
-용어집 완성은 계약 고정 시점의 사람 작업이고 이 목록은 그 입력입니다.
+This file is a glossary only; it does not carry implementation detail.
+File, symbol, table, and HTTP names use the words here.
+The source is `docs/design.md` 13.1, with Tier 2/3 concepts removed to match V1 scope (`docs/cutline.md`).
+Target Architecture-only terms (Mandate, Mandate Exception, Scenario, Precedent, Probe Run, Decision Provider) are not in the V1 glossary.
+Finishing the glossary is human work at contract freeze; this list is the input to that work.
 
 **Principal**:
-Agent에게 작업을 맡긴 사람.
+The person who gave the Agent the work.
 _Avoid_: user, developer, owner
 
 **Session**:
-한 runtime에서 시작부터 종료까지 이어진 Agent 실행 단위.
-Claude Code에서는 transcript 파일 하나.
+One Agent execution from start to end in one runtime.
+In Claude Code, one transcript file.
 _Avoid_: conversation, run
 
 **Parsed Session**:
-transcript 줄을 memory에서 parse하고 redaction한 Session.
-parse하지 못한 줄의 수와 관측된 Action을 함께 담습니다.
+A Session whose transcript lines have been parsed and redacted in memory.
+It also carries the count of lines that could not be parsed and the observed Actions.
 
 **Action**:
-Agent가 실행하려 한 tool call 하나.
-실행 여부와 무관하게 시도 자체를 가리킵니다.
+One tool call the Agent tried to run.
+It names the attempt, whether or not it executed.
 _Avoid_: command, event, tool use
 
 **Action Key**:
-runtime의 tool use 식별자에서 결정적으로 유도한 Action 식별자.
-tool use 식별자가 없을 때는 Session 식별자와 순번을 사용합니다.
+An Action identifier derived deterministically from the runtime's tool-use identifier.
+When that identifier is absent, it uses the Session identifier and a sequence number.
 
 **Operation**:
-Action을 분해한 최소 단위.
-하나의 Capability를 하나의 Target에 행사합니다.
-Bash Action 하나는 Operation 여러 개를 가집니다.
+The smallest unit obtained by splitting an Action.
+It exercises one Capability on one Target.
+One Bash Action has several Operations.
 _Avoid_: fragment, step, sub-command
 
 **Capability**:
-Operation이 행사하는 힘의 종류.
-고정 enum.
+The kind of power an Operation exercises.
+A fixed enum.
 _Avoid_: permission, action type, verb
 
 **Target**:
-Operation의 효과가 닿는 대상을 runtime에서 읽은 그대로 적은 값.
-경로, host, VCS remote, package, MCP tool 등.
+The object an Operation's effect reaches, written as the runtime read it.
+A path, host, VCS remote, package, MCP tool, and so on.
 _Avoid_: resource, object
 
 **Remote Key**:
-VCS remote를 `host/owner/repo` 형식으로 정규화한 값.
-scheme, user, port와 끝의 `.git`은 포함하지 않습니다.
+A VCS remote normalized to `host/owner/repo`.
+It does not include scheme, user, port, or a trailing `.git`.
 
 **Zone**:
-Target을 조직의 신뢰 경계로 분류한 값.
-고정 enum.
+A Target classified against the organization's trust boundary.
+A fixed enum.
 _Avoid_: scope, boundary, trust level
 
 **Environment Profile**:
-Zone 계산에 필요한 조직의 사실 선언.
-신뢰하는 host, credential 경로, protected branch 등.
+The organization's statement of fact used to compute Zone.
+Trusted hosts, credential paths, protected branches, and so on.
 _Avoid_: config, trusted infrastructure, context
 
 **Analyzability**:
-classifier가 Operation의 효과를 얼마나 확정했는지 나타내는 값.
+How firmly the classifier established the Operation's effect.
 `full`, `partial`, `none`.
 _Avoid_: opacity, confidence
 
 **Reversibility**:
-Operation을 실행한 뒤 되돌릴 수 있는 정도.
+How far an Operation can be undone after it runs.
 _Avoid_: risk, severity
 
 **Effect**:
-명세가 Operation 또는 Action에 내리는 결과.
+The outcome the spec assigns to an Operation or Action.
 `allow`, `ask`, `deny`.
-_Avoid_: decision(단독 사용), verdict, permission
+_Avoid_: decision (used alone), verdict, permission
 
 **Rule**:
-Capability, Zone, Reversibility, Analyzability 조건에 Effect 하나를 붙인 문장.
-_Avoid_: policy(단수 rule을 가리킬 때), statement
+One sentence that attaches one Effect to Capability, Zone, Reversibility, and Analyzability conditions.
+_Avoid_: policy (when pointing at a single rule), statement
 
 **Policy**:
-조직의 권한 명세를 담는 그릇.
-Version들의 묶음.
+The vessel that holds the organization's permission spec.
+A bundle of Versions.
 
 **Policy Version**:
-불변 문서 하나.
-Rule 목록과 Environment Profile을 포함하며 content hash로 식별합니다.
-상태는 `draft`, `in_review`, `accepted`, `rejected`입니다.
-`accepted`는 검토 결과이지 배포나 집행 상태가 아닙니다.
-_Avoid_: revision, snapshot, accepted를 가리키는 active, applied, enforced
+One immutable document.
+It includes the Rule list and the Environment Profile, and is identified by content hash.
+Status is `draft`, `in_review`, `accepted`, `rejected`.
+`accepted` is a review result, not a deployment or enforcement status.
+_Avoid_: revision, snapshot, active / applied / enforced for accepted
 
 **Decision**:
-한 Policy Version을 한 Action에 대입한 평가 결과.
-Effect와 근거 Rule을 포함합니다.
+The evaluation of one Policy Version against one Action.
+It includes the Effect and the Rule it rests on.
 _Avoid_: result, outcome
 
 **Replay Run**:
-Decision Source를 같은 Action 집합에 대입한 실행 1회.
-`version_diff`는 두 Policy Version을, `conformance`는 `observed_runtime`과 Policy Version을 비교합니다.
-`adoption`은 candidate Policy Version 하나를 baseline 없이 대입합니다.
-과거 runtime이 Action을 승인했는지는 어느 kind도 추정하지 않습니다.
+One execution that applies a Decision Source to the same Action set.
+`version_diff` compares two Policy Versions; `conformance` compares `observed_runtime` with a Policy Version.
+`adoption` applies one candidate Policy Version with no baseline.
+No kind infers whether the past runtime approved the Action.
 
 **Decision Source**:
-Replay에서 Effect를 내는 쪽.
-Policy Version 또는 `observed_runtime`(관측된 Disposition).
+The side that produces an Effect in a Replay.
+A Policy Version, or `observed_runtime` (an observed Disposition).
 
 **Disposition**:
-runtime이 Action에 실제로 보인 동작.
+What the runtime actually did with the Action.
 `auto_executed`, `prompted`, `hook_approved`, `blocked`, `executed_prompt_unknown`.
 _Avoid_: observed decision, runtime state
 
 **Conformance Finding**:
-Disposition과 Policy Version의 Effect가 어긋난 Action 묶음.
+A bundle of Actions whose Disposition disagrees with the Policy Version's Effect.
 `violation`, `under_asked`, `over_asked`.
 상태는 `open` 또는 `acknowledged`이고, 확인 처리할 때 note를 남긴다.
 _Avoid_: drift, incident, alert
 
 **Diff Group**:
-Effect가 달라진 Action을 같은 signature로 묶은 단위.
-사람이 판정하는 단위입니다.
+Actions whose Effect changed, bundled by the same signature.
+The unit a person judges.
 _Avoid_: cluster, bucket
 
 **Group Key**:
-Diff Group 또는 Adoption Group signature에서 결정적으로 유도한 식별자.
+An identifier derived deterministically from a Diff Group or Adoption Group signature.
 
 **Adoption Group**:
-`adoption` Replay Run에서 candidate Policy Version이 같은 Capability와 Zone에 같은 Effect(`ask` 또는 `deny`)를 준 Action 묶음.
-최초 도입 검토에서 사람이 판정하는 단위이며 signature에 program이 없고 severity도 없습니다.
-`allow` Action은 집계만 하고 Adoption Group으로 만들지 않습니다.
+A bundle of Actions to which the candidate Policy Version, in an `adoption` Replay Run, gave the same Effect (`ask` or `deny`) on the same Capability and Zone.
+The unit a person judges in first-adoption review; the signature has no program and no severity.
+`allow` Actions are counted only and are not made into Adoption Groups.
 _Avoid_: adoption cluster, ask bucket
 
 **Program Summary**:
-Adoption Group에서 signature Operation의 program 상위 10개와 건수.
+The top 10 programs of the signature Operations in an Adoption Group, with counts.
 _Avoid_: top programs
 
 **Widening / Narrowing**:
-candidate의 Effect가 baseline보다 덜 제한적이면 Widening, 더 제한적이면 Narrowing.
+Widening when the candidate's Effect is less restrictive than the baseline; Narrowing when it is more restrictive.
 _Avoid_: loosening, tightening, regression
 
 **Headline**:
-Diff Group 또는 Adoption Group을 설명하는 고정 template의 평문 한 문장.
+One plain-language sentence from a fixed template that describes a Diff Group or Adoption Group.
 _Avoid_: summary, description
 
 **Target Summary**:
-Diff Group 또는 Adoption Group에서 Target key 상위 5개와 건수.
+The top 5 Target keys in a Diff Group or Adoption Group, with counts.
 _Avoid_: top targets
 
 **Verdict**:
-사람이 Diff Group 또는 Adoption Group에 내린 판정.
+The judgement a person records on a Diff Group or Adoption Group.
 `expected`, `investigate`, `unexpected`.
-화면 라벨은 Review Kind에 따라 다릅니다.
-`change`는 예상된 변화 / 조사 필요 / 예상 밖, `adoption`은 의도한 제한 / 보류 / 정책 수정 필요.
+Screen labels differ by Review Kind.
+`change` uses expected change (예상된 변화) / needs investigation (조사 필요) / unexpected (예상 밖); `adoption` uses intended restriction (의도한 제한) / hold (보류) / policy needs a fix (정책 수정 필요).
 
 **Change Review**:
-Policy Version 하나의 수락 여부를 결정하는 단위.
-Replay Run, Verdict, 결정 기록을 묶습니다.
-화면 라벨은 Review Kind가 `change`면 변경 검토, `adoption`이면 최초 도입 검토입니다.
-Review Kind가 `adoption`이면 baseline Policy Version이 없습니다.
+The unit that decides whether to accept one Policy Version.
+It binds a Replay Run, Verdicts, and the decision record.
+The screen label is change review (변경 검토) when Review Kind is `change`, and first-adoption review (최초 도입 검토) when it is `adoption`.
+When Review Kind is `adoption` there is no baseline Policy Version.
 _Avoid_: approval request, PR
 
 **Review Kind**:
-Change Review의 종류.
-`change`는 accepted baseline과 candidate Policy Version을 `version_diff`로 비교하고, `adoption`은 accepted version이 없을 때 candidate 하나를 `adoption` Replay Run으로 단일 평가합니다.
-요청이 kind를 고르지 않고 server가 Policy의 accepted version 유무로 정합니다.
+The kind of Change Review.
+`change` compares an accepted baseline and a candidate Policy Version with `version_diff`; `adoption` evaluates one candidate with an `adoption` Replay Run when there is no accepted version.
+The request does not choose the kind; the server sets it from whether the Policy has an accepted version.
 _Avoid_: review type, review mode
 
 **Accept Policy Change / Reject Policy Change**:
-Change Review에 결정을 남기는 두 동작.
-Review Kind가 `adoption`이면 최초 정책 채택 / 최초 정책 반려라고 부릅니다.
+The two actions that leave a decision on a Change Review.
+When Review Kind is `adoption` they are called adopt first policy (최초 정책 채택) / reject first policy (최초 정책 반려).
 _Avoid_: Approve Review, Mark Reviewed, activate
 
 **Withdraw Review**:
-사람이 `computing`이나 `ready`인 Change Review를 결정 없이 닫는 동작.
-화면 라벨은 검토 철회이고 review 상태는 `withdrawn`(철회됨)이 됩니다.
-candidate Policy Version은 철회 전이로 `draft`로 돌아가고, Decision Record를 남기지 않으며, withdrawn review는 열린 review로 세지 않습니다.
+The action by which a person closes a `computing` or `ready` Change Review without a decision.
+The screen label is withdraw review (검토 철회) and review status becomes `withdrawn` (철회됨).
+The candidate Policy Version returns to `draft` via the withdrawal transition, no Decision Record is written, and a withdrawn review does not count as an open review.
 _Avoid_: cancel, delete, discard
 
 **Decision Record**:
-정책 변경 또는 최초 도입의 수락이나 반려 1건의 불변 기록.
-Review Kind가 `adoption`이면 baseline content hash가 null입니다.
+The immutable record of one accept or reject of a policy change or a first adoption.
+When Review Kind is `adoption` the baseline content hash is null.
 _Avoid_: approval, activation, deployment record
 
 **Evidence Report**:
-Change Review의 결정과 근거 hash를 담아 조직장이 읽는 Markdown 산출물.
+A Markdown artifact an engineering lead reads, carrying the Change Review decision and the evidence hashes.
 _Avoid_: approval document, audit report
 
 **Trace Import**:
-transcript 파일 하나를 server에 적재한 기록 1건. 수용, 중복, 거부, redaction 건수를 가진다.
+One record of loading one transcript file onto the server. It has accepted, duplicate, rejected, and redaction counts.
 _Avoid_: upload, ingest batch
 
 **Runtime Observation**:
-runtime hook이 보고한 사건 1건(pre_tool_use, permission_request, session_end). 판정에 쓰지 않고 conformance 대조에만 쓴다. tool use 식별자로 Action에 연결한다. tool use 식별자가 없는 permission_request는 같은 Session, 같은 tool, 같은 입력 hash를 가진 직전 pre_tool_use와 짝지어 연결한다.
+One event a runtime hook reported (pre_tool_use, permission_request, session_end). It is not used for judgement; it is used only for conformance comparison. It is joined to an Action by the tool-use identifier. A permission_request with no tool-use identifier is paired with the preceding pre_tool_use that has the same Session, the same tool, and the same input hash.
+
 _Avoid_: event, log entry
 
 **Gate**:
-Change Review를 수락할 수 있는지 계산한 결과. blocker 목록이 비어 있으면 열린다. 사람이 아니라 규칙이 계산한다.
-Review Kind가 `change`면 Widening group의 Verdict를, `adoption`이면 모든 Adoption Group의 Verdict를 본다.
+The computed result of whether a Change Review may be accepted. It opens when the blocker list is empty. A rule computes it, not a person.
+When Review Kind is `change` it looks at Verdicts on Widening groups; when `adoption` it looks at Verdicts on every Adoption Group.
 _Avoid_: approval check, guard
 
 **Activity Overview**:
-Policy 없이 가져온 Action만으로 집계한 활동 요약.
-Session 수, Action 수, Capability 분포, Target Kind 분포, Analyzability 비율, 상위 program, Remote Key의 host를 담는다.
-Effect와 Zone은 Policy가 있어야 계산되므로 없다.
+An activity summary aggregated from imported Actions with no Policy.
+It holds Session count, Action count, Capability distribution, Target Kind distribution, Analyzability share, top programs, and Remote Key hosts.
+Effect and Zone are absent because they need a Policy.
 _Avoid_: Activity Shape, dashboard
 
 **Target Kind**:
-Activity Overview에서 Target을 종류로 묶은 값.
+A value that groups Targets by kind in Activity Overview.
 `workspace_path`, `other_path`, `vcs_remote`, `host`, `package`, `mcp`, `deploy_target`, `unknown`.
-Zone과 달리 Environment Profile 없이 Target 자체에서 정한다.
+Unlike Zone, it is decided from the Target itself with no Environment Profile.
 _Avoid_: target type, resource kind
 
-관계:
+Relations:
 
-- Session은 Action을 여러 개 가집니다.
-- Action은 Operation을 0개 이상 가집니다.
-  0개인 Action은 평가에서 제외합니다.
-- Decision의 Effect는 Operation별 Effect 중 가장 제한적인 값입니다.
-- Change Review는 Replay Run 1개를 참조합니다.
-- 조직의 Policy는 하나입니다.
-  accepted version이 없으면 Review Kind는 `adoption`, 있으면 `change`입니다.
-- Policy Version의 `accepted`는 검토 기록입니다.
-  runtime 설정에 반영하는 일은 Authority Diff 밖에서 이루어지고, 그 뒤의 Runtime Observation과 Conformance Finding이 실제 동작을 말합니다.
+- A Session has several Actions.
+- An Action has zero or more Operations.
+  An Action with 0 Operations is excluded from evaluation.
+- A Decision's Effect is the most restrictive Effect among the Operations.
+- A Change Review refers to 1 Replay Run.
+- The organization has one Policy.
+  When there is no accepted version, Review Kind is `adoption`; otherwise `change`.
+- `accepted` on a Policy Version is a review record.
+  Applying it to runtime settings happens outside Authority Diff; Runtime Observation and Conformance Finding after that are what speak to actual behavior.

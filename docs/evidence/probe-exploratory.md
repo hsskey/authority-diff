@@ -2,7 +2,7 @@ Scenarios agent-authored: 30 of 35 in `tests/corpus/scenarios.json` were written
 
 # Exploratory policy-sentence probe
 
-exploratory semantic-policy evaluation, n=35. 이 표본 수로는 일치율 95%를 주장할 수 없음(35/35이어도 Wilson 하한 0.901).
+exploratory semantic-policy evaluation, n=35. This sample size cannot claim 95% agreement (Wilson lower bound 0.901 even at 35/35).
 
 This report ranks how Jev reads the default template's Rule sentences against synthetic Scenarios.
 It has no threshold and is not wired to any gate.
