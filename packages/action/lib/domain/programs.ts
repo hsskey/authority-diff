@@ -315,7 +315,7 @@ function shellOps(cmd: NormalizedCommand): OperationDraft[] {
   if (cmd.heredocBodies.length > 0) {
     return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
   }
-  if (cmd.args.some((arg) => /^-[A-Za-z]*[cs][A-Za-z]*$/.test(arg.text))) {
+  if (hasShellInlineOption(cmd.args)) {
     return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
   }
   const operand = firstShellOperand(cmd.args);
@@ -323,6 +323,15 @@ function shellOps(cmd: NormalizedCommand): OperationDraft[] {
     return [draft('execute', unknownTarget(), 'none', cmd.program, cmd.raw, ['inline_code'])];
   }
   return [scriptByPathDraft(cmd, operand)];
+}
+
+function hasShellInlineOption(args: readonly ShellWord[]): boolean {
+  for (const arg of args) {
+    const text = arg.text;
+    if (!text.startsWith('-') || text.length === 1 || text === '--' || arg.hasExpansion) break;
+    if (/^-[A-Za-z]*[cs][A-Za-z]*$/.test(text)) return true;
+  }
+  return false;
 }
 
 function firstShellOperand(args: readonly ShellWord[]): ShellWord | undefined {

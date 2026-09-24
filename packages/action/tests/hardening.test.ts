@@ -125,6 +125,8 @@ describe('hardening round 4: path-form execute and command lookup', () => {
 
   test.each([
     ['bash tests/run.sh --fast', '/work/repo/tests/run.sh'],
+    ['bash deploy.sh -s prod', '/work/repo/deploy.sh'],
+    ['bash setup.sh -c config.yaml', '/work/repo/setup.sh'],
     ['sh ./x.sh', '/work/repo/x.sh'],
     ['zsh ~/bin/tool', '~/bin/tool'],
   ] as const)('%s is execute on the script path, partial', (command, path) => {
@@ -138,13 +140,16 @@ describe('hardening round 4: path-form execute and command lookup', () => {
     expect(op?.signals).toContain('script_by_path');
   });
 
-  test.each(['bash -s', 'bash --version', 'sh'])('%s stays opaque inline execution', (command) => {
-    const exec = classify(bash(command)).find((o) => o.program === 'bash' || o.program === 'sh');
-    expect(exec?.capability).toBe('execute');
-    expect(exec?.target.kind).toBe('unknown');
-    expect(exec?.analyzability).toBe('none');
-    expect(exec?.signals).toContain('inline_code');
-  });
+  test.each(['bash -s', 'bash --version', 'sh', 'bash -xc "echo hi"'])(
+    '%s stays opaque inline execution',
+    (command) => {
+      const exec = classify(bash(command)).find((o) => o.program === 'bash' || o.program === 'sh');
+      expect(exec?.capability).toBe('execute');
+      expect(exec?.target.kind).toBe('unknown');
+      expect(exec?.analyzability).toBe('none');
+      expect(exec?.signals).toContain('inline_code');
+    },
+  );
 
   test('bash -c string is re-parsed rather than treated as a script file', () => {
     expect(withCap(classify(bash('bash -c "echo hi"')), 'read')?.program).toBe('echo');

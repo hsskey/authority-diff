@@ -111,7 +111,7 @@ function tryReparseSubshell(
   if (!SUBSHELL_SPAWNERS.has(program)) return false;
 
   const args = commandArgs(node);
-  const dashCIndex = args.findIndex((w) => w.text === '-c');
+  const dashCIndex = shellDashCIndex(args);
   if (dashCIndex === -1) return false;
   const body = args[dashCIndex + 1];
   if (body === undefined || body.hasExpansion || body.text.length === 0) return false;
@@ -121,6 +121,16 @@ function tryReparseSubshell(
   if (tree === null) return false;
   collect(tree.rootNode, depth + 1, out, parser);
   return true;
+}
+
+/** Index of a shell `-c` option; flags after the script name belong to the script. */
+function shellDashCIndex(args: readonly ShellWord[]): number {
+  for (let i = 0; i < args.length; i++) {
+    const text = args[i]?.text ?? '';
+    if (!text.startsWith('-') || text.length === 1 || text === '--') return -1;
+    if (text === '-c') return i;
+  }
+  return -1;
 }
 
 function isCommandNameField(command: Node, child: Node): boolean {
