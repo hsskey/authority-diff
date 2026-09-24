@@ -110,7 +110,7 @@ The `gh` group has 32 Actions in 18 Sessions: seven Actions left because their a
 The curl, WebFetch, and WebSearch groups are unchanged in Actions and Sessions.
 A vs B' keeps its seven widening groups and has 139 changed Actions.
 
-The Gate 2, adoption preview, and conformance documents remain labelled classifier 0.2.2 and are not re-run in this round.
+The Gate 2, adoption preview, and conformance documents were not re-run in this round; they were remeasured on classifier 0.2.3 separately (see those documents).
 The conformance `host` Zone `under_asked` volume is expected to move into `workspace` with change 3.
 
 ## Adversarial corpus
