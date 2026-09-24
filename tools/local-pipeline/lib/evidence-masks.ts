@@ -47,6 +47,9 @@ function pad(n: number): string {
 }
 
 function targetKind(key: string): { prefix: string; label: (n: number) => string } {
+  if (!/[./:~]/.test(key)) {
+    return { prefix: 'named-remote-', label: (n) => `named-remote-${pad(n)} (unresolved)` };
+  }
   if (key.startsWith('/') || key.startsWith('~')) {
     return { prefix: 'local-path-', label: (n) => `local-path-${pad(n)}` };
   }
@@ -83,8 +86,8 @@ export function createMasks(legend: Legend): Masks & { readonly legend: Legend }
       if (key === 'unknown' || key === 'workspace') {
         return key;
       }
-      if (!/[./:~]/.test(key)) {
-        return key === 'origin' ? 'origin (unresolved)' : 'named remote (unresolved)';
+      if (key === 'origin') {
+        return 'origin (unresolved)';
       }
       const known = legend.targets[key];
       if (known !== undefined) {
