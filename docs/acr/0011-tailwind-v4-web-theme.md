@@ -1,6 +1,6 @@
 # ACR-0011 Tailwind v4 theme and utilities for apps/web
 
-Status: accepted (2026-09-24).
+Status: accepted (2026-09-24). The Preflight exclusion is superseded by ACR-0012; the rest stays in effect.
 Procedure: docs/design.md 33.3.5.
 Scope: `apps/web` build toolchain; docs/cutline.md 15 web style convention.
 

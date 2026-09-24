@@ -23,6 +23,7 @@ import {
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
 import { usePageTitle } from '../../../shared/use-page-title.ts';
+import { TextLink } from '../../../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/')({
   component: ChangeReviewPage,
@@ -88,12 +89,12 @@ const BUTTON_LINK =
 const FIELD = 'grid max-w-96 gap-1 text-[0.85rem]';
 const FIELD_INPUT =
   'rounded-md border border-gray-300 bg-white px-[0.6rem] py-[0.4rem] text-inherit dark:border-gray-600 dark:bg-gray-900';
-const ISSUE_LIST = 'm-0 grid gap-[0.35rem] pl-5 text-[0.9rem]';
+const ISSUE_LIST = 'm-0 grid list-disc gap-[0.35rem] pl-5 text-[0.9rem]';
 const META_GRID = 'm-0 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4';
 const META_TERM = 'text-[0.75rem] uppercase tracking-[0.04em] text-muted';
 const META_VALUE = 'mx-0 mt-1 mb-0';
 const SUMMARY_LINES =
-  'm-0 grid gap-[0.4rem] rounded-lg border border-border bg-panel py-4 pr-5 pl-10 text-base';
+  'm-0 grid list-decimal gap-[0.4rem] rounded-lg border border-border bg-panel py-4 pr-5 pl-10 text-base';
 
 function Stack({ children }: { children: ReactNode }) {
   return <div className="grid gap-5">{children}</div>;
@@ -657,12 +658,12 @@ function WideningGroups({
                     />
                   </Cell>
                   <Cell nowrap>
-                    <Link
+                    <TextLink
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
-                    </Link>
+                    </TextLink>
                   </Cell>
                 </tr>
               ))}
@@ -708,12 +709,12 @@ function NarrowingGroups({
                 </Cell>
                 <Cell numeric>{group.actionCount}</Cell>
                 <Cell nowrap>
-                  <Link
+                  <TextLink
                     to="/change-reviews/$reviewId/groups/$groupKey"
                     params={{ reviewId, groupKey: group.groupKey }}
                   >
                     보기
-                  </Link>
+                  </TextLink>
                 </Cell>
               </tr>
             ))}
@@ -777,12 +778,12 @@ function AdoptionGroups({
                     />
                   </Cell>
                   <Cell nowrap>
-                    <Link
+                    <TextLink
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
                       보기
-                    </Link>
+                    </TextLink>
                   </Cell>
                 </tr>
               ))}

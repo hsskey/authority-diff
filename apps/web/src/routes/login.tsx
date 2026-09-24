@@ -19,16 +19,17 @@ function LoginPage() {
       <PageTitle>로그인</PageTitle>
       <Panel
         as="form"
-        className="login-form"
+        className="grid max-w-96 gap-3"
         onSubmit={(event) => {
           event.preventDefault();
           writeAuthToken(token.trim());
           void navigate({ to: '/' });
         }}
       >
-        <label>
+        <label className="grid gap-1">
           Bearer token
           <input
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
             name="token"
             type="password"
             autoComplete="off"
@@ -37,7 +38,12 @@ function LoginPage() {
             required
           />
         </label>
-        <button type="submit">token 저장</button>
+        <button
+          type="submit"
+          className="cursor-pointer rounded-md border border-gray-800 bg-gray-900 px-3 py-2 text-white"
+        >
+          token 저장
+        </button>
       </Panel>
     </section>
   );

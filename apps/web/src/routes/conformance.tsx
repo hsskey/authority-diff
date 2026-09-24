@@ -11,7 +11,8 @@ import { EmptyState } from '../shared/components/EmptyState.tsx';
 import { ErrorState } from '../shared/components/ErrorState.tsx';
 import { LoadingState } from '../shared/components/LoadingState.tsx';
 import { PageTitle } from '../shared/components/PageTitle.tsx';
-import { Panel } from '../shared/components/Panel.tsx';
+import { DataTable, TableCaption, Td, Th } from '../shared/components/DataTable.tsx';
+import { MetaGrid, MONO } from '../shared/components/MetaGrid.tsx';
 import { SectionTitle } from '../shared/components/SectionTitle.tsx';
 import { Stack } from '../shared/components/Stack.tsx';
 import { usePageTitle } from '../shared/use-page-title.ts';
@@ -65,42 +66,42 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
     <Stack as="section" aria-labelledby="permission-mode-title">
       <SectionTitle id="permission-mode-title">permission mode별 Action</SectionTitle>
       {rows.length === 0 ? (
-        <p className="hint">이 run에는 permission mode 집계가 없습니다.</p>
+        <p className="my-[1em] text-[0.9rem] text-muted">
+          이 run에는 permission mode 집계가 없습니다.
+        </p>
       ) : (
         <>
-          <Panel as="dl" className="meta-grid">
+          <MetaGrid>
             <div>
               <dt>guard 없이 실행될 수 있는 Action</dt>
               <dd>
                 {unguarded}건 / {total}건 ({UNGUARDED_PERMISSION_MODES.join(', ')})
               </dd>
             </div>
-          </Panel>
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <caption>permission mode {rows.length}개, mode가 없는 관측은 unknown</caption>
-              <thead>
-                <tr>
-                  <th scope="col">permission mode</th>
-                  <th scope="col" className="text-right tabular-nums">
-                    Action
-                  </th>
-                  <th scope="col" className="text-right tabular-nums">
-                    finding Action
-                  </th>
+          </MetaGrid>
+          <DataTable>
+            <TableCaption>permission mode {rows.length}개, mode가 없는 관측은 unknown</TableCaption>
+            <thead>
+              <tr>
+                <Th scope="col">permission mode</Th>
+                <Th scope="col" numeric>
+                  Action
+                </Th>
+                <Th scope="col" numeric>
+                  finding Action
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.permissionMode}>
+                  <Td>{row.permissionMode}</Td>
+                  <Td numeric>{row.actionCount}</Td>
+                  <Td numeric>{row.findingCount}</Td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.permissionMode}>
-                    <td>{row.permissionMode}</td>
-                    <td className="text-right tabular-nums">{row.actionCount}</td>
-                    <td className="text-right tabular-nums">{row.findingCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </DataTable>
         </>
       )}
     </Stack>
@@ -119,10 +120,10 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
 
   return (
     <Stack>
-      <Panel as="dl" className="meta-grid">
+      <MetaGrid>
         <div>
           <dt>Policy Version</dt>
-          <dd className="mono">{findings.run.policyVersionId}</dd>
+          <dd className={MONO}>{findings.run.policyVersionId}</dd>
         </div>
         <div>
           <dt>기간</dt>
@@ -132,9 +133,9 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
         </div>
         <div>
           <dt>Replay Run</dt>
-          <dd className="mono">{findings.run.replayRunId}</dd>
+          <dd className={MONO}>{findings.run.replayRunId}</dd>
         </div>
-      </Panel>
+      </MetaGrid>
 
       <PermissionModeBreakdown rows={findings.run.byPermissionMode} />
 
@@ -144,37 +145,35 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
           message="이 run에서 관측된 모든 Action이 Policy Version과 일치했습니다."
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <caption>finding {findings.items.length}건, 시각은 UTC</caption>
-            <thead>
-              <tr>
-                <th scope="col">종류</th>
-                <th scope="col">Capability</th>
-                <th scope="col">Zone</th>
-                <th scope="col">Program</th>
-                <th scope="col" className="text-right tabular-nums">
-                  Action
-                </th>
-                <th scope="col">최초</th>
-                <th scope="col">최근</th>
+        <DataTable>
+          <TableCaption>finding {findings.items.length}건, 시각은 UTC</TableCaption>
+          <thead>
+            <tr>
+              <Th scope="col">종류</Th>
+              <Th scope="col">Capability</Th>
+              <Th scope="col">Zone</Th>
+              <Th scope="col">Program</Th>
+              <Th scope="col" numeric>
+                Action
+              </Th>
+              <Th scope="col">최초</Th>
+              <Th scope="col">최근</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {findings.items.map((finding) => (
+              <tr key={finding.findingKey}>
+                <Td>{finding.kind}</Td>
+                <Td>{finding.capability}</Td>
+                <Td>{finding.zone}</Td>
+                <Td>{finding.program ?? '-'}</Td>
+                <Td numeric>{finding.actionCount}</Td>
+                <Td className="whitespace-nowrap">{minuteOf(finding.firstOccurredAt)}</Td>
+                <Td className="whitespace-nowrap">{minuteOf(finding.lastOccurredAt)}</Td>
               </tr>
-            </thead>
-            <tbody>
-              {findings.items.map((finding) => (
-                <tr key={finding.findingKey}>
-                  <td>{finding.kind}</td>
-                  <td>{finding.capability}</td>
-                  <td>{finding.zone}</td>
-                  <td>{finding.program ?? '-'}</td>
-                  <td className="text-right tabular-nums">{finding.actionCount}</td>
-                  <td className="whitespace-nowrap">{minuteOf(finding.firstOccurredAt)}</td>
-                  <td className="whitespace-nowrap">{minuteOf(finding.lastOccurredAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </DataTable>
       )}
     </Stack>
   );

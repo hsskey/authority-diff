@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Link, createFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import type {
   AdoptionGroupSamplesResponse,
   ChangeReviewResponse,
@@ -22,6 +22,7 @@ import {
 } from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
 import { usePageTitle } from '../../../../shared/use-page-title.ts';
+import { TextLink } from '../../../../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
   component: DiffGroupPage,
@@ -131,7 +132,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 }
 
 function IssueList({ children }: { children: ReactNode }) {
-  return <ul className="m-0 grid gap-[0.35rem] pl-5 text-[0.9rem]">{children}</ul>;
+  return <ul className="m-0 grid list-disc gap-[0.35rem] pl-5 text-[0.9rem]">{children}</ul>;
 }
 
 function RedactedInput({ children }: { children: ReactNode }) {
@@ -447,9 +448,9 @@ function ChangeGroupSignature({
       ) : null}
       <Hint>
         검토를 마치려면{' '}
-        <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+        <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           변경 검토로 돌아가세요
-        </Link>
+        </TextLink>
         .
       </Hint>
     </Stack>
@@ -496,9 +497,9 @@ function AdoptionGroupSignature({
       </PanelRow>
       <Hint>
         검토를 마치려면{' '}
-        <Link to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
+        <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
           최초 도입 검토로 돌아가세요
-        </Link>
+        </TextLink>
         .
       </Hint>
     </Stack>
