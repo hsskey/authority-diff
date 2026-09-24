@@ -110,7 +110,7 @@ _Avoid_: observed decision, runtime state
 **Conformance Finding**:
 A bundle of Actions whose Disposition disagrees with the Policy Version's Effect.
 `violation`, `under_asked`, `over_asked`.
-상태는 `open` 또는 `acknowledged`이고, 확인 처리할 때 note를 남긴다.
+State is `open` or `acknowledged`; leave a note when acknowledging.
 _Avoid_: drift, incident, alert
 
 **Diff Group**:
