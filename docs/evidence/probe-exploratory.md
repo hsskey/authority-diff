@@ -126,4 +126,4 @@ TYPESAFE_API_KEY=<key> pnpm authority probe --policy .local/default-policy.json 
 ```
 
 The command writes `.local/probe/<contentHash>.md`.
-The recorded fixture responses cover only the five earlier Scenarios, so `--provider fixture` stops at the first added Scenario with `probe.fixture_not_found`.
+The recorded fixture responses now cover all 35 Scenarios, so `--provider fixture` replays the whole corpus offline.
