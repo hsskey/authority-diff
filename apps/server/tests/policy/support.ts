@@ -81,6 +81,7 @@ export function makeModule(overrides: Partial<PolicyModule> = {}): PolicyModule 
     hasAcceptedVersion: () => unconfigured(),
     declareActivation: () => unconfigured(),
     findLatestActivation: () => unconfigured(),
+    listActivationsBetween: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     validateVersion: () => unconfigured(),
     ...overrides,

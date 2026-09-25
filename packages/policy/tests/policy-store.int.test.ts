@@ -289,24 +289,45 @@ describe('policy store', () => {
     expect(expectOk(await repository.getBaseline(policy.id))).toEqual(latest);
   });
 
-  test('findLatestActivation returns the most recent declaration', async () => {
-    // Declarations a second apart, later than any other test's, so the order is unambiguous.
+  // Declarations one second apart in 2099, later than any other test's and in a minute of
+  // their own per test, so the order and the window contents are unambiguous.
+  async function declareThreeSecondsApart(minute: number) {
     let tick = 0;
     const declaring = createPolicyRepository({
       db: database.db,
-      clock: { now: () => IsoTimestampSchema.parse(`2099-01-01T00:00:0${tick++}.000Z`) },
+      clock: {
+        now: () => IsoTimestampSchema.parse(`2099-01-01T00:0${minute}:0${tick++}.000Z`),
+      },
       idGenerator: createUlidGenerator(),
     });
-    const { initialVersion: older } = await seedAcceptedDefaultPolicy();
-    const { initialVersion: newer } = await seedAcceptedDefaultPolicy();
-    expectOk(await declaring.declareActivation(newer.id, { reason: 'first', actorName: 'ops' }));
-    const latest = expectOk(
-      await declaring.declareActivation(older.id, { reason: 'second', actorName: 'ops' }),
+    const { initialVersion: first } = await seedAcceptedDefaultPolicy();
+    const { initialVersion: second } = await seedAcceptedDefaultPolicy();
+    const declare = async (id: typeof first.id) =>
+      expectOk(await declaring.declareActivation(id, { reason: 'applied', actorName: 'ops' }));
+    return [await declare(first.id), await declare(second.id), await declare(first.id)] as const;
+  }
+
+  test('findLatestActivation returns the latest declaration at or before the given time', async () => {
+    const [, atOneSecond] = await declareThreeSecondsApart(0);
+
+    const found = expectOk(
+      await repository.findLatestActivation(IsoTimestampSchema.parse('2099-01-01T00:00:01.000Z')),
     );
 
-    const found = expectOk(await repository.findLatestActivation());
+    expect(found).toEqual(atOneSecond);
+  });
 
-    expect(found).toEqual(latest);
+  test('listActivationsBetween excludes the start and includes the end', async () => {
+    const [, atOneSecond, atTwoSeconds] = await declareThreeSecondsApart(1);
+
+    const listed = expectOk(
+      await repository.listActivationsBetween(
+        IsoTimestampSchema.parse('2099-01-01T00:01:00.000Z'),
+        IsoTimestampSchema.parse('2099-01-01T00:01:02.000Z'),
+      ),
+    );
+
+    expect(listed).toEqual([atOneSecond, atTwoSeconds]);
   });
 
   test('declareActivation refuses a version that is not accepted', async () => {

@@ -18,7 +18,11 @@ const DAY_MS = 86_400_000;
 
 export interface ConformanceDailyDeps {
   readonly activations: {
-    findLatestActivation(): Promise<Result<PolicyActivation | null, AppError>>;
+    findLatestActivation(asOf: IsoTimestamp): Promise<Result<PolicyActivation | null, AppError>>;
+    listActivationsBetween(
+      from: IsoTimestamp,
+      to: IsoTimestamp,
+    ): Promise<Result<readonly PolicyActivation[], AppError>>;
   };
   readonly replay: Pick<ReplayModule, 'requestConformanceReplay'>;
   readonly clock: Clock;
@@ -38,24 +42,44 @@ export function previousUtcDay(now: IsoTimestamp): {
 }
 
 /**
- * Requests a conformance Replay Run of the latest declared Policy Version over
- * the previous UTC day. It only requests the run; the run is the same one
- * `POST /replay-runs` would create for that version and window.
+ * Requests a conformance Replay Run over the previous UTC day for the Policy
+ * Version declared at the start of that day. A day on which a different version
+ * was declared is skipped, since one version cannot stand for the whole day.
+ * It only requests the run; the run is the same one `POST /replay-runs` would
+ * create for that version and window.
  */
 export function createConformanceDailyJob(deps: ConformanceDailyDeps): JobHandler {
   const { activations, replay, clock, logger } = deps;
   return async () => {
-    const latest = await activations.findLatestActivation();
-    if (!latest.ok) {
-      logger.error('conformance_daily_failed', { errorCode: latest.error.code });
-      return;
-    }
-    if (latest.value === null) {
-      logger.info('conformance_daily_skipped', { reason: 'no_policy_activation' });
-      return;
-    }
-    const policyVersionId = latest.value.policyVersionId;
     const window = previousUtcDay(clock.now());
+    const declared = await activations.findLatestActivation(window.windowFrom);
+    if (!declared.ok) {
+      logger.error('conformance_daily_failed', { errorCode: declared.error.code });
+      return;
+    }
+    if (declared.value === null) {
+      logger.info('conformance_daily_skipped', { reason: 'no_policy_activation', ...window });
+      return;
+    }
+    const policyVersionId = declared.value.policyVersionId;
+    const during = await activations.listActivationsBetween(window.windowFrom, window.windowTo);
+    if (!during.ok) {
+      logger.error('conformance_daily_failed', { errorCode: during.error.code });
+      return;
+    }
+    const switched = during.value.find(
+      (activation) => activation.policyVersionId !== policyVersionId,
+    );
+    if (switched !== undefined) {
+      logger.warn('conformance_daily_skipped', {
+        reason: 'policy_activation_changed',
+        policyVersionId,
+        declaredPolicyVersionId: switched.policyVersionId,
+        declaredAt: switched.createdAt,
+        ...window,
+      });
+      return;
+    }
     const requested = await replay.requestConformanceReplay({
       candidateVersionId: policyVersionId,
       ...window,

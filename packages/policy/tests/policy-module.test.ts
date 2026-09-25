@@ -61,6 +61,7 @@ function makeRepository(
     hasAcceptedVersion: () => unconfigured(),
     declareActivation: () => unconfigured(),
     findLatestActivation: () => unconfigured(),
+    listActivationsBetween: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     ...overrides,
   };

@@ -14,7 +14,7 @@ import {
   PolicyDocumentSchema,
   PolicyVersionIdSchema,
 } from '@authority/policy/schema';
-import type { PolicyActivation } from '@authority/policy/schema';
+import type { PolicyActivation, PolicyVersionId } from '@authority/policy/schema';
 import { assembleReplayModule, REPLAY_RUN_JOB } from '@authority/replay';
 import type { ReplayModule, ReplayStore } from '@authority/replay';
 import { computeConformanceWith } from '@authority/replay/diff';
@@ -62,13 +62,36 @@ const observations: ObservationForReplay[] = [
   },
 ];
 
-const activation: PolicyActivation = PolicyActivationSchema.parse({
-  id: `pact_${'E'.repeat(26)}`,
-  policyVersionId: declaredVersionId,
-  reason: 'applied to managed settings',
-  actorName: 'operator',
-  createdAt: '2026-01-01T00:00:00.000Z',
-});
+const otherVersionId = PolicyVersionIdSchema.parse(`pver_${'F'.repeat(26)}`);
+
+let activationCount = 0;
+function declared(policyVersionId: PolicyVersionId, createdAt: string): PolicyActivation {
+  activationCount += 1;
+  return PolicyActivationSchema.parse({
+    id: `pact_${String(activationCount).padStart(26, '0')}`,
+    policyVersionId,
+    reason: 'applied to managed settings',
+    actorName: 'operator',
+    createdAt,
+  });
+}
+
+// The activation reads the job uses, over declarations listed oldest first; the
+// policy store's integration tests cover the same bounds against the database.
+function activationsOf(declarations: readonly PolicyActivation[]) {
+  return {
+    findLatestActivation: (asOf: IsoTimestamp) =>
+      Promise.resolve(ok(declarations.filter((item) => item.createdAt <= asOf).at(-1) ?? null)),
+    listActivationsBetween: (from: IsoTimestamp, to: IsoTimestamp) =>
+      Promise.resolve(
+        ok(declarations.filter((item) => item.createdAt > from && item.createdAt <= to)),
+      ),
+  };
+}
+
+const declaredBeforeTheDay = activationsOf([
+  declared(declaredVersionId, '2026-01-01T00:00:00.000Z'),
+]);
 
 function makeStore(): ReplayStore {
   const runs = new Map<string, ReplayRun>();
@@ -197,10 +220,16 @@ describe('conformance.daily job', () => {
     expect(queue.schedules).toEqual([{ name: 'conformance.daily', cron: '0 1 * * *' }]);
   });
 
-  test('requests nothing when no Policy Version was declared', async () => {
+  test.each([
+    ['no declaration', []],
+    [
+      'a declaration made only during the day',
+      [declared(declaredVersionId, '2026-01-02T12:00:00.000Z')],
+    ],
+  ])('requests nothing when there is %s at the start of the day', async (_, declarations) => {
     const replay = stubReplay();
     const job = createConformanceDailyJob({
-      activations: { findLatestActivation: () => Promise.resolve(ok(null)) },
+      activations: activationsOf(declarations),
       replay,
       clock: createFixedClock(SCHEDULED_AT),
       logger: createMemoryLogger(),
@@ -211,19 +240,106 @@ describe('conformance.daily job', () => {
     expect(replay.requestConformanceReplay).not.toHaveBeenCalled();
   });
 
-  test('requests a conformance run of the declared version over the previous UTC day', async () => {
-    const { replay } = makeReplay(SCHEDULED_AT);
-    const request = vi.spyOn(replay, 'requestConformanceReplay');
+  test.each([
+    [
+      'the only declaration, made before the day',
+      [declared(declaredVersionId, '2026-01-01T00:00:00.000Z')],
+      declaredVersionId,
+    ],
+    [
+      'a declaration made exactly at the start of the day',
+      [declared(declaredVersionId, '2026-01-02T00:00:00.000Z')],
+      declaredVersionId,
+    ],
+    [
+      'the latest of several declarations before the day',
+      [
+        declared(otherVersionId, '2026-01-01T00:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+      ],
+      declaredVersionId,
+    ],
+    [
+      'a version re-declared during the day',
+      [
+        declared(declaredVersionId, '2026-01-01T00:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-02T12:00:00.000Z'),
+      ],
+      declaredVersionId,
+    ],
+    [
+      'a version declared before a different one is declared after the day',
+      [
+        declared(declaredVersionId, '2026-01-01T00:00:00.000Z'),
+        declared(otherVersionId, '2026-01-03T00:30:00.000Z'),
+      ],
+      declaredVersionId,
+    ],
+  ])(
+    'requests a run over the previous UTC day of %s',
+    async (_, declarations, expectedVersionId) => {
+      const { replay } = makeReplay(SCHEDULED_AT);
+      const request = vi.spyOn(replay, 'requestConformanceReplay');
+      const job = createConformanceDailyJob({
+        activations: activationsOf(declarations),
+        replay,
+        clock: createFixedClock(SCHEDULED_AT),
+        logger: createMemoryLogger(),
+      });
+
+      await job({});
+
+      expect(request).toHaveBeenCalledWith({
+        candidateVersionId: expectedVersionId,
+        ...FIXTURE_DAY,
+      });
+    },
+  );
+
+  test.each([
+    [
+      'a different version is declared during the day',
+      [
+        declared(declaredVersionId, '2026-01-01T00:00:00.000Z'),
+        declared(otherVersionId, '2026-01-02T12:00:00.000Z'),
+      ],
+      otherVersionId,
+    ],
+    [
+      'an older version is declared again during the day',
+      [
+        declared(otherVersionId, '2026-01-01T00:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+        declared(otherVersionId, '2026-01-02T12:00:00.000Z'),
+      ],
+      otherVersionId,
+    ],
+  ])('skips the day and logs why when %s', async (_, declarations, switchedTo) => {
+    const replay = stubReplay();
+    const logger = createMemoryLogger();
     const job = createConformanceDailyJob({
-      activations: { findLatestActivation: () => Promise.resolve(ok(activation)) },
+      activations: activationsOf(declarations),
       replay,
       clock: createFixedClock(SCHEDULED_AT),
-      logger: createMemoryLogger(),
+      logger,
     });
 
     await job({});
 
-    expect(request).toHaveBeenCalledWith({ candidateVersionId: declaredVersionId, ...FIXTURE_DAY });
+    expect(replay.requestConformanceReplay).not.toHaveBeenCalled();
+    expect(logger.records).toEqual([
+      {
+        level: 'warn',
+        msg: 'conformance_daily_skipped',
+        fields: {
+          reason: 'policy_activation_changed',
+          policyVersionId: declaredVersionId,
+          declaredPolicyVersionId: switchedTo,
+          declaredAt: '2026-01-02T12:00:00.000Z',
+          ...FIXTURE_DAY,
+        },
+      },
+    ]);
   });
 
   test('the scheduled run stores the same resultHash as a requested run and the pure computation', async () => {
@@ -247,7 +363,7 @@ describe('conformance.daily job', () => {
     await queue.work(
       CONFORMANCE_DAILY_JOB,
       createConformanceDailyJob({
-        activations: { findLatestActivation: () => Promise.resolve(ok(activation)) },
+        activations: declaredBeforeTheDay,
         replay: scheduled.replay,
         clock: createFixedClock(SCHEDULED_AT),
         logger: createMemoryLogger(),
