@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import type { PolicyDocument } from '../schema.ts';
+import type { PolicyDocument, PolicyDocumentV2 } from '../schema.ts';
 import { DEFAULT_POLICY_DOCUMENT, validatePolicyDocument } from '../evaluate.ts';
 
-function withRules(rules: PolicyDocument['rules']): PolicyDocument {
+function withRules(rules: PolicyDocumentV2['rules']): PolicyDocumentV2 {
   return { ...DEFAULT_POLICY_DOCUMENT, rules };
 }
 function withEnvironment(overrides: Partial<PolicyDocument['environment']>): PolicyDocument {

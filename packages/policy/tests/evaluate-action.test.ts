@@ -106,23 +106,79 @@ describe('evaluateAction', () => {
   });
 
   test('matchedRuleIds are sorted and decidingRuleId is the first of the Effect', () => {
-    // A protected deploy matches ask_irreversible_local and ask_production_deploy.
+    // An agent config delete matches ask_irreversible_local and ask_agent_config_change.
     const decision = evaluateAction(
       [
         makeOperation({
-          capability: 'deploy',
-          target: { kind: 'deploy_target', label: 'prod' },
-          fragment: 'terraform apply production',
+          capability: 'delete',
+          target: pathTarget('~/.claude/settings.json', false),
         }),
       ],
       DEFAULT_POLICY_DOCUMENT,
     );
     expect(decision?.operations[0]?.matchedRuleIds).toEqual([
+      'ask_agent_config_change',
       'ask_irreversible_local',
-      'ask_production_deploy',
     ]);
-    expect(decision?.operations[0]?.decidingRuleId).toBe('ask_irreversible_local');
+    expect(decision?.operations[0]?.decidingRuleId).toBe('ask_agent_config_change');
     expect(decision?.effect).toBe('ask');
+  });
+});
+
+const PUBLIC_PUSH = makeOperation({
+  capability: 'push',
+  target: vcsRemoteTarget('github.com/o/r', 'feature/x'),
+});
+const PRODUCTION_DEPLOY = makeOperation({
+  capability: 'deploy',
+  target: { kind: 'deploy_target', label: 'prod' },
+  fragment: 'helm upgrade production release',
+});
+const AGENT_CONFIG_WRITE = makeOperation({
+  capability: 'write',
+  target: pathTarget('~/.claude/settings.json', false),
+});
+const WORKSPACE_WRITE = makeOperation({
+  capability: 'write',
+  target: pathTarget('~/ws/file.ts', true),
+});
+const HOST_READ = makeOperation({ capability: 'read', target: pathTarget('/etc/motd', false) });
+const CREDENTIAL_SEND = makeOperation({
+  capability: 'send',
+  target: pathTarget('~/.ssh/id_rsa', false),
+});
+
+describe('Mandate-dependent Decision (default template)', () => {
+  test.each([
+    ['a public push decided only by ask_external_disclosure', [PUBLIC_PUSH], true],
+    ['a production deploy decided only by ask_production_deploy', [PRODUCTION_DEPLOY], true],
+    ['an agent config write, the control Rule without an exception', [AGENT_CONFIG_WRITE], false],
+    ['a default ask with no matched Rule', [HOST_READ], false],
+    ['a deny', [CREDENTIAL_SEND], false],
+    ['an allow', [WORKSPACE_WRITE], false],
+    [
+      'a Mandate-dependent ask next to an allowed Operation',
+      [PUBLIC_PUSH, { ...WORKSPACE_WRITE, index: 1 }],
+      true,
+    ],
+    [
+      'a Mandate-dependent ask next to an ask without an exception',
+      [PUBLIC_PUSH, { ...AGENT_CONFIG_WRITE, index: 1 }],
+      false,
+    ],
+  ] as const)('%s', (_label, operations, expected) => {
+    expect(evaluateAction(operations, DEFAULT_POLICY_DOCUMENT)?.isMandateDependent).toBe(expected);
+  });
+
+  test('an Operation matched by an ask Rule without an exception is not Mandate-dependent', () => {
+    const decision = evaluateAction(
+      [PUBLIC_PUSH, { ...AGENT_CONFIG_WRITE, index: 1 }],
+      DEFAULT_POLICY_DOCUMENT,
+    );
+    expect(decision?.operations.map((operation) => operation.isMandateDependent)).toEqual([
+      true,
+      false,
+    ]);
   });
 });
 

@@ -3,7 +3,7 @@
 This file is a glossary only; it does not carry implementation detail.
 File, symbol, table, and HTTP names use the words here.
 The source is `docs/design.md` 13.1, with Tier 2/3 concepts removed to match V1 scope (`docs/cutline.md`).
-Target Architecture-only terms (Mandate, Mandate Exception, Scenario, Precedent, Probe Run, Decision Provider) are not in the V1 glossary.
+Target Architecture-only terms (Scenario, Precedent, Probe Run, Decision Provider) are not in the V1 glossary.
 Finishing the glossary is human work at contract freeze; this list is the input to that work.
 
 **Principal**:
@@ -92,6 +92,20 @@ A declaration that an operator applied an accepted Policy Version outside Author
 It does not change Policy Version status, and replay and evaluation do not read it.
 The daily conformance schedule reads the one in effect at the start of the day it checks, to choose which Policy Version it checks, and skips a day on which a different Policy Version was declared.
 _Avoid_: deployment, enforcement, active version
+
+**Mandate**:
+The instruction the Principal gave the Agent for the work.
+_Avoid_: prompt, request, task
+
+**Mandate Exception**:
+One clause on an `ask` Rule of a schemaVersion 2 Policy Version that names when the Mandate itself makes the Action `allow`.
+Replay does not evaluate it; the Effect stays `ask`.
+_Avoid_: override, waiver
+
+**Mandate-dependent**:
+A Decision whose `ask` rests only on Rules with a Mandate Exception.
+It is recorded on the Decision only and does not enter a Diff Group, an Adoption Group, the Gate, or `resultHash`.
+_Avoid_: conditional ask, soft ask
 
 **Decision**:
 The evaluation of one Policy Version against one Action.

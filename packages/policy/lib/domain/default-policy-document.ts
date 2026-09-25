@@ -1,9 +1,11 @@
-import type { PolicyDocument } from '../../schema.ts';
+import type { PolicyDocumentV2 } from '../../schema.ts';
 
-// Default template from docs/design.md Appendix A, minus Mandate Exception (ADR-0009). Paths are absolute; generic environment facts are placeholders.
+// Default template from docs/design.md Appendix A. Paths are absolute; generic environment facts are placeholders.
+// ask_agent_config_change keeps no Mandate Exception as the control for the two ask Rules that have one.
+// ask_irreversible_local leaves out deploy: deploy is irreversible only in protected, where ask_production_deploy asks, and a co-matching ask Rule without an exception would hide that Rule's Mandate Exception.
 
-export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
-  schemaVersion: 1,
+export const DEFAULT_POLICY_DOCUMENT: PolicyDocumentV2 = {
+  schemaVersion: 2,
   environment: {
     credentialPaths: [
       '~/.ssh/**',
@@ -37,6 +39,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'deny',
+      mandateException: null,
       rationale: 'Reading or changing credentials collapses every other boundary, so it is denied.',
     },
     {
@@ -48,6 +51,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'deny',
+      mandateException: null,
       rationale: "Overwriting shared history erases other people's work and cannot be undone.",
     },
     {
@@ -59,17 +63,19 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'ask',
+      mandateException: null,
       rationale: "Delegating a task does not grant permission to change the agent's own settings.",
     },
     {
       ruleId: 'ask_irreversible_local',
       match: {
-        capabilities: ['delete', 'rewrite', 'deploy'],
+        capabilities: ['delete', 'rewrite'],
         zones: '*',
         reversibility: ['irreversible'],
         analyzability: null,
       },
       effect: 'ask',
+      mandateException: null,
       rationale:
         'Being able to recover through version control is not on its own a reason to approve.',
     },
@@ -77,6 +83,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
       ruleId: 'ask_unanalyzable',
       match: { capabilities: '*', zones: '*', reversibility: null, analyzability: ['none'] },
       effect: 'ask',
+      mandateException: null,
       rationale: 'A program whose effect could not be determined is confirmed by a person first.',
     },
     {
@@ -88,6 +95,10 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'ask',
+      mandateException: {
+        clause:
+          'the Mandate explicitly names the destination and explicitly asks for this send or push',
+      },
       rationale:
         'External disclosure is irreversible and an open-ended instruction does not authorize it.',
     },
@@ -100,7 +111,12 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'ask',
-      rationale: 'A production deployment is always approved by a person before it runs.',
+      mandateException: {
+        clause:
+          'the Mandate explicitly names what to deploy and explicitly names production as the environment',
+      },
+      rationale:
+        'A production deployment reaches every user, so a person approves it unless the Principal asked for exactly this deployment.',
     },
     {
       ruleId: 'allow_workspace_edit',
@@ -111,6 +127,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'allow',
+      mandateException: null,
       rationale:
         'Changes inside the workspace are tracked by version control and are safe to allow.',
     },
@@ -123,6 +140,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: ['full', 'partial'],
       },
       effect: 'allow',
+      mandateException: null,
       rationale: 'Running tests and builds inside the workspace is ordinary day-to-day work.',
     },
     {
@@ -134,6 +152,7 @@ export const DEFAULT_POLICY_DOCUMENT: PolicyDocument = {
         analyzability: null,
       },
       effect: 'allow',
+      mandateException: null,
       rationale: 'Fetching from an approved registry or internal host is an expected action.',
     },
   ],

@@ -75,6 +75,7 @@ function opDecision(
     matchedRuleIds: extra?.matchedRuleIds ?? [],
     decidingRuleId: extra?.decidingRuleId ?? null,
     effect,
+    isMandateDependent: false,
   };
 }
 
@@ -83,7 +84,7 @@ function decision(
   operations: OperationDecision[],
   decidingOperationIndex = 0,
 ): Decision {
-  return { effect, decidingOperationIndex, operations };
+  return { effect, decidingOperationIndex, isMandateDependent: false, operations };
 }
 
 function action(

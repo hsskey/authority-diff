@@ -43,6 +43,7 @@ const WIDE_OPEN: PolicyDocument = {
       ruleId: 'allow_everything',
       match: { capabilities: '*', zones: '*', reversibility: null, analyzability: null },
       effect: 'allow',
+      mandateException: null,
       rationale: 'test fixture: widen every action so the review has widening groups',
     },
   ],
