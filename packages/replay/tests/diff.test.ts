@@ -798,6 +798,21 @@ describe('sorting and determinism (I6)', () => {
     );
     expect(withHeadline).not.toBe(result.resultHash);
   });
+
+  test('resultHash and groupKeys are pinned to fixed values', () => {
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario(baseCases());
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+    expect({
+      resultHash: result.resultHash,
+      groupKeys: result.groups.map((group) => group.groupKey),
+    }).toEqual({
+      resultHash: '155aad7f7b7ef98b6ca363dcb6ca5ac33794446e6c6901d3053e64b817fa2483',
+      groupKeys: [
+        '4038bb474ee0433c9b701ad88f055bc46856d932efab1da9affd691fce2de9dc',
+        '7453bad87d4707bd181e921f3b40cf392d35cce103e4008e2e1fc8f041d18b47',
+      ],
+    });
+  });
 });
 
 describe('output shape', () => {
