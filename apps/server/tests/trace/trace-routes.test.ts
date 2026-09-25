@@ -212,6 +212,7 @@ describe('GET /api/v1/actions/:actionKey', () => {
           }),
           countStaleClassifications: () => Promise.resolve(0),
           listObservationSessions: () => Promise.resolve([]),
+          listObservationTimes: () => Promise.resolve([]),
           getObservations: () => Promise.resolve([]),
         },
       }),

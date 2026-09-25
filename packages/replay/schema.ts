@@ -65,6 +65,17 @@ export const UNKNOWN_PERMISSION_MODE = 'unknown';
 export const UNGUARDED_PERMISSION_MODES: readonly string[] = ['bypassPermissions', 'auto'];
 
 /**
+ * A period inside a conformance run's window with no runtime observation, 24
+ * hours or longer. `from` is the window start or the observation before the
+ * period; `to` is the observation after it or the window end.
+ */
+export const ObservationGapSchema = z.object({
+  from: IsoTimestampSchema,
+  to: IsoTimestampSchema,
+});
+export type ObservationGap = z.infer<typeof ObservationGapSchema>;
+
+/**
  * `byPermissionMode` is set by conformance runs only, sorted by permissionMode
  * ascending UTF-16; a version_diff run has no observations and omits it.
  */

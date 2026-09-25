@@ -26,6 +26,7 @@ import type {
   AuthorityMapCell,
   ConformanceFindingView,
   DiffGroup,
+  ObservationGap,
   PermissionModeCount,
   ReplayRun,
   ReplayRunId,
@@ -38,6 +39,7 @@ import { buildAnalyzabilityCounts, buildMatrix } from '../domain/build-matrix.ts
 import { computeAdoptionWith } from '../domain/compute-adoption.ts';
 import { computeConformanceWith } from '../domain/compute-conformance.ts';
 import { computeDiffWith } from '../domain/compute-diff.ts';
+import { findObservationGaps } from '../domain/find-observation-gaps.ts';
 import { deriveTargetKey } from '../domain/group-summary.ts';
 import type { PolicyReader, RecordCompletionInput, ReplayStore } from './ports.ts';
 
@@ -91,7 +93,10 @@ export interface RequestAdoptionReplayInput {
   readonly windowTo: IsoTimestamp;
 }
 
-/** The findings of the most recent completed conformance run. */
+/**
+ * The findings of the most recent completed conformance run. `observationGaps`
+ * is read from the observations stored now, not from the run's inputs.
+ */
 export interface ConformanceFindingsView {
   readonly run: {
     readonly replayRunId: ReplayRunId;
@@ -100,6 +105,7 @@ export interface ConformanceFindingsView {
     readonly windowTo: IsoTimestamp;
     readonly unpairedPermissionRequests: number;
     readonly byPermissionMode: readonly PermissionModeCount[];
+    readonly observationGaps: readonly ObservationGap[];
   } | null;
   readonly items: readonly ConformanceFindingView[];
 }
@@ -648,6 +654,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       if (run === null) {
         return { run: null, items: [] };
       }
+      const window = { from: run.windowFrom, to: run.windowTo };
       return {
         run: {
           replayRunId: run.replayRunId,
@@ -656,6 +663,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           windowTo: run.windowTo,
           unpairedPermissionRequests: run.unpairedPermissionRequests,
           byPermissionMode: run.byPermissionMode,
+          observationGaps: findObservationGaps(await reader.listObservationTimes(window), window),
         },
         items: await store.listConformanceFindings(run.replayRunId),
       };

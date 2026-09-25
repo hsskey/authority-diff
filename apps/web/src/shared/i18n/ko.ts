@@ -237,6 +237,7 @@ export const ko: Messages = {
     permissionMode: 'permission mode',
     action: 'Action',
     findingAction: 'finding Action',
+    noObservations: (from: string, to: string) => `${from}부터 ${to}까지 관측 없음`,
     noRunTitle: '아직 비교한 runtime 관측이 없습니다',
     noRunMessage:
       'conformance run이 runtime 관측과 Policy Version을 비교하면 finding이 여기에 나타납니다.',

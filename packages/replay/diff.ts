@@ -4,6 +4,7 @@ import { computeAdoptionWith } from './lib/domain/compute-adoption.ts';
 import { computeConformanceWith } from './lib/domain/compute-conformance.ts';
 import { computeDiffWith, renderHeadline } from './lib/domain/compute-diff.ts';
 import { deriveDisposition } from './lib/domain/derive-disposition.ts';
+import { findObservationGaps } from './lib/domain/find-observation-gaps.ts';
 import { deriveTargetKey } from './lib/domain/group-summary.ts';
 import { pairPermissionRequests } from './lib/domain/pair-permission-requests.ts';
 
@@ -22,6 +23,7 @@ export {
   computeDiffWith,
   deriveDisposition,
   deriveTargetKey,
+  findObservationGaps,
   pairPermissionRequests,
   renderHeadline,
 };

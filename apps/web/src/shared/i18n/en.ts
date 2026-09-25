@@ -256,6 +256,7 @@ export const en = {
     permissionMode: 'permission mode',
     action: 'Action',
     findingAction: 'finding Action',
+    noObservations: (from: string, to: string) => `No observations from ${from} to ${to}.`,
     noRunTitle: 'No runtime observations compared yet',
     noRunMessage:
       'Findings appear here once a conformance run compares runtime observations with a Policy Version.',

@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-24; A vs B resultHash `547da885…2735`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-25; A vs B resultHash `547da885…2735`
 <!-- evidence-numbers
 snapshot.actions: 34,940
 snapshot.evaluated: 34,033
@@ -14,7 +14,7 @@ gate2.a-vs-bp.changed: 169
 # Gate 2 replay
 
 <!-- remeasure:gate2-intro -->
-Gate 2 evidence from classifier 0.2.6 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm evidence:remeasure` on 2026-09-24.
+Gate 2 evidence from classifier 0.2.6 on the frozen snapshot and the corrected environment profile (policy v2), measured with `pnpm evidence:remeasure` on 2026-09-25.
 Every number in the main sections is labelled **classifier 0.2.6**; the earlier 0.2.5, 0.2.4, 0.2.3, 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
 <!-- /remeasure:gate2-intro -->
 No repository names, host paths, or raw command text appear below; repo-02 to repo-06 are GitHub repositories of other owners that are in neither remote list, and `named-remote-NN` is a git remote name that did not resolve to a Remote Key.

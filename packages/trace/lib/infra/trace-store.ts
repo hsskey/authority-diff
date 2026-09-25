@@ -1,6 +1,8 @@
 import { and, asc, count, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
+import { IsoTimestampSchema } from '@authority/kernel';
+import type { IsoTimestamp } from '@authority/kernel';
 import {
   ActionForReplaySchema,
   ObservationForReplaySchema,
@@ -162,6 +164,20 @@ export function createTraceStore(database: Database): TraceStore {
           ),
         );
       return rows.map((row) => row.sessionExternalId);
+    },
+
+    async listObservationTimes(query: WindowQuery): Promise<readonly IsoTimestamp[]> {
+      const rows = await db
+        .selectDistinct({ occurredAt: runtimeObservations.occurredAt })
+        .from(runtimeObservations)
+        .where(
+          and(
+            gte(runtimeObservations.occurredAt, query.from),
+            lte(runtimeObservations.occurredAt, query.to),
+          ),
+        )
+        .orderBy(asc(runtimeObservations.occurredAt));
+      return rows.map((row) => IsoTimestampSchema.parse(row.occurredAt));
     },
 
     async getObservations(

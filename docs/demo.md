@@ -3,7 +3,7 @@
 This is the script for recording the V1 journey as a screen demo.
 It follows the twelve steps of the scripted fresh-volume journey in `docs/evidence/adoption-preview.md`, one screen per step and one spoken line per screen.
 
-Live figures are from classifier 0.2.6 on corpus snapshot transcripts-2026-09-23-1036, measured 2026-09-24.
+Live figures are from classifier 0.2.6 on corpus snapshot transcripts-2026-09-23-1036, measured 2026-09-25.
 Each one names the measured block in `docs/evidence/adoption-preview.md` that carries it.
 After `pnpm evidence:remeasure` rewrites the evidence for another classifier, refill every figure from its block.
 Do not take a figure from memory, from an older evidence version, or from what a rehearsal showed on screen.
@@ -90,9 +90,10 @@ Check the import summary against step 1's figures before recording on; a differe
 
 ## Recording order
 
-Recording proceeds from tag `evidence-2026-09-24-classifier-0.2.3`, the evidence snapshot of classifier 0.2.3.
-A take from that tag shows the classifier 0.2.3 figures kept under "Previous version: classifier 0.2.3" in `docs/evidence/adoption-preview.md`, not the figures in the scenario above.
-The scenario figures are the classifier 0.2.6 evidence snapshot, tag `evidence-2026-09-24-classifier-0.2.6`; a take from that tag shows them.
+Recording proceeds from tag `evidence-2026-09-25-classifier-0.2.6-english`, which is created on the merge commit of this change.
+A take from that tag shows the scenario figures above, with the Headlines and the Evidence Report in English.
+Tag `evidence-2026-09-24-classifier-0.2.6` is the earlier classifier 0.2.6 evidence snapshot; it reproduces the figures of 2026-09-24, with the server text in Korean.
+Tag `evidence-2026-09-24-classifier-0.2.3` is the classifier 0.2.3 evidence snapshot; it reproduces the figures of 2026-09-24 kept under "Previous version: classifier 0.2.3" in `docs/evidence/adoption-preview.md`, not the figures in the scenario above.
 Verdicts, adoption, rejection, and acceptance are one-way on a volume, so record in journey order on one volume.
 A retake of any step after one of them needs a new volume from the seed procedure.
 
