@@ -649,8 +649,8 @@ Basis documents are docs/design.md chapters 19–23 and docs/cutline.md chapters
 
 7b. scripts/prove-lint.ts and `pnpm lint:prove`. The same way, prove each of the 19 lint rules above fails as the expected Oxlint rule.
 
-8. root scripts: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, check:evidence, check:doc-invariance, test,
-   check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + check:evidence + check:doc-invariance + test).
+8. root scripts: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, check:evidence, check:doc-invariance, check:korean, test,
+   check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + check:evidence + check:doc-invariance + check:korean + test).
 
 9. CI: pnpm install --frozen-lockfile, pnpm check, pnpm lint:boundaries:prove.
 
