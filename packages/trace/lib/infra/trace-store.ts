@@ -88,20 +88,22 @@ export function createTraceStore(database: Database): TraceStore {
             .onConflictDoNothing({ target: agentActions.actionKey })
             .returning({ actionKey: agentActions.actionKey });
           inserted = returned.length;
-          const parsed = sql`(values ${sql.join(
-            input.actions.map((action) => sql`(${action.actionKey}, ${action.observedOutcome})`),
-            sql`, `,
-          )}) as parsed(action_key, observed_outcome)`;
-          await tx
-            .update(agentActions)
-            .set({ observedOutcome: sql`parsed.observed_outcome` })
-            .from(parsed)
-            .where(
-              and(
-                eq(agentActions.actionKey, sql`parsed.action_key`),
-                ne(agentActions.observedOutcome, sql`parsed.observed_outcome`),
-              ),
-            );
+          if (inserted < input.actions.length) {
+            const parsed = sql`(values ${sql.join(
+              input.actions.map((action) => sql`(${action.actionKey}, ${action.observedOutcome})`),
+              sql`, `,
+            )}) as parsed(action_key, observed_outcome)`;
+            await tx
+              .update(agentActions)
+              .set({ observedOutcome: sql`parsed.observed_outcome` })
+              .from(parsed)
+              .where(
+                and(
+                  eq(agentActions.actionKey, sql`parsed.action_key`),
+                  ne(agentActions.observedOutcome, sql`parsed.observed_outcome`),
+                ),
+              );
+          }
         }
         const duplicateCount = input.attemptedCount - inserted;
 
