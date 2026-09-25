@@ -164,7 +164,7 @@ flowchart LR
         TR --> LP["tools/local-pipeline: measure, replay-local"]
     end
     subgraph SRV["local server (docker compose)"]
-        WEB["apps/web: Activity Overview, Policy Version, Change Review, Conformance"] --> HTTP["apps/server: HTTP + in-process replay"]
+        WEB["apps/web: Activity Overview, Policy Version, Change Review, Conformance"] --> HTTP["apps/server: HTTP + pg-boss jobs"]
         HTTP --> PKG["packages: trace, policy, replay, review"]
         PKG --> PG[("PostgreSQL 16")]
     end
@@ -200,7 +200,6 @@ Changes to foundation decisions versus the design:
 
 | item | design | V1 | why |
 | --- | --- | --- | --- |
-| replay execution | pg-boss job | Async function in the same process. Status is `replay_runs.status`. On restart a run that has been `running` for more than 60 s is set to `failed` and requested again with the same `inputsHash` | 1.2 s on 1 ten-thousand 2 thousand Actions |
 | pure entry points | `trace/client.ts` alone | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts` | A local pipeline that runs the full computation with no DB is the tool for measurement and diff verification |
 | Action identifier | `act_` ULID + `actionKey` | `actionKey` (sha256) is the primary key | The same identifier must appear on reimport and on both local/server so `resultHash` can be compared |
 | auth | token table, 2 roles | 1 token in an environment variable. Reviewer name is entered at decision time | Single user |
