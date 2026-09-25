@@ -45,7 +45,8 @@ export interface ClassificationUpdate {
 /**
  * The persistence port owned by trace. `lib/infra` implements it against
  * drizzle; tests implement it in memory. Idempotency is the natural keys:
- * `actionKey` for Actions, `observationKey` for observations.
+ * `actionKey` for Actions, `observationKey` for observations. Re-importing an
+ * Action refreshes only its `observedOutcome`.
  */
 export interface TraceStore {
   writeImport(input: WriteImportInput): Promise<WriteCounts>;

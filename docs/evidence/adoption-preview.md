@@ -16,7 +16,7 @@ adoption.resultHash: 099321d3…0215
 gate2.a-vs-b.resultHash: 547da885…2735
 gate2.a-vs-bp.resultHash: a3e33bde…3904
 gate2.a-vs-b.changed: 169
-conformance.resultHash: 898affd1…1ca8
+conformance.resultHash: 42318e75…1863
 -->
 
 # Adoption preview (first Policy)
@@ -140,7 +140,7 @@ It reads what the server returns, not what the screens render; the screen checks
 | 6 verdicts | verdicts | 24 groups set to `expected`; `adoption_unreviewed` blocks the gate until the last one, then the gate opens |
 | 7 adopt | decision | review `accepted`, version 1 `accepted` |
 | 8 report | Evidence Report | adoption Evidence Report carries resultHash `099321d3…0215` |
-| 9 conformance | `authority spool-flush`, replay run | 2 spool copies sent; conformance run for version 1 completed with 86 findings, resultHash `898affd1…1ca8` |
+| 9 conformance | `authority spool-flush`, replay run | 2 spool copies sent; conformance run for version 1 completed with 86 findings, resultHash `42318e75…1863` |
 | 10 change review B' | policy version, change review | draft version 2 with B' (`ebea9a23…0cc9`), kind `change`, baseline version 1; changed 169, Widening group 7; resultHash `a3e33bde…3904` equals the local Gate 2 run |
 | 11 unexpected, reject, B, accept | verdicts, decisions | 5 groups `expected`, 2 `unexpected` → `widening_unexpected` blocks and accept is refused; rejected; draft version 3 with B (`45197245…6515`): changed 169, Widening group 5, resultHash `547da885…2735` equals the local Gate 2 run; all `expected` → accepted |
 | 12 audit | `authority verify-audit` | intact, 3 decision records |

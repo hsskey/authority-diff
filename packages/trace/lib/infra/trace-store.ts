@@ -53,7 +53,8 @@ function actionInsertValues(action: StoredAgentAction): ActionRow {
 /**
  * The drizzle-backed {@link TraceStore}. Idempotency is enforced by
  * `ON CONFLICT DO NOTHING` on the natural keys; an import counts the Actions it
- * actually inserted against the number it attempted.
+ * actually inserted against the number it attempted. A re-imported Action
+ * keeps every stored field except `observedOutcome`, which follows the parser.
  */
 export function createTraceStore(database: Database): TraceStore {
   const db = database.db;
@@ -87,6 +88,22 @@ export function createTraceStore(database: Database): TraceStore {
             .onConflictDoNothing({ target: agentActions.actionKey })
             .returning({ actionKey: agentActions.actionKey });
           inserted = returned.length;
+          if (inserted < input.actions.length) {
+            const parsed = sql`(values ${sql.join(
+              input.actions.map((action) => sql`(${action.actionKey}, ${action.observedOutcome})`),
+              sql`, `,
+            )}) as parsed(action_key, observed_outcome)`;
+            await tx
+              .update(agentActions)
+              .set({ observedOutcome: sql`parsed.observed_outcome` })
+              .from(parsed)
+              .where(
+                and(
+                  eq(agentActions.actionKey, sql`parsed.action_key`),
+                  ne(agentActions.observedOutcome, sql`parsed.observed_outcome`),
+                ),
+              );
+          }
         }
         const duplicateCount = input.attemptedCount - inserted;
 

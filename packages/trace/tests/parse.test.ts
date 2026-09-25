@@ -169,6 +169,47 @@ describe('parseTranscript observed outcome', () => {
   });
 });
 
+describe('parseTranscript marker text outside an error result', () => {
+  function outcomeOf(isError: boolean, body: string): string | undefined {
+    const parsed = parseTranscript({
+      sessionExternalId: 'marker-session',
+      lines: [
+        assistantLine({
+          id: 'm',
+          name: 'Bash',
+          toolInput: { command: 'grep -r marker .' },
+          timestamp: '2026-01-02T03:04:05.000Z',
+        }),
+        resultLine('m', isError, body),
+      ],
+    });
+    return parsed.toolCalls[0]?.observedOutcome;
+  }
+
+  test.each([
+    "The user doesn't want to proceed with this tool use. The tool use was rejected",
+    '<tool_use_error>Blocked: sleep 99</tool_use_error>',
+    'Dangerous rm operation detected',
+    'PreToolUse:Bash hook error: denied',
+  ])('a successful result whose body contains %j is executed', (marker) => {
+    expect(outcomeOf(false, `src/notes.md:3: ${marker}`)).toBe('executed');
+  });
+
+  test('a successful result whose body starts with a marker is executed', () => {
+    expect(outcomeOf(false, '<tool_use_error>Blocked: sleep 99</tool_use_error>')).toBe('executed');
+  });
+
+  test('an error result with a marker after other text is executed', () => {
+    expect(outcomeOf(true, 'Exit code 1\n<tool_use_error>Blocked: x</tool_use_error>')).toBe(
+      'executed',
+    );
+  });
+
+  test('an error result starting with a PreToolUse hook error is blocked_by_runtime', () => {
+    expect(outcomeOf(true, 'PreToolUse:Bash hook error: denied')).toBe('blocked_by_runtime');
+  });
+});
+
 describe('parseTranscript tool input', () => {
   test('Bash keeps the redacted command string, not canonical JSON', () => {
     const parsed = parseTranscript({
