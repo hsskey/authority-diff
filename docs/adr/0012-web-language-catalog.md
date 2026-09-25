@@ -13,7 +13,7 @@ Status: accepted (V1). Source: `apps/web/src/shared/i18n/`, `scripts/check-i18n-
   No i18n library is used: two catalogs and one hook cover what the screens need.
   The screens do not show the stored Headline.
   They compose the Headline in the screen language from the group's structured fields (Capability, Zone, Effect, action count, Target Summary), and the stored Headline stays only in the Evidence Report.
-  The Korean screen Headline keeps the wording of the Korean Headline template in `docs/cutline.md`.
+  The Korean screen Headline keeps the wording of the Korean template replay used before its stored Headlines became English.
   Because the Target Summary keeps at most five Target keys, the screen states a Target count of five as "at least five" while the stored Headline states the exact count.
   Values that come from data (Capability, Zone, and program identifiers, Rule rationales, redacted tool input) are shown as recorded, in either language.
 - Limitation:
