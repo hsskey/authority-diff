@@ -65,7 +65,7 @@ A trace that a person rejected a tool run remains as a fixed phrase inside a `to
 
 - There was one kind of rejection phrase; 7 in the sample, in 7 different files.
 - The phrase is a runtime-generated string to the effect of <!-- ko-product-output -->"사용자가 이 tool 사용을 진행하기를 원하지 않는다. tool 사용이 거절되었다" (it starts with `The user doesn't want to proceed with this tool use. The tool use was rejected`).
-- When this marker is present, `observedOutcome` is `rejected_by_human`.
+- When an `is_error` result starts with this marker, `observedOutcome` is `rejected_by_human`.
 
 There is no separate field in the record that marks an approval prompt that appeared and that a person then approved.
 
@@ -82,7 +82,8 @@ Of 458 `is_error` `tool_result` rows, block markers were 121.
 - Form `PreToolUse:<tool> hook error:` (pre-execution hook refusal) 62.
 - `Dangerous rm operation detected` (pre-execution guard) 1.
 
-When this marker is present (and there is no rejection phrase), `observedOutcome` is `blocked_by_runtime`.
+When an `is_error` result starts with one of these markers, `observedOutcome` is `blocked_by_runtime`.
+The same strings inside a successful result, such as a read of a file that quotes them, are output, not markers.
 
 A `PostToolUse` hook error is after the tool already ran, so it is not treated as a block.
 `<tool_use_error>` that is not a block, such as `<tool_use_error>InputValidationError` (about 20), and results where the program ran and exited abnormally (`Exit code`, traceback, and so on, about 330) are not blocks.
@@ -91,10 +92,11 @@ A `PostToolUse` hook error is after the tool already ran, so it is not treated a
 
 After the matching `tool_result` is found, judge in this order.
 
-1. If the rejection phrase is present, `rejected_by_human`.
-2. Else if a block marker is present, `blocked_by_runtime`.
-3. Else `executed` (it ran even if the command failed and `is_error` is set).
-4. If there is no `tool_result`, `unknown`.
+1. If `is_error` is not true, `executed`.
+2. Else if the result starts with the rejection phrase, `rejected_by_human`.
+3. Else if the result starts with a block marker, `blocked_by_runtime`.
+4. Else `executed` (it ran even though the command failed and `is_error` is set).
+5. If there is no `tool_result`, `unknown`.
 
 ## Why the same tool_use id appears more than once
 
