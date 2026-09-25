@@ -384,7 +384,7 @@ describe('headline', () => {
     const result = computeAdoptionWith(evaluate, actions);
 
     expect(result.groups[0]?.headline).toBe(
-      "호스트에서의 읽기 2건이 이 정책에서 '확인 필요' 대상이 됩니다.",
+      "This policy gives 'ask' to 2 read Actions in the host Zone.",
     );
   });
 
@@ -396,7 +396,7 @@ describe('headline', () => {
     const result = computeAdoptionWith(evaluate, actions);
 
     expect(result.groups[0]?.headline).toBe(
-      "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.",
+      "This policy gives 'deny' to 1 read Action in the credentials Zone.",
     );
   });
 

@@ -39,7 +39,8 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
     groups: [
       {
         direction: 'widening',
-        headline: "저장소 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+        headline:
+          "github.com/acme-oss/toolkit and 1 other Target: 15 push Actions change from 'ask' to 'allow'.",
         fromEffect: 'ask',
         toEffect: 'allow',
         actionCount: 15,
@@ -52,7 +53,7 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
       decision: 'accept',
       reviewerName: 'reviewer',
       decidedAt: IsoTimestampSchema.parse('2026-02-02T00:00:00.000Z'),
-      note: '검토 완료',
+      note: 'Reviewed',
       sequence: 7,
       hash: DECISION_HASH,
       replayInputsHash: REPLAY_INPUTS_HASH,
@@ -66,10 +67,10 @@ function makeInput(overrides: Partial<ReportInput> = {}): ReportInput {
 test('the report carries the two fixed notice sentences verbatim', () => {
   const report = renderReport(makeInput());
   expect(report).toContain(
-    '이 기록은 정책 변경을 위 과거 기록에 비추어 검토했다는 사실을 남깁니다.',
+    'This record states that the policy change was reviewed against the past records above.',
   );
   expect(report).toContain(
-    'Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.',
+    'Authority Diff did not deploy or enforce the policy and did not measure whether the runtime behaves as the policy says.',
   );
 });
 
@@ -78,13 +79,15 @@ test('the report lists both content hashes, the window, and each headline', () =
   expect(report).toContain(BASELINE_HASH);
   expect(report).toContain(CANDIDATE_HASH);
   expect(report).toContain('2026-01-01T00:00:00.000Z ~ 2026-02-01T00:00:00.000Z');
-  expect(report).toContain("저장소 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.");
+  expect(report).toContain(
+    "github.com/acme-oss/toolkit and 1 other Target: 15 push Actions change from 'ask' to 'allow'.",
+  );
 });
 
 test('the report sums the modes that never prompt as the workload that could run without a guard', () => {
   const report = renderReport(makeInput());
   expect(report).toContain(
-    'guard 없이 실행될 수 있는 Action(bypassPermissions, auto): 30건 (63.8%)',
+    'Actions that can run without a guard (bypassPermissions, auto): 30 (63.8%)',
   );
   expect(report).toContain('| bypassPermissions | 30 | 12 |');
   expect(report).toContain('rpl_0123456789abcdefghjkmnpqrs');
@@ -92,19 +95,19 @@ test('the report sums the modes that never prompt as the workload that could run
 
 test('the report says so when no conformance run has completed', () => {
   const report = renderReport(makeInput({ conformance: null }));
-  expect(report).toContain('완료된 conformance run이 없어 permission mode 표가 없습니다.');
+  expect(report).toContain('No permission mode table because no conformance run has completed.');
 });
 
 test('the report names the reviewer and decision when decided', () => {
   const report = renderReport(makeInput());
   expect(report).toContain('reviewer');
-  expect(report).toContain('정책 변경 수락');
+  expect(report).toContain('- Decision: Policy change accepted');
 });
 
 test('the report labels a change Verdict with the review screen words', () => {
   const report = renderReport(makeInput());
-  expect(report).toContain('## Effect 전이');
-  expect(report).toContain('- Verdict: 예상된 변화');
+  expect(report).toContain('## Effect transitions');
+  expect(report).toContain('- Verdict: Expected change');
 });
 
 test('the report records the Decision Record sequence and hash when decided', () => {
@@ -124,23 +127,23 @@ test('the Policy Version section lists the decision record replay hashes', () =>
 test('the report shows the audit chain tail sequence and hash apart from the Decision Record', () => {
   const report = renderReport(makeInput());
   expect(report).toContain(
-    `## Audit chain\n\n- 보고서 생성 시점의 audit chain sequence: 9\n- 보고서 생성 시점의 audit chain hash: \`${TAIL_HASH}\``,
+    `## Audit chain\n\n- Audit chain sequence when the report was generated: 9\n- Audit chain hash when the report was generated: \`${TAIL_HASH}\``,
   );
 });
 
 test('an undecided review still shows the audit chain tail', () => {
   const report = renderReport(makeInput({ decision: null }));
-  expect(report).toContain(`audit chain hash: \`${TAIL_HASH}\``);
+  expect(report).toContain(`Audit chain hash when the report was generated: \`${TAIL_HASH}\``);
 });
 
 test('an empty audit chain renders a placeholder instead of a tail', () => {
   const report = renderReport(makeInput({ auditTail: null }));
-  expect(report).toContain('## Audit chain\n\n기록된 결정이 아직 없습니다.');
+  expect(report).toContain('## Audit chain\n\nNo decision recorded yet.');
 });
 
 test('an undecided review still renders without a reviewer line', () => {
   const report = renderReport(makeInput({ decision: null }));
-  expect(report).toContain('아직 결정되지 않았습니다.');
+  expect(report).toContain('Not decided yet.');
 });
 
 test("a group's Target key is deriveTargetKey's first-two-segment form, never a full absolute path", () => {
@@ -149,7 +152,7 @@ test("a group's Target key is deriveTargetKey's first-two-segment form, never a 
       groups: [
         {
           direction: 'widening',
-          headline: "etc/nginx 등 1곳으로의 read 4건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+          headline: "etc/nginx only: 4 read Actions change from 'ask' to 'allow'.",
           fromEffect: 'ask',
           toEffect: 'allow',
           actionCount: 4,
@@ -159,7 +162,7 @@ test("a group's Target key is deriveTargetKey's first-two-segment form, never a 
       ],
     }),
   );
-  expect(report).toContain('- etc/nginx (4건)');
+  expect(report).toContain('- etc/nginx (4)');
   expect(report).not.toContain('/etc/nginx/nginx.conf');
 });
 
@@ -175,14 +178,14 @@ test('the report lists operation-level widening when Action effect is unchanged'
       groups: [],
     }),
   );
-  expect(report).toContain('## Action Effect가 그대로인 Operation 단위 widening');
-  expect(report).toContain('| Capability | 기준 Zone | 변경안 Zone | 건수 |');
+  expect(report).toContain('## Operation-level widening with the Action Effect unchanged');
+  expect(report).toContain('| Capability | Baseline Zone | Candidate Zone | Count |');
   expect(report).toContain('| push | unknown_remote | trusted_remote | 2 |');
   expect(report).toContain('| push | public_remote | trusted_remote | 1 |');
 });
 
-const ADOPTION_HEADLINE_ASK = "호스트에서의 실행 3건이 이 정책에서 '확인 필요' 대상이 됩니다.";
-const ADOPTION_HEADLINE_DENY = "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.";
+const ADOPTION_HEADLINE_ASK = "This policy gives 'ask' to 3 execute Actions in the host Zone.";
+const ADOPTION_HEADLINE_DENY = "This policy gives 'deny' to 1 read Action in the credentials Zone.";
 
 function makeAdoptionInput(overrides: Partial<AdoptionReportInput> = {}): AdoptionReportInput {
   return {
@@ -236,50 +239,50 @@ function makeAdoptionInput(overrides: Partial<AdoptionReportInput> = {}): Adopti
 test('the adoption report carries the fixed notice and the adoption sentence verbatim', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
   expect(report).toContain(
-    'Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.',
+    'Authority Diff did not deploy or enforce the policy and did not measure whether the runtime behaves as the policy says.',
   );
   expect(report).toContain(
-    '이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.',
+    'These figures apply the policy to past behavior; they do not reconstruct what the runtime approved at the time.',
   );
 });
 
 test('the adoption report lists the candidate hash, the window, and the analysis size', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
-  expect(report).toContain(`- 제안 Policy Version contentHash: \`${CANDIDATE_HASH}\``);
-  expect(report).not.toContain('기준 Policy Version');
+  expect(report).toContain(`- Candidate Policy Version contentHash: \`${CANDIDATE_HASH}\``);
+  expect(report).not.toContain('Baseline Policy Version');
   expect(report).toContain('2026-01-01T00:00:00.000Z ~ 2026-02-01T00:00:00.000Z');
-  expect(report).toContain('- 분석한 Action: 8건 (전체 10건, 제외 2건)');
-  expect(report).toContain('- 그중 analyzability none: 2건 (25.0%)');
+  expect(report).toContain('- Analyzed Actions: 8 (total 10, excluded 2)');
+  expect(report).toContain('- Of those, analyzability none: 2 (25.0%)');
 });
 
 test('the adoption report tabulates allow, ask, and deny counts with their rate of evaluated Actions', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
   expect(report).toContain(
-    '| Effect | Action 수 | 비율 |\n| --- | --- | --- |\n| 허용 | 4 | 50.0% |\n| 확인 필요 | 3 | 37.5% |\n| 차단 | 1 | 12.5% |',
+    '| Effect | Actions | Share |\n| --- | --- | --- |\n| allow | 4 | 50.0% |\n| ask | 3 | 37.5% |\n| deny | 1 | 12.5% |',
   );
 });
 
 test('the adoption report puts ask and deny groups in separate tables with each Verdict', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
   const askSection = report.slice(
-    report.indexOf('## 확인 필요 Adoption Group과 Verdict'),
-    report.indexOf('## 차단 Adoption Group과 Verdict'),
+    report.indexOf("## 'ask' Adoption Groups and Verdicts"),
+    report.indexOf("## 'deny' Adoption Groups and Verdicts"),
   );
   const denySection = report.slice(
-    report.indexOf('## 차단 Adoption Group과 Verdict'),
-    report.indexOf('## 결정'),
+    report.indexOf("## 'deny' Adoption Groups and Verdicts"),
+    report.indexOf('## Decision'),
   );
-  expect(askSection).toContain(`| ${ADOPTION_HEADLINE_ASK} | 3 | 2 | unknown (3건) | 미판정 |`);
+  expect(askSection).toContain(`| ${ADOPTION_HEADLINE_ASK} | 3 | 2 | unknown (3) | Unreviewed |`);
   expect(askSection).not.toContain(ADOPTION_HEADLINE_DENY);
   expect(denySection).toContain(
-    `| ${ADOPTION_HEADLINE_DENY} | 1 | 1 | ~/.synthetic-credentials (1건) | 의도한 제한 |`,
+    `| ${ADOPTION_HEADLINE_DENY} | 1 | 1 | ~/.synthetic-credentials (1) | Intended restriction |`,
   );
   expect(denySection).not.toContain(ADOPTION_HEADLINE_ASK);
 });
 
 test('the adoption report names the adoption decision and its Decision Record hash', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
-  expect(report).toContain('- 결정: 최초 정책 채택');
+  expect(report).toContain('- Decision: First policy adopted');
   expect(report).toContain(
     `- Decision Record sequence: 3\n- Decision Record hash: \`${DECISION_HASH}\``,
   );
@@ -292,17 +295,17 @@ test('an adoption report before the run completes has no numbers and no group ta
   const report = renderAdoptionReport(
     makeAdoptionInput({ stats: null, groups: [], decision: null }),
   );
-  expect(report).toContain('아직 replay가 완료되지 않아 분석 수치가 없습니다.');
-  expect(report).toContain('아직 replay가 완료되지 않아 Effect 표가 없습니다.');
-  expect(report).toContain("'확인 필요' 대상 Adoption Group이 없습니다.");
-  expect(report).toContain("'차단' 대상 Adoption Group이 없습니다.");
-  expect(report).toContain('아직 결정되지 않았습니다.');
+  expect(report).toContain('No analysis figures yet because the replay has not completed.');
+  expect(report).toContain('No Effect table yet because the replay has not completed.');
+  expect(report).toContain("No 'ask' Adoption Group.");
+  expect(report).toContain("No 'deny' Adoption Group.");
+  expect(report).toContain('Not decided yet.');
 });
 
 test('the adoption report shows the audit chain tail sequence and hash', () => {
   const report = renderAdoptionReport(makeAdoptionInput());
   expect(report).toContain(
-    `## Audit chain\n\n- 보고서 생성 시점의 audit chain sequence: 9\n- 보고서 생성 시점의 audit chain hash: \`${TAIL_HASH}\``,
+    `## Audit chain\n\n- Audit chain sequence when the report was generated: 9\n- Audit chain hash when the report was generated: \`${TAIL_HASH}\``,
   );
 });
 
@@ -316,7 +319,7 @@ test.each([
   ],
 ])('the %s report states the record provenance before its first section', (_kind, report) => {
   expect(report).toMatch(
-    /`\n\n기록 출처: 실제 transcript 40건 \/ synthetic 7건\n\n## 정책 Version/,
+    /`\n\nRecord sources: real transcript 40 \/ synthetic 7\n\n## Policy Versions/,
   );
 });
 
@@ -324,7 +327,7 @@ test('the provenance line names hook imports only when some Action came from one
   const report = renderReport(
     makeInput({ traceSources: { transcript: 3, hook: 2, synthetic: 0 } }),
   );
-  expect(report).toContain('기록 출처: 실제 transcript 3건 / synthetic 0건 / hook 2건\n');
+  expect(report).toContain('Record sources: real transcript 3 / synthetic 0 / hook 2\n');
 });
 
 test('a change report folds a home directory in headlines and Target keys to ~', () => {
@@ -333,7 +336,7 @@ test('a change report folds a home directory in headlines and Target keys to ~',
       groups: [
         {
           direction: 'widening',
-          headline: "Users/alice 등 1곳으로의 read 4건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+          headline: "Users/alice only: 4 read Actions change from 'ask' to 'allow'.",
           fromEffect: 'ask',
           toEffect: 'allow',
           actionCount: 4,
@@ -343,8 +346,8 @@ test('a change report folds a home directory in headlines and Target keys to ~',
       ],
     }),
   );
-  expect(report).toContain('#### ~ 등 1곳으로의 read 4건이');
-  expect(report).toContain('  - ~ (4건)');
+  expect(report).toContain("#### ~ only: 4 read Actions change from 'ask' to 'allow'.");
+  expect(report).toContain('  - ~ (4)');
   expect(report).not.toContain('alice');
 });
 
@@ -366,5 +369,5 @@ test('an adoption report folds a home directory in its Target column to ~', () =
       ],
     }),
   );
-  expect(report).toContain('| ~ (2건), etc/hosts (1건) |');
+  expect(report).toContain('| ~ (2), etc/hosts (1) |');
 });

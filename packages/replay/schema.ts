@@ -289,8 +289,8 @@ export type ComputeDiff = (input: {
  * firstOccurredAt, and lastOccurredAt follow the ComputeDiff rules. There is
  * no severity.
  *
- * The Headline is `<zone>에서의 <capability> N건이 이 정책에서 '<effect>'
- * 대상이 됩니다.` in plain Korean, with no command text, ruleId, or regular
+ * The Headline is `This policy gives '<effect>' to N <capability> Actions in
+ * the <zone> Zone.` in plain English, with no command text, ruleId, or regular
  * expression.
  *
  * `groups` are in review order: deny before ask, then actionCount descending,

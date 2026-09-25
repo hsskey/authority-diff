@@ -123,50 +123,50 @@ export interface AdoptionReportInput {
 const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
 
 const EFFECT_LABEL: Record<Effect, string> = {
-  allow: '허용',
-  ask: '확인 필요',
-  deny: '차단',
+  allow: 'allow',
+  ask: 'ask',
+  deny: 'deny',
 };
 
 type VerdictLabel = Record<Verdict, string>;
 
 /** The same words the review screens use for each kind's Verdict. */
 const CHANGE_VERDICT_LABEL: VerdictLabel = {
-  expected: '예상된 변화',
-  investigate: '조사 필요',
-  unexpected: '예상 밖',
+  expected: 'Expected change',
+  investigate: 'Needs investigation',
+  unexpected: 'Unexpected',
 };
 
 const ADOPTION_VERDICT_LABEL: VerdictLabel = {
-  expected: '의도한 제한',
-  investigate: '보류',
-  unexpected: '정책 수정 필요',
+  expected: 'Intended restriction',
+  investigate: 'On hold',
+  unexpected: 'Policy needs revision',
 };
 
 const DIRECTION_LABEL: Record<'widening' | 'narrowing', string> = {
-  widening: '넓어짐',
-  narrowing: '좁아짐',
+  widening: 'Widening',
+  narrowing: 'Narrowing',
 };
 
 type DecisionLabel = Record<'accept' | 'reject', string>;
 
 const CHANGE_DECISION_LABEL: DecisionLabel = {
-  accept: '정책 변경 수락',
-  reject: '정책 변경 반려',
+  accept: 'Policy change accepted',
+  reject: 'Policy change rejected',
 };
 
 const ADOPTION_DECISION_LABEL: DecisionLabel = {
-  accept: '최초 정책 채택',
-  reject: '최초 정책 반려',
+  accept: 'First policy adopted',
+  reject: 'First policy rejected',
 };
 
 const FIXED_NOTICE = [
-  '> 이 기록은 정책 변경을 위 과거 기록에 비추어 검토했다는 사실을 남깁니다.',
-  '> Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.',
+  '> This record states that the policy change was reviewed against the past records above.',
+  '> Authority Diff did not deploy or enforce the policy and did not measure whether the runtime behaves as the policy says.',
 ].join('\n');
 
 const ADOPTION_NOTICE =
-  '> 이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.';
+  '> These figures apply the policy to past behavior; they do not reconstruct what the runtime approved at the time.';
 
 function ratio(part: number, whole: number): string {
   if (whole === 0) {
@@ -177,37 +177,37 @@ function ratio(part: number, whole: number): string {
 
 /** The fixed provenance line; `hook` appears only when some Action came from a hook import. */
 function renderTraceSources(counts: TraceSourceCounts): string {
-  const line = `기록 출처: 실제 transcript ${counts.transcript}건 / synthetic ${counts.synthetic}건`;
-  return counts.hook === 0 ? line : `${line} / hook ${counts.hook}건`;
+  const line = `Record sources: real transcript ${counts.transcript} / synthetic ${counts.synthetic}`;
+  return counts.hook === 0 ? line : `${line} / hook ${counts.hook}`;
 }
 
 function renderTarget(target: ReportTarget): string {
-  return `${foldHomePaths(target.key)} (${target.count}건)`;
+  return `${foldHomePaths(target.key)} (${target.count})`;
 }
 
 function verdictLabel(verdict: Verdict | null, label: VerdictLabel): string {
-  return verdict === null ? '미판정' : label[verdict];
+  return verdict === null ? 'Unreviewed' : label[verdict];
 }
 
 function renderNoneRatio(input: ReportInput): string {
   if (input.evaluatedActions === null) {
-    return '아직 replay가 완료되지 않아 분석 수치가 없습니다.';
+    return 'No analysis figures yet because the replay has not completed.';
   }
   const changed = input.changedActions ?? 0;
   const none = input.analyzabilityNoneCount ?? 0;
   return [
-    `- 분석한 Action: ${input.evaluatedActions}건`,
-    `- Effect가 바뀐 Action: ${changed}건`,
-    `- 그중 analyzability none: ${none}건 (${ratio(none, changed)})`,
+    `- Analyzed Actions: ${input.evaluatedActions}`,
+    `- Actions whose Effect changed: ${changed}`,
+    `- Of those, analyzability none: ${none} (${ratio(none, changed)})`,
   ].join('\n');
 }
 
 function renderOperationWidening(rows: ReplayStats['operationWidening'] | null): string {
   if (rows === null) {
-    return '아직 replay가 완료되지 않아 Operation 단위 widening 표가 없습니다.';
+    return 'No Operation-level widening table yet because the replay has not completed.';
   }
   const table = [
-    '| Capability | 기준 Zone | 변경안 Zone | 건수 |',
+    '| Capability | Baseline Zone | Candidate Zone | Count |',
     '| --- | --- | --- | --- |',
     ...rows.map((row) => `| ${row.capability} | ${row.fromZone} | ${row.toZone} | ${row.count} |`),
   ];
@@ -216,7 +216,7 @@ function renderOperationWidening(rows: ReplayStats['operationWidening'] | null):
 
 function renderTransitions(transitions: readonly ReportTransition[] | null): string {
   if (transitions === null || transitions.length === 0) {
-    return '아직 replay가 완료되지 않아 transition 표가 없습니다.';
+    return 'No transition table yet because the replay has not completed.';
   }
   const rows = transitions
     .filter((transition) => transition.count > 0)
@@ -225,22 +225,22 @@ function renderTransitions(transitions: readonly ReportTransition[] | null): str
         `| ${EFFECT_LABEL[transition.from]} | ${EFFECT_LABEL[transition.to]} | ${transition.count} |`,
     );
   if (rows.length === 0) {
-    return 'Effect가 바뀐 Action이 없습니다.';
+    return 'No Action changed Effect.';
   }
-  return ['| 기준 정책 | 변경안 | 건수 |', '| --- | --- | --- |', ...rows].join('\n');
+  return ['| Baseline | Candidate | Count |', '| --- | --- | --- |', ...rows].join('\n');
 }
 
 function renderGroup(group: ReportGroup): string {
   const lines = [
     `#### ${foldHomePaths(group.headline)}`,
     '',
-    `- 방향: ${DIRECTION_LABEL[group.direction]}`,
+    `- Direction: ${DIRECTION_LABEL[group.direction]}`,
     `- Effect: ${EFFECT_LABEL[group.fromEffect]} → ${EFFECT_LABEL[group.toEffect]}`,
-    `- Action ${group.actionCount}건`,
+    `- Actions: ${group.actionCount}`,
     `- Verdict: ${verdictLabel(group.verdict, CHANGE_VERDICT_LABEL)}`,
   ];
   if (group.targetSummary.length > 0) {
-    lines.push('- 주요 Target:');
+    lines.push('- Target Summary:');
     for (const target of group.targetSummary) {
       lines.push(`  - ${renderTarget(target)}`);
     }
@@ -250,16 +250,16 @@ function renderGroup(group: ReportGroup): string {
 
 function renderGroups(groups: readonly ReportGroup[]): string {
   if (groups.length === 0) {
-    return 'Effect가 바뀐 Diff Group이 없습니다.';
+    return 'No Diff Group changed Effect.';
   }
   const widening = groups.filter((group) => group.direction === 'widening');
   const narrowing = groups.filter((group) => group.direction === 'narrowing');
   const sections: string[] = [];
   if (widening.length > 0) {
-    sections.push('### 넓어진 Diff Group', '', widening.map(renderGroup).join('\n\n'));
+    sections.push('### Widening Diff Groups', '', widening.map(renderGroup).join('\n\n'));
   }
   if (narrowing.length > 0) {
-    sections.push('### 좁아진 Diff Group', '', narrowing.map(renderGroup).join('\n\n'));
+    sections.push('### Narrowing Diff Groups', '', narrowing.map(renderGroup).join('\n\n'));
   }
   return sections.join('\n');
 }
@@ -270,16 +270,16 @@ function sumActions(rows: readonly PermissionModeCount[]): number {
 
 function renderConformance(conformance: ReportConformance | null): string {
   if (conformance === null) {
-    return '완료된 conformance run이 없어 permission mode 표가 없습니다.';
+    return 'No permission mode table because no conformance run has completed.';
   }
   const rows = conformance.byPermissionMode;
   const lines = [
     `- Conformance Replay Run: \`${conformance.replayRunId}\``,
     `- Policy Version: \`${conformance.policyVersionId}\``,
-    `- 관측 기간: ${conformance.windowFrom} ~ ${conformance.windowTo}`,
+    `- Observation window: ${conformance.windowFrom} ~ ${conformance.windowTo}`,
   ];
   if (rows.length === 0) {
-    return [...lines, '- 이 run에는 permission mode 집계가 없습니다.'].join('\n');
+    return [...lines, '- This run has no permission mode breakdown.'].join('\n');
   }
   const total = sumActions(rows);
   const unguarded = sumActions(
@@ -287,9 +287,9 @@ function renderConformance(conformance: ReportConformance | null): string {
   );
   return [
     ...lines,
-    `- guard 없이 실행될 수 있는 Action(${UNGUARDED_PERMISSION_MODES.join(', ')}): ${unguarded}건 (${ratio(unguarded, total)})`,
+    `- Actions that can run without a guard (${UNGUARDED_PERMISSION_MODES.join(', ')}): ${unguarded} (${ratio(unguarded, total)})`,
     '',
-    '| permission mode | Action 수 | finding Action 수 |',
+    '| permission mode | Actions | Actions with findings |',
     '| --- | --- | --- |',
     ...rows.map((row) => `| ${row.permissionMode} | ${row.actionCount} | ${row.findingCount} |`),
   ].join('\n');
@@ -297,13 +297,13 @@ function renderConformance(conformance: ReportConformance | null): string {
 
 function renderDecision(decision: ReportDecision | null, label: DecisionLabel): string {
   if (decision === null) {
-    return '아직 결정되지 않았습니다.';
+    return 'Not decided yet.';
   }
   return [
-    `- 결정: ${label[decision.decision]}`,
-    `- 검토자: ${decision.reviewerName}`,
-    `- 시각: ${decision.decidedAt}`,
-    `- 메모: ${decision.note === '' ? '(없음)' : decision.note}`,
+    `- Decision: ${label[decision.decision]}`,
+    `- Reviewer: ${decision.reviewerName}`,
+    `- Decided at: ${decision.decidedAt}`,
+    `- Note: ${decision.note === '' ? '(none)' : decision.note}`,
     `- Decision Record sequence: ${decision.sequence}`,
     `- Decision Record hash: \`${decision.hash}\``,
   ].join('\n');
@@ -311,11 +311,11 @@ function renderDecision(decision: ReportDecision | null, label: DecisionLabel): 
 
 function renderAuditTail(tail: AuditTail | null): string {
   if (tail === null) {
-    return '기록된 결정이 아직 없습니다.';
+    return 'No decision recorded yet.';
   }
   return [
-    `- 보고서 생성 시점의 audit chain sequence: ${tail.sequence}`,
-    `- 보고서 생성 시점의 audit chain hash: \`${tail.hash}\``,
+    `- Audit chain sequence when the report was generated: ${tail.sequence}`,
+    `- Audit chain hash when the report was generated: \`${tail.hash}\``,
   ].join('\n');
 }
 
@@ -338,37 +338,37 @@ export function renderReport(input: ReportInput): string {
     '',
     renderTraceSources(input.traceSources),
     '',
-    '## 정책 Version',
+    '## Policy Versions',
     '',
-    `- 기준 Policy Version contentHash: \`${input.baselineContentHash}\``,
-    `- 변경안 Policy Version contentHash: \`${input.candidateContentHash}\``,
+    `- Baseline Policy Version contentHash: \`${input.baselineContentHash}\``,
+    `- Candidate Policy Version contentHash: \`${input.candidateContentHash}\``,
     ...renderReplayHashes(input.decision),
     '',
-    '## 검토 기간',
+    '## Review window',
     '',
     `- ${input.windowFrom} ~ ${input.windowTo}`,
     '',
-    '## 분석 규모',
+    '## Analysis size',
     '',
     renderNoneRatio(input),
     '',
-    '## Effect 전이',
+    '## Effect transitions',
     '',
     renderTransitions(input.transitions),
     '',
-    '## Action Effect가 그대로인 Operation 단위 widening',
+    '## Operation-level widening with the Action Effect unchanged',
     '',
     renderOperationWidening(input.operationWidening),
     '',
-    '## Diff Group과 Verdict',
+    '## Diff Groups and Verdicts',
     '',
     renderGroups(input.groups),
     '',
-    '## Conformance: permission mode별 Action',
+    '## Conformance: Actions by permission mode',
     '',
     renderConformance(input.conformance),
     '',
-    '## 결정',
+    '## Decision',
     '',
     renderDecision(input.decision, CHANGE_DECISION_LABEL),
     '',
@@ -376,7 +376,7 @@ export function renderReport(input: ReportInput): string {
     '',
     renderAuditTail(input.auditTail),
     '',
-    '## 고지',
+    '## Notice',
     '',
     FIXED_NOTICE,
     '',
@@ -385,24 +385,24 @@ export function renderReport(input: ReportInput): string {
 
 function renderAdoptionScale(stats: AdoptionStats | null): string {
   if (stats === null) {
-    return '아직 replay가 완료되지 않아 분석 수치가 없습니다.';
+    return 'No analysis figures yet because the replay has not completed.';
   }
   const none = stats.analyzability.none;
   return [
-    `- 분석한 Action: ${stats.evaluatedActions}건 (전체 ${stats.totalActions}건, 제외 ${stats.excludedActions}건)`,
-    `- 그중 analyzability none: ${none}건 (${ratio(none, stats.evaluatedActions)})`,
+    `- Analyzed Actions: ${stats.evaluatedActions} (total ${stats.totalActions}, excluded ${stats.excludedActions})`,
+    `- Of those, analyzability none: ${none} (${ratio(none, stats.evaluatedActions)})`,
   ].join('\n');
 }
 
 function renderEffectCounts(stats: AdoptionStats | null): string {
   if (stats === null) {
-    return '아직 replay가 완료되지 않아 Effect 표가 없습니다.';
+    return 'No Effect table yet because the replay has not completed.';
   }
   const rows = EFFECTS.map((effect) => {
     const count = stats.effectCounts[effect];
     return `| ${EFFECT_LABEL[effect]} | ${count} | ${ratio(count, stats.evaluatedActions)} |`;
   });
-  return ['| Effect | Action 수 | 비율 |', '| --- | --- | --- |', ...rows].join('\n');
+  return ['| Effect | Actions | Share |', '| --- | --- | --- |', ...rows].join('\n');
 }
 
 function renderAdoptionGroupTable(
@@ -411,10 +411,10 @@ function renderAdoptionGroupTable(
 ): string {
   const rows = groups.filter((group) => group.effect === effect);
   if (rows.length === 0) {
-    return `'${EFFECT_LABEL[effect]}' 대상 Adoption Group이 없습니다.`;
+    return `No '${EFFECT_LABEL[effect]}' Adoption Group.`;
   }
   return [
-    '| Adoption Group | Action 수 | Session 수 | 주요 Target | Verdict |',
+    '| Adoption Group | Actions | Sessions | Target Summary | Verdict |',
     '| --- | --- | --- | --- | --- |',
     ...rows.map((group) => {
       const targets = group.targetSummary.map(renderTarget).join(', ');
@@ -432,36 +432,36 @@ export function renderAdoptionReport(input: AdoptionReportInput): string {
   return [
     '# Evidence Report',
     '',
-    `최초 도입 검토 \`${input.changeReviewId}\``,
+    `Adoption Review \`${input.changeReviewId}\``,
     '',
     renderTraceSources(input.traceSources),
     '',
-    '## 정책 Version',
+    '## Policy Versions',
     '',
-    `- 제안 Policy Version contentHash: \`${input.candidateContentHash}\``,
+    `- Candidate Policy Version contentHash: \`${input.candidateContentHash}\``,
     ...renderReplayHashes(input.decision),
     '',
-    '## 검토 기간',
+    '## Review window',
     '',
     `- ${input.windowFrom} ~ ${input.windowTo}`,
     '',
-    '## 분석 규모',
+    '## Analysis size',
     '',
     renderAdoptionScale(input.stats),
     '',
-    '## 정책 적용 결과',
+    '## Effects under the policy',
     '',
     renderEffectCounts(input.stats),
     '',
-    '## 확인 필요 Adoption Group과 Verdict',
+    "## 'ask' Adoption Groups and Verdicts",
     '',
     renderAdoptionGroupTable(input.groups, 'ask'),
     '',
-    '## 차단 Adoption Group과 Verdict',
+    "## 'deny' Adoption Groups and Verdicts",
     '',
     renderAdoptionGroupTable(input.groups, 'deny'),
     '',
-    '## 결정',
+    '## Decision',
     '',
     renderDecision(input.decision, ADOPTION_DECISION_LABEL),
     '',
@@ -469,7 +469,7 @@ export function renderAdoptionReport(input: AdoptionReportInput): string {
     '',
     renderAuditTail(input.auditTail),
     '',
-    '## 고지',
+    '## Notice',
     '',
     FIXED_NOTICE,
     ADOPTION_NOTICE,

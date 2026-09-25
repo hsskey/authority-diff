@@ -13,6 +13,7 @@ import type {
 import { buildAnalyzabilityCounts, buildMatrix } from './build-matrix.ts';
 import {
   CAPABILITY_WORD,
+  countOf,
   deriveTargetKey,
   EFFECT_WORD,
   sampleActionKeys,
@@ -38,13 +39,14 @@ interface AdoptionEntry {
 /** The Headline is rendered from a group but is excluded from resultHash. */
 type HeadlineInput = Omit<AdoptionGroup, 'headline'>;
 
-/** Renders the fixed plain-Korean Headline for an Adoption Group. */
+/** Renders the fixed plain-English Headline for an Adoption Group. */
 function renderAdoptionHeadline(
   group: Pick<AdoptionGroup, 'effect' | 'capability' | 'zone' | 'actionCount'>,
 ): string {
   return (
-    `${ZONE_WORD[group.zone]}에서의 ${CAPABILITY_WORD[group.capability]} ${group.actionCount}건이 ` +
-    `이 정책에서 '${EFFECT_WORD[group.effect]}' 대상이 됩니다.`
+    `This policy gives '${EFFECT_WORD[group.effect]}' to ` +
+    `${countOf(group.actionCount, `${CAPABILITY_WORD[group.capability]} Action`)} ` +
+    `in the ${ZONE_WORD[group.zone]} Zone.`
   );
 }
 
