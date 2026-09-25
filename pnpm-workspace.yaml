@@ -15,7 +15,14 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - drizzle-orm@0.45.3
   - drizzle-kit@0.31.11
+# pg-boss (packages/platform) depends on pg, which drizzle-orm takes as an
+# optional peer. Without this, platform alone resolves a pg-flavored drizzle-orm
+# and its Database type no longer matches the other packages' drizzle-orm. See
+# docs/acr/0015-job-queue.md.
 packageExtensions:
+  drizzle-orm@0.45.3:
+    dependencies:
+      pg: 8.23.0
   dependency-cruiser:
     dependencies:
       typescript: 6.0.3

@@ -89,6 +89,8 @@ export interface PolicyRepository {
     id: PolicyVersionId,
     input: DeclareActivationInput,
   ): Promise<Result<PolicyActivation, AppError>>;
+  /** The most recently declared Policy Activation, or null when none was declared. */
+  findLatestActivation(): Promise<Result<PolicyActivation | null, AppError>>;
   /**
    * Legacy, test-only path: inserts an accepted version 1 without a Change
    * Review. Product code creates a draft version 1 with `createPolicy` and
@@ -472,6 +474,19 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           .returning();
         invariant(row !== undefined, 'insert returned no row');
         return ok(toActivation(row));
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    async findLatestActivation() {
+      try {
+        const [row] = await db
+          .select()
+          .from(policyActivations)
+          .orderBy(desc(policyActivations.createdAt), desc(policyActivations.id))
+          .limit(1);
+        return ok(row === undefined ? null : toActivation(row));
       } catch (cause) {
         return err(internal(cause));
       }

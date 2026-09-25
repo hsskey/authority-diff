@@ -89,7 +89,8 @@ _Avoid_: revision, snapshot, active / applied / enforced for accepted
 
 **Policy Activation**:
 A declaration that an operator applied an accepted Policy Version outside Authority Diff, with a reason and the operator's name.
-It is only recorded: it does not change Policy Version status, and replay, conformance, and evaluation do not read it.
+It does not change Policy Version status, and replay and evaluation do not read it.
+The daily conformance run reads only the latest one, to choose which Policy Version it checks.
 _Avoid_: deployment, enforcement, active version
 
 **Decision**:

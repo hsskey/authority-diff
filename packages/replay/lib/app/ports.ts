@@ -120,7 +120,8 @@ export interface ConformanceRunView {
 export interface ReplayStore {
   findCompletedByInputsHash(inputsHash: string): Promise<ReplayRun | null>;
   insertQueuedRun(run: ReplayRun): Promise<void>;
-  markRunning(id: ReplayRunId, startedAt: IsoTimestamp): Promise<void>;
+  /** Claims a `queued` run; false when the run is in any other status. */
+  markRunning(id: ReplayRunId, startedAt: IsoTimestamp): Promise<boolean>;
   recordCompletion(input: RecordCompletionInput): Promise<void>;
   markFailed(id: ReplayRunId, errorCode: string, completedAt: IsoTimestamp): Promise<void>;
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
@@ -130,6 +131,7 @@ export interface ReplayStore {
   listAdoptionGroups(query: ListAdoptionGroupsQuery): Promise<AdoptionGroupsPage>;
   getAdoptionGroup(id: ReplayRunId, groupKey: string): Promise<StoredAdoptionGroup | null>;
   failStaleRunningRuns(input: FailStaleRunsInput): Promise<number>;
+  listQueuedRunIds(): Promise<readonly ReplayRunId[]>;
   /** Completed `version_diff` and `adoption` runs; a conformance run never backs the authority map. */
   listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]>;
   findLatestConformanceRun(): Promise<ConformanceRunView | null>;

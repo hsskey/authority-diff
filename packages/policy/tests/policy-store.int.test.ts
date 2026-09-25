@@ -13,6 +13,7 @@ import {
   EMPTY_POLICY_DOCUMENT,
   type PolicyRepository,
 } from '../index.ts';
+import { IsoTimestampSchema } from '@authority/kernel';
 import { PolicyVersionIdSchema } from '../schema.ts';
 import { expectErr, expectOk } from './support/result.ts';
 
@@ -286,6 +287,26 @@ describe('policy store', () => {
 
     expect(expectOk(await repository.getVersion(initialVersion.id))).toEqual(initialVersion);
     expect(expectOk(await repository.getBaseline(policy.id))).toEqual(latest);
+  });
+
+  test('findLatestActivation returns the most recent declaration', async () => {
+    // Declarations a second apart, later than any other test's, so the order is unambiguous.
+    let tick = 0;
+    const declaring = createPolicyRepository({
+      db: database.db,
+      clock: { now: () => IsoTimestampSchema.parse(`2099-01-01T00:00:0${tick++}.000Z`) },
+      idGenerator: createUlidGenerator(),
+    });
+    const { initialVersion: older } = await seedAcceptedDefaultPolicy();
+    const { initialVersion: newer } = await seedAcceptedDefaultPolicy();
+    expectOk(await declaring.declareActivation(newer.id, { reason: 'first', actorName: 'ops' }));
+    const latest = expectOk(
+      await declaring.declareActivation(older.id, { reason: 'second', actorName: 'ops' }),
+    );
+
+    const found = expectOk(await repository.findLatestActivation());
+
+    expect(found).toEqual(latest);
   });
 
   test('declareActivation refuses a version that is not accepted', async () => {

@@ -454,7 +454,7 @@ If an agent starts making code on this list, stop it.
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event name system.
 - [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
 - [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`. The append-only `policy_activations` table and `POST /policy-versions/{id}/activations` were implemented in reduced, declaration-only form (recorded in ACR-0014): an accepted version records that an operator applied it outside Authority Diff, changing no status. rollback, `superseded`, and `stale` are still not built.
-- [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs.
+- [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs. The `JobQueue` port, its pg-boss and in-memory adapters, Replay Run execution as a `replay.run` job, and one periodic job (a daily conformance run for the declared Policy Version) were implemented (ACR-0015). Other periodic jobs are still not built.
 - [ ] `api_tokens` table and role, `idempotency_keys` and `Idempotency-Key` handling.
 - [ ] `@hono/zod-openapi`, `openapi.json` generation, `GET /metrics`, Prometheus metric.
 - [ ] Testcontainers.

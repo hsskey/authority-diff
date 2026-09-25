@@ -26,9 +26,13 @@ import type {
   ObservationForReplay,
   StoredAgentAction,
 } from '@authority/trace/schema';
-import { countRowsByRun, createMemoryLogger } from '@authority/platform/testing';
-import { createReplayModule } from '../index.ts';
-import type { PolicyReader } from '../index.ts';
+import {
+  countRowsByRun,
+  createMemoryJobQueue,
+  createMemoryLogger,
+} from '@authority/platform/testing';
+import { createReplayModule, REPLAY_RUN_JOB } from '../index.ts';
+import type { CreateReplayModuleDeps, PolicyReader } from '../index.ts';
 import { createEvaluator } from '@authority/policy/evaluate';
 import { computeAdoption, computeConformanceWith, computeDiff } from '../diff.ts';
 import actionFixture from '../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
@@ -43,6 +47,13 @@ const WINDOW_FROM = IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z');
 
 // The shared test database persists across `pnpm test:int` runs, and inputsHash
 // is content-based; a fresh windowTo per run keeps each run's inputsHash unique.
+function replayOnQueue(deps: Omit<CreateReplayModuleDeps, 'jobQueue'>) {
+  const jobs = createMemoryJobQueue();
+  const replay = createReplayModule({ ...deps, jobQueue: jobs });
+  void jobs.work(REPLAY_RUN_JOB, replay.runReplayJob);
+  return { replay, jobs };
+}
+
 function freshWindow() {
   return { windowFrom: WINDOW_FROM, windowTo: IsoTimestampSchema.parse(new Date().toISOString()) };
 }
@@ -138,7 +149,7 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
     candidate: emptied.value.document,
   });
 
-  const replay = createReplayModule({
+  const { replay, jobs } = replayOnQueue({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),
@@ -157,7 +168,7 @@ test('drizzle store persists a run whose resultHash matches the local pipeline a
     throw new Error(`requestReplay failed: ${first.error.code}`);
   }
   expect(first.value.reused).toBe(false);
-  await first.value.execution;
+  await jobs.drain();
 
   const stored = await replay.getRun(first.value.run.id);
   expect(stored?.status).toBe('completed');
@@ -283,7 +294,7 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
       to: window.windowTo,
     },
   );
-  const replay = createReplayModule({
+  const { replay, jobs } = replayOnQueue({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),
@@ -300,7 +311,7 @@ test('a conformance run joins observations by toolUseId, pairs permission reques
   if (!requested.ok) {
     throw new Error(`requestConformanceReplay failed: ${requested.error.code}`);
   }
-  await requested.value.execution;
+  await jobs.drain();
   const stored = await replay.getRun(requested.value.run.id);
   const listed = await replay.listConformanceFindings();
 
@@ -402,7 +413,7 @@ test('acknowledging a stored finding persists status and note', async () => {
     listObservationSessions: () => Promise.resolve([pushAction.sessionExternalId]),
     getObservations: () => Promise.resolve(observations),
   };
-  const replay = createReplayModule({
+  const { replay, jobs } = replayOnQueue({
     database,
     reader,
     policy: {
@@ -429,7 +440,7 @@ test('acknowledging a stored finding persists status and note', async () => {
   if (!requested.ok) {
     throw new Error(requested.error.code);
   }
-  await requested.value.execution;
+  await jobs.drain();
   const listed = await replay.listConformanceFindings();
   const [firstFinding] = listed.items;
   if (firstFinding === undefined) {
@@ -474,7 +485,7 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
   }
   const local = computeAdoption({ actions: streamed, candidate: candidate.document });
   expect(local.groups.length).toBeGreaterThan(0);
-  const replay = createReplayModule({
+  const { replay, jobs } = replayOnQueue({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),
@@ -488,7 +499,7 @@ test('an adoption run persists its groups and assignments, is idempotent, and pa
   if (!first.ok) {
     throw new Error(`requestAdoptionReplay failed: ${first.error.code}`);
   }
-  await first.value.execution;
+  await jobs.drain();
   const stored = await replay.getRun(first.value.run.id);
   const second = await replay.requestAdoptionReplay({
     candidateVersionId: candidate.id,
@@ -616,7 +627,7 @@ test('a run persists more assignments and changed actions than one statement can
   }
   const actions = syntheticPushActions(ACTION_COUNT);
   const window = freshWindow();
-  const replay = createReplayModule({
+  const { replay, jobs } = replayOnQueue({
     database,
     reader: syntheticReader(actions),
     policy: makePolicyReader(repository),
@@ -648,7 +659,7 @@ test('a run persists more assignments and changed actions than one statement can
   if (!adoption.ok || !diff.ok) {
     throw new Error('replay request failed');
   }
-  await Promise.all([adoption.value.execution, diff.value.execution]);
+  await jobs.drain();
 
   expect([
     (await replay.getRun(adoption.value.run.id))?.status,
@@ -660,4 +671,50 @@ test('a run persists more assignments and changed actions than one statement can
   expect(await countRowsByRun(database.db, 'replay_changed_actions', diff.value.run.id)).toBe(
     changed,
   );
+});
+
+test('two deliveries of one replay.run job execute the run once', async () => {
+  const clock = createSystemClock();
+  const idGenerator = createUlidGenerator();
+  const repository = createPolicyRepository({ db: database.db, clock, idGenerator });
+  const seeded = await repository.seedAcceptedPolicy({
+    name: idGenerator.next('policy'),
+    document: DEFAULT_POLICY_DOCUMENT,
+  });
+  if (!seeded.ok) {
+    throw new Error('seedAcceptedPolicy failed');
+  }
+  const trace = createTraceModule({ database, clock, idGenerator });
+  const imported = await trace.importTrace(ParsedSessionSchema.parse(sessionFixture));
+  if (!imported.ok) {
+    throw new Error('importTrace failed');
+  }
+  const logger = createMemoryLogger();
+  // No worker: the run stays queued until the test delivers its job twice at once.
+  const replay = createReplayModule({
+    database,
+    reader: trace.reader,
+    policy: makePolicyReader(repository),
+    jobQueue: createMemoryJobQueue(),
+    clock,
+    idGenerator,
+    logger,
+    classifierVersion: trace.classifierVersion,
+  });
+  const requested = await replay.requestAdoptionReplay({
+    candidateVersionId: seeded.value.version.id,
+    ...freshWindow(),
+  });
+  if (!requested.ok) {
+    throw new Error(`requestAdoptionReplay failed: ${requested.error.code}`);
+  }
+  const payload = { replayRunId: requested.value.run.id };
+
+  await Promise.all([replay.runReplayJob(payload), replay.runReplayJob(payload)]);
+
+  const stored = await replay.getRun(requested.value.run.id);
+  expect([stored?.status, logger.records.filter((record) => record.level === 'error')]).toEqual([
+    'completed',
+    [],
+  ]);
 });

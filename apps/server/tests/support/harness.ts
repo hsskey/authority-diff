@@ -2,7 +2,11 @@ import { ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
 import { createDatabase, parseConfig } from '@authority/platform';
 import type { Config, Database } from '@authority/platform';
-import { createMemoryLogger, createSequentialIdGenerator } from '@authority/platform/testing';
+import {
+  createMemoryJobQueue,
+  createMemoryLogger,
+  createSequentialIdGenerator,
+} from '@authority/platform/testing';
 import { createApp } from '../../src/http/app.ts';
 import type { ServerDeps } from '../../src/http/env.ts';
 
@@ -37,7 +41,8 @@ export function buildApp(overrides: Partial<ServerDeps> = {}) {
     logger: createMemoryLogger(),
     idGenerator: createSequentialIdGenerator(),
     db: okProbe,
+    jobQueue: createMemoryJobQueue(),
     ...overrides,
   };
-  return createApp(deps);
+  return createApp(deps).app;
 }

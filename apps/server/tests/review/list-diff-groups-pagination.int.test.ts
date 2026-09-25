@@ -11,7 +11,6 @@ import type { Database } from '@authority/platform';
 import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyDocument, PolicyId, PolicyVersionId } from '@authority/policy/schema';
 import { createMemoryLogger } from '@authority/platform/testing';
-import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
 import { ParsedSessionSchema } from '@authority/trace/schema';
@@ -19,6 +18,7 @@ import { createReviewModule } from '@authority/review';
 import type { ChangeReviewView, PolicyReviewRepository, ReviewModule } from '@authority/review';
 import { ChangeReviewIdSchema } from '@authority/review/schema';
 import sessionFixture from '../../../../tests/fixtures/parsed-session.json' with { type: 'json' };
+import { createQueuedReplayModule } from '../support/queued-replay.ts';
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
 const WINDOW_FROM = IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z');
@@ -112,7 +112,7 @@ beforeAll(async () => {
   if (!imported.ok) {
     throw new Error('importTrace failed');
   }
-  const replay: ReplayModule = createReplayModule({
+  const replay: ReplayModule = createQueuedReplayModule({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),

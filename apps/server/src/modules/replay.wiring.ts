@@ -1,5 +1,5 @@
 import type { Hono } from 'hono';
-import type { Clock, IdGenerator, Logger } from '@authority/kernel';
+import type { Clock, IdGenerator, JobQueue, Logger } from '@authority/kernel';
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyVersionId } from '@authority/policy/schema';
@@ -36,13 +36,17 @@ function makePolicyReader(repository: ReturnType<typeof createPolicyRepository>)
 export interface RegisterReplayModuleDeps {
   readonly trace: TraceModule;
   readonly database: Database;
+  readonly jobQueue: JobQueue;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly logger: Logger;
 }
 
 /** Wires the replay module and its routes; runs restart recovery once at init. */
-export function registerReplayModule(app: Hono<AppEnv>, deps: RegisterReplayModuleDeps): void {
+export function registerReplayModule(
+  app: Hono<AppEnv>,
+  deps: RegisterReplayModuleDeps,
+): ReplayModule {
   const repository = createPolicyRepository({
     db: deps.database.db,
     clock: deps.clock,
@@ -52,6 +56,7 @@ export function registerReplayModule(app: Hono<AppEnv>, deps: RegisterReplayModu
     database: deps.database,
     reader: deps.trace.reader,
     policy: makePolicyReader(repository),
+    jobQueue: deps.jobQueue,
     clock: deps.clock,
     idGenerator: deps.idGenerator,
     logger: deps.logger,
@@ -67,4 +72,5 @@ export function registerReplayModule(app: Hono<AppEnv>, deps: RegisterReplayModu
   registerAdoptionGroupsRoutes(app, replay);
   registerAuthorityMapRoutes(app, replay);
   registerConformanceFindingsRoutes(app, replay);
+  return replay;
 }

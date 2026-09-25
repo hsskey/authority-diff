@@ -60,6 +60,7 @@ function makeRepository(
     getBaseline: () => unconfigured(),
     hasAcceptedVersion: () => unconfigured(),
     declareActivation: () => unconfigured(),
+    findLatestActivation: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     ...overrides,
   };
