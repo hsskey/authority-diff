@@ -4,6 +4,7 @@ import { UNGUARDED_PERMISSION_MODES } from '@authority/replay/schema';
 import type {
   AdoptionEffect,
   AdoptionStats,
+  ObservationGap,
   PermissionModeCount,
   ReplayStats,
 } from '@authority/replay/schema';
@@ -66,14 +67,16 @@ export interface AuditTail {
 
 /**
  * The most recent completed conformance run as the report shows it: the run's
- * identity, so the reader can tell it from the review's own replay, and its
- * Action counts per runtime permission mode.
+ * identity, so the reader can tell it from the review's own replay, the
+ * periods of its window with no observation, and its Action counts per
+ * runtime permission mode.
  */
 export interface ReportConformance {
   readonly replayRunId: string;
   readonly policyVersionId: string;
   readonly windowFrom: IsoTimestamp;
   readonly windowTo: IsoTimestamp;
+  readonly observationGaps: readonly ObservationGap[];
   readonly byPermissionMode: readonly PermissionModeCount[];
 }
 
@@ -277,6 +280,7 @@ function renderConformance(conformance: ReportConformance | null): string {
     `- Conformance Replay Run: \`${conformance.replayRunId}\``,
     `- Policy Version: \`${conformance.policyVersionId}\``,
     `- Observation window: ${conformance.windowFrom} ~ ${conformance.windowTo}`,
+    ...conformance.observationGaps.map((gap) => `- No observations from ${gap.from} to ${gap.to}.`),
   ];
   if (rows.length === 0) {
     return [...lines, '- This run has no permission mode breakdown.'].join('\n');

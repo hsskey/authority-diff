@@ -27,6 +27,7 @@ import {
   ConformanceFindingStatusSchema,
   ConformanceFindingViewSchema,
   DiffGroupSchema,
+  ObservationGapSchema,
   PermissionModeCountSchema,
   ReplayRunIdSchema,
   ReplayRunSchema,
@@ -321,9 +322,9 @@ export const AuthorityMapResponseSchema = z.object({
 });
 export type AuthorityMapResponse = z.infer<typeof AuthorityMapResponseSchema>;
 
-/** Findings of the latest completed conformance run (the run carries version and window). unpairedPermissionRequests could not join a Disposition; UNGUARDED_PERMISSION_MODES never prompt. */
+/** Findings of the latest completed conformance run (the run carries version and window). unpairedPermissionRequests could not join a Disposition; UNGUARDED_PERMISSION_MODES never prompt; observationGaps are the window's periods of 24 hours or more with no observation. */
 export { PermissionModeCountSchema, UNGUARDED_PERMISSION_MODES };
-export type { PermissionModeCount } from '@authority/replay/schema';
+export type { ObservationGap, PermissionModeCount } from '@authority/replay/schema';
 
 /** `status` and `note` default so a listing payload from before acknowledgement still parses. */
 export const ConformanceFindingResponseSchema = ConformanceFindingViewSchema.extend({
@@ -357,6 +358,7 @@ export const ListConformanceFindingsResponseSchema = z.object({
       windowTo: IsoTimestampSchema,
       unpairedPermissionRequests: z.number().int().nonnegative(),
       byPermissionMode: z.array(PermissionModeCountSchema),
+      observationGaps: z.array(ObservationGapSchema),
     })
     .nullable(),
   items: z.array(ConformanceFindingResponseSchema),

@@ -165,6 +165,7 @@ test('under_asked with allow is widening in Change Review', async () => {
       Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
     countStaleClassifications: () => Promise.resolve(0),
     listObservationSessions: () => Promise.resolve([pushAction.sessionExternalId]),
+    listObservationTimes: () => Promise.resolve([]),
     getObservations: () => Promise.resolve(observations),
   };
   const jobs = createMemoryJobQueue();

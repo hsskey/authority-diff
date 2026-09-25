@@ -67,6 +67,7 @@ export function assembleTraceModule(deps: AssembleTraceModuleDeps): TraceModule 
       countStaleClassifications: (query) =>
         store.countStaleClassifications({ ...query, classifierVersion }),
       listObservationSessions: (query) => store.listObservationSessions(query),
+      listObservationTimes: (query) => store.listObservationTimes(query),
       getObservations: (sessionExternalIds) => store.getObservations(sessionExternalIds),
     },
     classifierVersion,

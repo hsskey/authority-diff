@@ -138,9 +138,10 @@ The basis of first-adoption review is ADR-0010; measurement is `docs/evidence/ad
 14. `unexpected` appeared, so reject, edit the draft, make a new review, and after all are `expected` press <!-- ko-product-output -->"정책 변경 수락".
 15. Download the Evidence report.
     It includes both versions' `contentHash`, the window, analyzed Action count and `none` share, the transition table, the operation-level widening table for when Action Effect is unchanged, groups and Verdicts, reviewer and time, the Decision Record audit chain sequence and hash, the audit chain tail sequence and hash at report generation, and the fixed wording below.
-    Separately the report includes Action·finding aggregates by permission mode from the most recently completed conformance run, with that run's id, Policy Version, window, and the Action total of modes that can run without a guard, and if there is no completed conformance run it writes that fact.
+    Separately the report includes Action·finding aggregates by permission mode from the most recently completed conformance run, with that run's id, Policy Version, window, each period of 24 hours or more in that window with no observation, and the Action total of modes that can run without a guard, and if there is no completed conformance run it writes that fact.
     This aggregate is the observed permission-mode distribution, not a judgement of whether the runtime follows the candidate; that judgement remains the `/conformance` screen's job.
 16. When hook observations (`install-hooks`, `spool-flush`) accumulate, on the conformance screen (`/conformance`) see findings where Disposition disagrees with the accepted version's Effect.
+    The screen first states each period of 24 hours or more in the run's window with no observation.
     This screen alone speaks to how the runtime actually behaved.
 
 > This record leaves the fact that the policy change was reviewed against the past records above.

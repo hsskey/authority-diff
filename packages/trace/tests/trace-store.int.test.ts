@@ -6,6 +6,7 @@ import {
   parseConfig,
 } from '@authority/platform';
 import type { Database } from '@authority/platform';
+import { IsoTimestampSchema } from '@authority/kernel';
 import { deriveActionKey, parseTranscript } from '@authority/trace/client';
 import type { ParsedSession } from '@authority/trace/schema';
 import { createTraceModule, type TraceModule } from '../index.ts';
@@ -118,5 +119,45 @@ describe('re-importing a stored Action', () => {
     const result = await module.importTrace(current);
 
     expect(result).toMatchObject({ ok: true, value: { acceptedCount: 0, duplicateCount: 1 } });
+  });
+});
+
+describe('listing observation times', () => {
+  // A window no other test writes into, since the database is shared.
+  const WINDOW = {
+    from: IsoTimestampSchema.parse('2031-03-01T00:00:00.000Z'),
+    to: IsoTimestampSchema.parse('2031-03-07T23:59:59.999Z'),
+  };
+
+  function hookObservation(sessionExternalId: string, occurredAt: string) {
+    return {
+      event: 'pre_tool_use' as const,
+      sessionExternalId,
+      toolUseId: null,
+      toolName: 'Bash',
+      toolInputHash: null,
+      hookDecision: null,
+      permissionMode: null,
+      cwd: null,
+      runtimeVersion: null,
+      occurredAt: IsoTimestampSchema.parse(occurredAt),
+    };
+  }
+
+  test('returns each distinct time inside the window once, ascending', async () => {
+    const session = `synthetic-times-${ids.next('ses')}`;
+    await module.ingestObservations({
+      runtime: 'claude_code',
+      observations: [
+        hookObservation(session, '2031-03-05T00:00:00.000Z'),
+        hookObservation(`${session}-other`, '2031-03-05T00:00:00.000Z'),
+        hookObservation(session, '2031-03-01T00:00:00.000Z'),
+        hookObservation(session, '2031-03-08T00:00:00.000Z'),
+      ],
+    });
+
+    const times = await module.reader.listObservationTimes(WINDOW);
+
+    expect(times).toEqual(['2031-03-01T00:00:00.000Z', '2031-03-05T00:00:00.000Z']);
   });
 });
