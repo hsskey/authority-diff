@@ -2,7 +2,7 @@
 
 Status: proposed (2026-09-25).
 Procedure: docs/design.md 33.3.
-Scope: docs/design.md 13.5, 24.4; docs/cutline.md 6, 12; ADR-0009, ADR-0011.
+Scope: docs/design.md 13.5, 24.4, and Appendix A rows ask_production_deploy (now carries a Mandate Exception) and ask_irreversible_local (deploy dropped); docs/cutline.md 6, 12; ADR-0009, ADR-0011.
 
 `PolicyDocument` gains schemaVersion 2, whose Rules carry `mandateException`, and `Decision` records whether its `ask` rests only on Rules with a Mandate Exception.
 This changes `packages/policy/schema.ts` (`PolicyDocumentSchema`, `PolicyRuleSchema`, `OperationDecisionSchema`, `DecisionSchema`), the `packages/contracts` wire shapes built from them, and `CONTEXT.md`, so it is recorded here.
