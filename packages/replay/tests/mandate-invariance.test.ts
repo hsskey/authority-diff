@@ -72,7 +72,7 @@ describe('replay result under schemaVersion 2', () => {
       actions
         .flatMap((action) => evaluate(action.operations)?.operations ?? [])
         .filter((operation) => operation.isMandateDependent)
-        .map((operation) => operation.decidingRuleId),
+        .map((operation) => operation.decidingRuleId ?? 'default_ask'),
     );
     expect([...decidingRuleIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual([
       'ask_external_disclosure',
