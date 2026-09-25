@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-24; conformance resultHash `42318e75…1863`
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-25; conformance resultHash `42318e75…1863`
 <!-- evidence-numbers
 snapshot.sessions: 1,036
 snapshot.actions: 34,940
@@ -10,7 +10,7 @@ conformance.resultHash: 42318e75…1863
 
 Conformance replay compares the accepted policy A against observed runtime Disposition over a window of hook observations.
 <!-- remeasure:conformance-intro -->
-Every number in the main sections is labelled **classifier 0.2.6, policy A** (measured 2026-09-24); the earlier 0.2.6, 0.2.5, 0.2.4, 0.2.3, 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
+Every number in the main sections is labelled **classifier 0.2.6, policy A** (measured 2026-09-25); the earlier 0.2.6, 0.2.5, 0.2.4, 0.2.3, 0.2.2, 0.2.1 measurements are kept unchanged under "Previous version" at the end.
 <!-- /remeasure:conformance-intro -->
 No repository names, host paths, or raw command text appear below.
 

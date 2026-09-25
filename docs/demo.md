@@ -3,7 +3,7 @@
 This is the script for recording the V1 journey as a screen demo.
 It follows the twelve steps of the scripted fresh-volume journey in `docs/evidence/adoption-preview.md`, one screen per step and one spoken line per screen.
 
-Live figures are from classifier 0.2.6 on corpus snapshot transcripts-2026-09-23-1036, measured 2026-09-24.
+Live figures are from classifier 0.2.6 on corpus snapshot transcripts-2026-09-23-1036, measured 2026-09-25.
 Each one names the measured block in `docs/evidence/adoption-preview.md` that carries it.
 After `pnpm evidence:remeasure` rewrites the evidence for another classifier, refill every figure from its block.
 Do not take a figure from memory, from an older evidence version, or from what a rehearsal showed on screen.
