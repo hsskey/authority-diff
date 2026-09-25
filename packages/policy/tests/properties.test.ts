@@ -2,7 +2,14 @@ import { describe, expect, test } from 'vitest';
 import fc from 'fast-check';
 import type { Analyzability, Capability, Operation, Target } from '@authority/action/schema';
 import type { Effect } from '@authority/kernel';
-import type { EnvironmentProfile, PolicyDocument, Reversibility, Zone } from '../schema.ts';
+import type {
+  Decision,
+  EnvironmentProfile,
+  PolicyDocumentV1,
+  PolicyDocumentV2,
+  Reversibility,
+  Zone,
+} from '../schema.ts';
 import { evaluateAction } from '../evaluate.ts';
 import { hostTarget, pathTarget, vcsRemoteTarget } from './support/factories.ts';
 
@@ -90,7 +97,7 @@ const arbMatch = fc.record({
 
 const arbRuleCore = fc.record({ match: arbMatch, effect: fc.constantFrom(...EFFECTS) });
 
-const arbDocument = fc.array(arbRuleCore, { maxLength: 6 }).map((cores): PolicyDocument => ({
+const arbDocument = fc.array(arbRuleCore, { maxLength: 6 }).map((cores): PolicyDocumentV1 => ({
   schemaVersion: 1,
   environment: ENV,
   rules: cores.map((core, index) => ({
@@ -100,6 +107,44 @@ const arbDocument = fc.array(arbRuleCore, { maxLength: 6 }).map((cores): PolicyD
     rationale: 'synthetic property test rule rationale',
   })),
 }));
+
+// Every ask Rule may carry a Mandate Exception; other Effects cannot.
+const arbDocumentV2 = arbDocument.chain((document) =>
+  fc
+    .array(fc.boolean(), { minLength: document.rules.length, maxLength: document.rules.length })
+    .map((flags): PolicyDocumentV2 => ({
+      schemaVersion: 2,
+      environment: document.environment,
+      rules: document.rules.map((rule, index) => ({
+        ...rule,
+        mandateException:
+          rule.effect === 'ask' && flags[index] === true
+            ? { clause: 'the Mandate explicitly names this synthetic act' }
+            : null,
+      })),
+    })),
+);
+
+function withoutMandateExceptions(document: PolicyDocumentV2): PolicyDocumentV1 {
+  return {
+    schemaVersion: 1,
+    environment: document.environment,
+    rules: document.rules.map(({ mandateException: _mandateException, ...rule }) => rule),
+  };
+}
+
+function withoutMandateDependence(decision: Decision | null): unknown {
+  if (decision === null) {
+    return null;
+  }
+  const { isMandateDependent: _isMandateDependent, operations, ...rest } = decision;
+  return {
+    ...rest,
+    operations: operations.map(
+      ({ isMandateDependent: _operationIsMandateDependent, ...operation }) => operation,
+    ),
+  };
+}
 
 function rank(effect: Effect): number {
   return EFFECT_RANK[effect];
@@ -126,7 +171,7 @@ describe('I1: Decision is independent of Rule order', () => {
 
     fc.assert(
       fc.property(arbDocumentWithPermutation, arbOperations, ([document, permuted], operations) => {
-        const reordered: PolicyDocument = { ...document, rules: permuted };
+        const reordered: PolicyDocumentV1 = { ...document, rules: permuted };
         expect(evaluateAction(operations, reordered)).toEqual(evaluateAction(operations, document));
       }),
     );
@@ -142,7 +187,7 @@ describe('I2: added Rules move restrictiveness monotonically', () => {
         arbMatch,
         fc.constantFrom<Effect>('ask', 'deny'),
         (document, operations, match, effect) => {
-          const extended: PolicyDocument = {
+          const extended: PolicyDocumentV1 = {
             ...document,
             rules: [
               ...document.rules,
@@ -168,7 +213,7 @@ describe('I2: added Rules move restrictiveness monotonically', () => {
   test('adding an allow Rule never makes an Action more restrictive', () => {
     fc.assert(
       fc.property(arbDocument, arbOperations, arbMatch, (document, operations, match) => {
-        const extended: PolicyDocument = {
+        const extended: PolicyDocumentV1 = {
           ...document,
           rules: [
             ...document.rules,
@@ -211,6 +256,26 @@ describe('I3: the Action Effect is the most restrictive Operation Effect', () =>
           'allow',
         );
         expect(decision.effect).toBe(expected);
+      }),
+    );
+  });
+});
+
+describe('I4: a Mandate Exception changes nothing but isMandateDependent', () => {
+  test('a document with Mandate Exceptions decides like the same Rules without them', () => {
+    fc.assert(
+      fc.property(arbDocumentV2, arbOperations, (document, operations) => {
+        expect(withoutMandateDependence(evaluateAction(operations, document))).toEqual(
+          withoutMandateDependence(evaluateAction(operations, withoutMandateExceptions(document))),
+        );
+      }),
+    );
+  });
+
+  test('a schemaVersion 1 document never yields a Mandate-dependent Decision', () => {
+    fc.assert(
+      fc.property(arbDocument, arbOperations, (document, operations) => {
+        expect(evaluateAction(operations, document)?.isMandateDependent).toBe(false);
       }),
     );
   });

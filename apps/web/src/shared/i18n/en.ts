@@ -468,6 +468,7 @@ export const en = {
     analyzability: 'Analyzability',
     effect: 'Effect',
     rationale: 'Rationale',
+    mandateException: 'Mandate Exception',
     any: 'Any',
     validationTitle: (isValid: boolean, issues: number) =>
       `Validation: ${isValid ? 'passed' : plural(issues, 'issue', 'issues')}`,

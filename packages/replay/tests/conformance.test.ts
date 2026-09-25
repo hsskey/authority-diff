@@ -64,6 +64,7 @@ function decision(effects: readonly Effect[], zone: Zone = 'workspace'): Decisio
   return {
     effect,
     decidingOperationIndex: effects.indexOf(effect),
+    isMandateDependent: false,
     operations: effects.map((e, operationIndex) => ({
       operationIndex,
       zone,
@@ -71,6 +72,7 @@ function decision(effects: readonly Effect[], zone: Zone = 'workspace'): Decisio
       matchedRuleIds: [],
       decidingRuleId: null,
       effect: e,
+      isMandateDependent: false,
     })),
   };
 }

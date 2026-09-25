@@ -42,7 +42,11 @@ describe('policy schema', () => {
     ).toBe(false);
   });
 
-  test('rejects schemaVersion 2', () => {
+  test('parses a schemaVersion 1 document without adding mandateException', () => {
+    expect(PolicyDocumentSchema.parse(baselinePolicyFixture)).toEqual(baselinePolicyFixture);
+  });
+
+  test('rejects a schemaVersion 2 Rule with no mandateException', () => {
     expect(
       PolicyDocumentSchema.safeParse({
         ...baselinePolicyFixture,
@@ -50,6 +54,29 @@ describe('policy schema', () => {
       }).success,
     ).toBe(false);
   });
+
+  test.each([
+    ['ask', { clause: 'the Mandate explicitly names this act' }, true],
+    ['allow', null, true],
+    ['allow', { clause: 'the Mandate explicitly names this act' }, false],
+    ['deny', { clause: 'the Mandate explicitly names this act' }, false],
+    ['ask', { clause: 'too short' }, false],
+  ] as const)(
+    'a schemaVersion 2 %s Rule with mandateException %o parses: %s',
+    (effect, mandateException, parses) => {
+      expect(
+        PolicyDocumentSchema.safeParse({
+          ...baselinePolicyFixture,
+          schemaVersion: 2,
+          rules: baselinePolicyFixture.rules.map((rule) => ({
+            ...rule,
+            effect,
+            mandateException,
+          })),
+        }).success,
+      ).toBe(parses);
+    },
+  );
 
   test('exports policy contract signatures', () => {
     expectTypeOf<ResolveZone>().toEqualTypeOf<

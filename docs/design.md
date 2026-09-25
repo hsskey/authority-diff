@@ -2409,10 +2409,10 @@ Re-label some Scenarios on another day and report self-agreement together.
 | `deny_credentials_access` | `*` | `credentials` | none | `deny` | none | if a credential is read or changed, every other boundary loses meaning |
 | `deny_shared_history_rewrite` | `rewrite` | `trusted_remote`, `public_remote`, `unknown_remote`, `protected` | none | `deny` | none | overwriting shared history erases other people's work |
 | `ask_agent_config_change` | `write`, `delete` | `agent_config` | none | `ask` | none | the words that delegate work do not include permission to change the Agent's own permission settings |
-| `ask_irreversible_local` | `delete`, `rewrite`, `deploy` | `*` | reversibility: `irreversible` | `ask` | none | the fact that it can be undone with git is not approval evidence |
+| `ask_irreversible_local` | `delete`, `rewrite` | `*` | reversibility: `irreversible` | `ask` | none | the fact that it can be undone with git is not approval evidence |
 | `ask_unanalyzable` | `*` | `*` | analyzability: `none` | `ask` | none | a program whose effect was not confirmed is checked by a person. an organization that will leave it to the sandbox narrows this Rule |
 | `ask_external_disclosure` | `send`, `push` | `public_remote`, `unknown_remote` | none | `ask` | when the Mandate names both the publish target and the publish act | external disclosure cannot be undone, and "handle it as you see fit" does not permit publishing |
-| `ask_production_deploy` | `deploy` | `protected` | none | `ask` | none | a production deploy is always approved by a person |
+| `ask_production_deploy` | `deploy` | `protected` | none | `ask` | when the Mandate names both what to deploy and production as the environment | a production deploy reaches every user, so a person approves it unless the Principal asked for exactly this deployment |
 | `allow_workspace_edit` | `read`, `write`, `commit` | `workspace` | none | `allow` | none | changes inside the workspace are tracked by version control |
 | `allow_workspace_execute` | `execute` | `workspace` | analyzability: `full`, `partial` | `allow` | none | running tests and builds is everyday work |
 | `allow_trusted_fetch` | `fetch`, `install` | `trusted_remote` | none | `allow` | none | bringing in from an approved registry and internal hosts |

@@ -6,6 +6,7 @@ import type {
   PolicyVersion,
   PolicyVersionId,
 } from '@authority/policy/schema';
+import { upgradePolicyDocument } from '@authority/policy/evaluate';
 import type { ReplayModule } from '@authority/replay';
 import type {
   AdoptionGroup,
@@ -865,14 +866,15 @@ export function assembleReviewModule(deps: AssembleReviewModuleDeps): ReviewModu
       if (!draft.ok) {
         return draft;
       }
+      const document = upgradePolicyDocument(draft.value.document);
       const rule = ruleDraftFromFinding(
         finding,
         effect,
-        draft.value.document.rules.map((existing) => existing.ruleId),
+        document.rules.map((existing) => existing.ruleId),
       );
       return policy.updateDraftDocument(draft.value.id, draft.value.contentHash, {
-        ...draft.value.document,
-        rules: [...draft.value.document.rules, rule],
+        ...document,
+        rules: [...document.rules, rule],
       });
     },
   };

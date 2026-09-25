@@ -26,6 +26,16 @@ describe('DEFAULT_POLICY_DOCUMENT', () => {
     ]);
   });
 
+  test('is schemaVersion 2 with a Mandate Exception on exactly two ask Rules', () => {
+    const withException = DEFAULT_POLICY_DOCUMENT.rules
+      .filter((rule) => rule.mandateException !== null)
+      .map((rule) => rule.ruleId);
+    expect([DEFAULT_POLICY_DOCUMENT.schemaVersion, withException]).toEqual([
+      2,
+      ['ask_external_disclosure', 'ask_production_deploy'],
+    ]);
+  });
+
   test('populates every Environment Profile list', () => {
     const { environment } = DEFAULT_POLICY_DOCUMENT;
     expect(environment.credentialPaths.length).toBeGreaterThan(0);

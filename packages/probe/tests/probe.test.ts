@@ -64,6 +64,33 @@ describe('renderPolicyProse', () => {
     expect(prose).not.toContain('~/.synthetic-secret');
     expect(prose).not.toContain('internal.invalid');
   });
+
+  test('renders reversibility and analyzability conditions and the Mandate Exception clause', () => {
+    const prose = renderPolicyProse({
+      ...POLICY,
+      schemaVersion: 2,
+      rules: [
+        {
+          ruleId: 'ask_public_push',
+          match: {
+            capabilities: ['push'],
+            zones: ['public_remote'],
+            reversibility: ['irreversible'],
+            analyzability: ['full', 'partial'],
+          },
+          effect: 'ask',
+          mandateException: { clause: 'the Mandate explicitly names the destination' },
+          rationale: 'Publishing is irreversible.',
+        },
+      ],
+    });
+    expect(prose).toContain(
+      'Rule ask_public_push: capability push on zone public_remote ' +
+        'with reversibility irreversible with analyzability full, partial: ask. ' +
+        'Mandate Exception: allow when the Mandate explicitly names the destination. ' +
+        'Rationale: Publishing is irreversible.',
+    );
+  });
 });
 
 test('runs two bounded questions per Scenario and computes pTop and margin', async () => {
