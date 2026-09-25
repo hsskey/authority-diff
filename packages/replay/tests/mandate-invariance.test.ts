@@ -74,7 +74,7 @@ describe('replay result under schemaVersion 2', () => {
         .filter((operation) => operation.isMandateDependent)
         .map((operation) => operation.decidingRuleId),
     );
-    expect([...decidingRuleIds].sort()).toEqual([
+    expect([...decidingRuleIds].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual([
       'ask_external_disclosure',
       'ask_production_deploy',
     ]);
