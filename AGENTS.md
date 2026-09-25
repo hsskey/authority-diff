@@ -126,7 +126,8 @@ The ones agents miss most often:
   Figures shared across documents go in an `<!-- evidence-numbers -->` block after the stamp, which `pnpm check:evidence` cross-checks.
   Re-running a fresh volume is described in `docs/evidence/adoption-preview.md`.
 - `docs/design.md` and `docs/cutline.md` keep the same headings and numbers (`pnpm check:doc-invariance`).
-- Quotations of product output in docs stay Korean and are marked `<!-- ko-product-output -->`.
+- Server-produced user-facing text (Headlines, Evidence Report, error messages) is English and never feeds a hash; Korean UI text belongs to the web catalog.
+- Quotations of product output in docs keep the product's own language; Korean ones are marked `<!-- ko-product-output -->`.
 
 ## Do not
 
