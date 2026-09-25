@@ -473,16 +473,22 @@ describe('findObservationGaps', () => {
       [['2026-03-01T01:00:00.000Z', '2026-03-03T00:00:00.000Z']],
     ],
     [
-      'a window shorter than 24 hours with no observation has no gap',
+      'a whole inclusive UTC day with no observation is one gap',
       [],
       { from: '2026-03-01T00:00:00.000Z', to: '2026-03-01T23:59:59.999Z' },
+      [['2026-03-01T00:00:00.000Z', '2026-03-01T23:59:59.999Z']],
+    ],
+    [
+      'a window shorter than a whole day with no observation has no gap',
+      [],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-01T23:59:59.998Z' },
       [],
     ],
     [
-      'a window of 24 hours with no observation is one gap',
-      [],
-      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-02T00:00:00.000Z' },
-      [['2026-03-01T00:00:00.000Z', '2026-03-02T00:00:00.000Z']],
+      'a last observation a whole inclusive day before the window end leaves a gap',
+      ['2026-03-01T12:00:00.000Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-02T11:59:59.999Z' },
+      [['2026-03-01T12:00:00.000Z', '2026-03-02T11:59:59.999Z']],
     ],
     [
       'a gap is measured across a year end',

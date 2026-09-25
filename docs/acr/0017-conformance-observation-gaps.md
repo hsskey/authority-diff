@@ -17,6 +17,7 @@ docs/evidence/conformance-limitations.md records such an outage found by hand.
 
 - An observation gap is a period of 24 hours or more inside the run's window with no stored runtime observation.
   The window start and end bound the first and last period, so a window with no observation at all is one gap when it lasts 24 hours or more.
+  The window includes its end millisecond, so the last period is measured to 1 ms past the window end, and a whole UTC day (00:00:00.000 to 23:59:59.999) with no observation is a gap.
   `from` is the window start or the observation before the period; `to` is the observation after it or the window end.
 - The gaps are computed when the findings are listed, from `runtime_observations` as stored at that time.
   No column or stats field is added, so conformance `inputsHash`, `resultHash`, and `findingKey` are unchanged; a test pins a conformance `resultHash`.

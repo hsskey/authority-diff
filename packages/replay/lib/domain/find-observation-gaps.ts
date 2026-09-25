@@ -28,19 +28,25 @@ function epochMsOf(at: IsoTimestamp): number {
 /**
  * The periods of 24 hours or more in the window with no observation.
  * `times` are the observation times inside the window, ascending; the window
- * start and end bound the first and last period.
+ * start and end bound the first and last period. The window includes its end
+ * millisecond, so the last period runs 1 ms past `window.to`, and a whole UTC
+ * day ending at 23:59:59.999 with no observation is a gap.
  */
 export function findObservationGaps(
   times: readonly IsoTimestamp[],
   window: { readonly from: IsoTimestamp; readonly to: IsoTimestamp },
 ): ObservationGap[] {
   const gaps: ObservationGap[] = [];
+  const spanMs = (from: IsoTimestamp, to: IsoTimestamp) => epochMsOf(to) - epochMsOf(from);
   let from = window.from;
-  for (const to of [...times, window.to]) {
-    if (epochMsOf(to) - epochMsOf(from) >= GAP_MIN_MS) {
+  for (const to of times) {
+    if (spanMs(from, to) >= GAP_MIN_MS) {
       gaps.push({ from, to });
     }
     from = to;
+  }
+  if (spanMs(from, window.to) + 1 >= GAP_MIN_MS) {
+    gaps.push({ from, to: window.to });
   }
   return gaps;
 }
