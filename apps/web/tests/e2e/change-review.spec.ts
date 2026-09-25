@@ -182,6 +182,7 @@ function samples(): unknown {
         baselineDecision: {
           effect: 'ask',
           decidingOperationIndex: 0,
+          isMandateDependent: false,
           operations: [
             {
               operationIndex: 0,
@@ -190,12 +191,14 @@ function samples(): unknown {
               matchedRuleIds: ['baseline_rule'],
               decidingRuleId: 'baseline_rule',
               effect: 'ask',
+              isMandateDependent: false,
             },
           ],
         },
         candidateDecision: {
           effect: 'allow',
           decidingOperationIndex: 0,
+          isMandateDependent: false,
           operations: [
             {
               operationIndex: 0,
@@ -204,6 +207,7 @@ function samples(): unknown {
               matchedRuleIds: ['candidate_rule'],
               decidingRuleId: 'candidate_rule',
               effect: 'allow',
+              isMandateDependent: false,
             },
           ],
         },

@@ -121,9 +121,58 @@ Delegated Mandates split evenly between implied and not_authorized, and every de
 ## Reproduce
 
 ```sh
-pnpm exec tsx tools/local-pipeline/policy-init.ts > .local/default-policy.json
-TYPESAFE_API_KEY=<key> pnpm authority probe --policy .local/default-policy.json --provider jev
+TYPESAFE_API_KEY=<key> pnpm authority probe --policy tests/fixtures/default-policy-v1.json --provider jev
 ```
 
+The run above used the schemaVersion 1 default template, kept as `tests/fixtures/default-policy-v1.json` (contentHash `eea676ae…c48b`).
+`tools/local-pipeline/policy-init.ts` now prints the schemaVersion 2 default template, which is the policy for the rerun.
 The command writes `.local/probe/<contentHash>.md`.
-The recorded fixture responses now cover all 35 Scenarios, so `--provider fixture` replays the whole corpus offline.
+The recorded fixture responses cover the 35 Scenarios measured above.
+The 20 schemaVersion 2 Scenarios below have no recorded response, so `--provider fixture` replays only a Scenario file limited to the measured 35.
+
+## schemaVersion 2 default template (not measured)
+
+The probe was not rerun against the schemaVersion 2 default template.
+No Jev API access was available for this change, and no other reader replaces Jev (docs/cutline.md 12).
+There are no figures in this section; every figure above belongs to the schemaVersion 1 run.
+
+### What changed for the rerun
+
+- The default template is schemaVersion 2 (docs/acr/0016-policy-schema-version-2.md).
+  `ask_external_disclosure` and `ask_production_deploy` carry a Mandate Exception; `ask_agent_config_change` has none and is the control.
+- `ask_irreversible_local` no longer lists deploy, so a production deploy is decided by `ask_production_deploy` alone and its Mandate Exception is not hidden by a second `ask` Rule.
+- `renderPolicyProse` now renders each Rule's reversibility and analyzability conditions and its Mandate Exception clause.
+  This removes the prose limitation recorded above, so a rerun would read the Rules as narrow as they are.
+
+### Added Scenarios
+
+`tests/corpus/scenarios.json` gains 20 Scenarios, ids `*_v2_*`, bringing the file to 55.
+Each targets one of the three Rules above, and the expected Effect follows the clause, not the Rule Effect alone.
+
+| target Rule | Scenarios | expected allow | expected ask |
+| --- | ---: | ---: | ---: |
+| ask_external_disclosure | 9 | 3 | 6 |
+| ask_production_deploy | 7 | 2 | 5 |
+| ask_agent_config_change | 4 | 0 | 4 |
+
+- `ask_external_disclosure` expects `allow` only when the Mandate names both the destination and the send or push.
+  The `ask` cases name only the act, only the target, a different target, or are delegated, implied, or absent.
+- `ask_production_deploy` expects `allow` only when the Mandate names both what to deploy and production.
+  The `ask` cases name only the environment, only the service, a different environment, or are delegated or implied.
+- `ask_agent_config_change` expects `ask` even for an explicit Mandate, so a reading that applies an exception the Rule does not have shows up as a mismatch.
+
+The same limitation as the first run applies: the author of these Scenarios also chose their expected Effects.
+
+### Start conditions
+
+The three conditions from docs/cutline.md 12 (ADR-0011) are judged unmet, because nothing was measured.
+
+1. Three policy sentences fixed after a low margin or mismatch, with a full rerun moving that item as intended and no neighbour worsening: unmet.
+   There is no schemaVersion 2 run, so no item was flagged and no sentence was fixed.
+2. Mandate Exception used two or more times in a real policy after schemaVersion 2: unmet.
+   The default template has two, but a template is not a policy in use, and no accepted Policy Version uses one yet.
+3. A second person's reading differs from the author's on a Scenario the probe flagged: unmet.
+   No Scenario was flagged and no second reader was compared.
+
+Calibration, a golden set, and a probe gate stay out of scope until these conditions are met.
+The rerun is a separate follow-up that needs Jev API access.

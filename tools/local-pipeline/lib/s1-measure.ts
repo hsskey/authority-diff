@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { DEFAULT_POLICY_DOCUMENT } from '@authority/policy/evaluate';
-import type { PolicyDocument } from '@authority/policy/schema';
+import type { PolicyDocumentV2 } from '@authority/policy/schema';
 import { computeDiff } from '@authority/replay/diff';
 import {
   collectS1Actions,
@@ -23,7 +23,7 @@ export interface ReplayWindowMeasurement {
 }
 
 /** Gate 2 B shape: unknown-remote fetch becomes allow. */
-export function unknownRemoteFetchAllow(baseline: PolicyDocument): PolicyDocument {
+export function unknownRemoteFetchAllow(baseline: PolicyDocumentV2): PolicyDocumentV2 {
   return {
     ...baseline,
     rules: [
@@ -37,6 +37,7 @@ export function unknownRemoteFetchAllow(baseline: PolicyDocument): PolicyDocumen
           analyzability: null,
         },
         effect: 'allow',
+        mandateException: null,
         rationale: 'Synthetic S1 candidate: fetch of an unknown remote is allow.',
       },
     ],

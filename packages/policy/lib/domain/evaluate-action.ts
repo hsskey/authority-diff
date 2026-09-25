@@ -60,6 +60,15 @@ function decidingRuleId(matched: readonly PolicyRule[], effect: Effect): string 
   return candidates[0] ?? null;
 }
 
+function hasMandateException(rule: PolicyRule): boolean {
+  return 'mandateException' in rule && rule.mandateException !== null;
+}
+
+function isMandateDependent(matched: readonly PolicyRule[], effect: Effect): boolean {
+  const askRules = matched.filter((rule) => rule.effect === 'ask');
+  return effect === 'ask' && askRules.length > 0 && askRules.every(hasMandateException);
+}
+
 function evaluateOperation(
   operation: Operation,
   rules: readonly PolicyRule[],
@@ -78,6 +87,7 @@ function evaluateOperation(
     matchedRuleIds: matched.map((rule) => rule.ruleId).sort(),
     decidingRuleId: decidingRuleId(matched, effect),
     effect,
+    isMandateDependent: isMandateDependent(matched, effect),
   };
 }
 
@@ -113,6 +123,11 @@ function buildDecision(
   return {
     effect,
     decidingOperationIndex: decidingOperationIndex(operationDecisions, effect),
+    isMandateDependent:
+      effect === 'ask' &&
+      operationDecisions
+        .filter((decision) => decision.effect === 'ask')
+        .every((decision) => decision.isMandateDependent),
     operations: operationDecisions,
   };
 }

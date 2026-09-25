@@ -16,4 +16,5 @@ export {
 } from './lib/infra/module.ts';
 export { nextStatus, type PolicyTransition } from './lib/domain/transition.ts';
 export { DEFAULT_POLICY_DOCUMENT } from './lib/domain/default-policy-document.ts';
+export { upgradePolicyDocument } from './lib/domain/upgrade-policy-document.ts';
 export { EMPTY_POLICY_DOCUMENT } from './lib/domain/empty-policy-document.ts';

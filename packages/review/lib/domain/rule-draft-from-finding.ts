@@ -1,6 +1,6 @@
 import type { Effect } from '@authority/kernel';
-import { PolicyRuleSchema } from '@authority/policy/schema';
-import type { PolicyRule } from '@authority/policy/schema';
+import { PolicyRuleV2Schema } from '@authority/policy/schema';
+import type { PolicyRuleV2 } from '@authority/policy/schema';
 import type { ConformanceFinding, ConformanceFindingKind } from '@authority/replay/schema';
 
 /** Whether `effect` is allowed for this Conformance Finding kind. */
@@ -23,7 +23,7 @@ export function ruleDraftFromFinding(
   finding: Pick<ConformanceFinding, 'findingKey' | 'capability' | 'zone'>,
   effect: Effect,
   existingRuleIds: readonly string[],
-): PolicyRule {
+): PolicyRuleV2 {
   const existing = new Set(existingRuleIds);
   const stem = `cfnd_${finding.findingKey.slice(0, 12)}`;
   let ruleId = stem;
@@ -32,7 +32,7 @@ export function ruleDraftFromFinding(
     ruleId = `${stem}_${suffix}`;
     suffix += 1;
   }
-  return PolicyRuleSchema.parse({
+  return PolicyRuleV2Schema.parse({
     ruleId,
     match: {
       capabilities: [finding.capability],
@@ -41,6 +41,7 @@ export function ruleDraftFromFinding(
       analyzability: null,
     },
     effect,
+    mandateException: null,
     rationale: `review candidate created from finding ${finding.findingKey}; adoption is decided in change review.`,
   });
 }

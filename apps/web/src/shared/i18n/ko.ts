@@ -452,6 +452,7 @@ export const ko: Messages = {
     analyzability: 'Analyzability',
     effect: 'Effect',
     rationale: '근거',
+    mandateException: 'Mandate Exception',
     any: '모두',
     validationTitle: (isValid: boolean, issues: number) =>
       `검증: ${isValid ? '통과' : `문제 ${issues}건`}`,

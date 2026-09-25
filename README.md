@@ -68,10 +68,10 @@ Jev is V2 exploration only (`authority probe`). Replay, Change Review, and confo
 ## Exploratory policy sentence check
 
 `authority probe --provider jev` asks Jev how it reads each default-template Rule sentence against the Scenarios in `tests/corpus/scenarios.json`, and ranks them by margin.
-The Scenario set is 35 synthetic entries, 30 of them agent-authored.
-Each default-template Rule has three added Scenarios, each using one of the explicit, implied, delegated, or absent Mandate phrasings.
+The measured set is 35 synthetic schemaVersion 1 entries, 30 of them agent-authored, three per default-template Rule across the explicit, implied, delegated, and absent Mandate phrasings.
 On one run 35 / 35 matched the expected Effect and the lowest Effect margin was 0.88; n=35 cannot support a 95% match-rate claim.
-There is no threshold and no gate wiring. The ranking, the lowest-margin Scenarios, and the limits are in [docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md).
+`tests/corpus/scenarios.json` now also holds 20 schemaVersion 2 Scenarios that were not rerun for lack of Jev access.
+There is no threshold and no gate wiring. The ranking, the lowest-margin Scenarios, the schemaVersion 2 additions, and the limits are in [docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md).
 
 ## How to run
 
