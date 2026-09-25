@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
 import { callRoute, describeApiError } from '../../shared/api-client.ts';
+import { useT } from '../../shared/i18n/use-t.ts';
 import { VERDICT_OPTIONS, verdictLabel } from './format.ts';
 
 type Verdict = ReviewDiffGroupResponse['verdict'];
@@ -23,6 +24,7 @@ export function VerdictSelect({
   verdict: Verdict;
   disabled?: boolean;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const record = useMutation({
     mutationFn: async (next: Exclude<Verdict, null>) => {
@@ -44,9 +46,9 @@ export function VerdictSelect({
 
   return (
     <label className="inline-grid gap-1">
-      <span className="sr-only">판정</span>
+      <span className="sr-only">{t.verdict.label}</span>
       <select
-        aria-label={`${groupLabel} 판정`}
+        aria-label={t.verdict.selectFor(groupLabel)}
         className="rounded-md border border-border bg-panel px-2 py-[0.3rem] text-inherit dark:border-gray-600 dark:bg-gray-900"
         value={verdict ?? ''}
         disabled={disabled || record.isPending}
@@ -59,11 +61,11 @@ export function VerdictSelect({
         }}
       >
         <option value="" disabled>
-          {verdictLabel(kind, null)}
+          {verdictLabel(t, kind, null)}
         </option>
         {VERDICT_OPTIONS.map((option) => (
           <option key={option} value={option}>
-            {verdictLabel(kind, option)}
+            {verdictLabel(t, kind, option)}
           </option>
         ))}
       </select>

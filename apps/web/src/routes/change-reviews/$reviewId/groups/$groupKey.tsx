@@ -15,14 +15,16 @@ import { EmptyState } from '../../../../shared/components/EmptyState.tsx';
 import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
 import {
+  adoptionGroupHeadline,
   adoptionGroupLabel,
+  diffGroupHeadline,
   diffGroupLabel,
-  effectLabel,
   formatZoneTransition,
 } from '../../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
 import { usePageTitle } from '../../../../shared/use-page-title.ts';
 import { TextLink } from '../../../../shared/components/TextLink.tsx';
+import { useT } from '../../../../shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
   component: DiffGroupPage,
@@ -223,30 +225,31 @@ function useReview(reviewId: string) {
 
 function DiffGroupPage() {
   const { reviewId, groupKey } = Route.useParams();
+  const t = useT();
   const reviewQuery = useReview(reviewId);
   const pendingTitle =
     reviewQuery.data === undefined
-      ? 'Group'
+      ? t.group.title
       : reviewQuery.data.kind === 'adoption'
-        ? 'Adoption Group'
-        : 'Diff Group';
+        ? t.group.adoptionTitle
+        : t.group.diffTitle;
   usePageTitle(pendingTitle);
 
   if (reviewQuery.isPending) {
     return (
       <section>
-        <PageTitle>Group</PageTitle>
-        <LoadingState label="검토를 불러오는 중" />
+        <PageTitle>{t.group.title}</PageTitle>
+        <LoadingState label={t.review.loading} />
       </section>
     );
   }
   if (reviewQuery.isError) {
     return (
       <section>
-        <PageTitle>Group</PageTitle>
+        <PageTitle>{t.group.title}</PageTitle>
         <ErrorState
-          title="검토를 불러오지 못했습니다"
-          message={reviewQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.review.loadFailed}
+          message={reviewQuery.error?.message ?? t.common.unknownError}
         />
       </section>
     );
@@ -268,6 +271,7 @@ function ChangeGroupPage({
   groupKey: string;
   review: ChangeReviewResponse;
 }) {
+  const t = useT();
   const groupsQuery = useQuery({
     queryKey: ['change-review-diff-groups', reviewId],
     queryFn: async () => {
@@ -288,7 +292,7 @@ function ChangeGroupPage({
     enabled: replayRunId !== null,
     queryFn: async () => {
       if (replayRunId === null) {
-        throw new Error('replay run이 아직 연결되지 않았습니다');
+        throw new Error(t.common.replayRunNotLinked);
       }
       const result = await callRoute(routes.getDiffGroupSamples, {
         params: { runId: replayRunId, groupKey },
@@ -304,19 +308,16 @@ function ChangeGroupPage({
 
   return (
     <Stack as="section">
-      <PageTitle>Diff Group</PageTitle>
-      {groupsQuery.isPending ? <LoadingState label="Diff Group을 불러오는 중" /> : null}
+      <PageTitle>{t.group.diffTitle}</PageTitle>
+      {groupsQuery.isPending ? <LoadingState label={t.group.loadingDiff} /> : null}
       {groupsQuery.isError ? (
         <ErrorState
-          title="Diff Group을 불러오지 못했습니다"
-          message={groupsQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.group.diffLoadFailed}
+          message={groupsQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {groupsQuery.isSuccess && group === null ? (
-        <EmptyState
-          title="Diff Group을 찾지 못했습니다"
-          message={`이 변경 검토에는 group ${groupKey}이 없습니다.`}
-        />
+        <EmptyState title={t.group.diffNotFound} message={t.group.diffNotFoundMessage(groupKey)} />
       ) : null}
       {group !== null ? (
         <>
@@ -341,6 +342,7 @@ function AdoptionGroupPage({
   groupKey: string;
   review: ChangeReviewResponse;
 }) {
+  const t = useT();
   const groupsQuery = useQuery({
     queryKey: ['change-review-adoption-groups', reviewId],
     queryFn: async () => {
@@ -361,7 +363,7 @@ function AdoptionGroupPage({
     enabled: replayRunId !== null,
     queryFn: async () => {
       if (replayRunId === null) {
-        throw new Error('replay run이 아직 연결되지 않았습니다');
+        throw new Error(t.common.replayRunNotLinked);
       }
       const result = await callRoute(routes.getAdoptionGroupSamples, {
         params: { runId: replayRunId, groupKey },
@@ -377,18 +379,18 @@ function AdoptionGroupPage({
 
   return (
     <Stack as="section">
-      <PageTitle>Adoption Group</PageTitle>
-      {groupsQuery.isPending ? <LoadingState label="Adoption Group을 불러오는 중" /> : null}
+      <PageTitle>{t.group.adoptionTitle}</PageTitle>
+      {groupsQuery.isPending ? <LoadingState label={t.group.loadingAdoption} /> : null}
       {groupsQuery.isError ? (
         <ErrorState
-          title="Adoption Group을 불러오지 못했습니다"
-          message={groupsQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.group.adoptionLoadFailed}
+          message={groupsQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {groupsQuery.isSuccess && group === null ? (
         <EmptyState
-          title="Adoption Group을 찾지 못했습니다"
-          message={`이 최초 도입 검토에는 group ${groupKey}이 없습니다.`}
+          title={t.group.adoptionNotFound}
+          message={t.group.adoptionNotFoundMessage(groupKey)}
         />
       ) : null}
       {group !== null ? (
@@ -416,42 +418,45 @@ function ChangeGroupSignature({
   review: ChangeReviewResponse;
   group: ReviewDiffGroupResponse;
 }) {
+  const t = useT();
   return (
     <Stack>
-      <Hint>{foldHomePaths(group.headline)}</Hint>
+      <Hint>{diffGroupHeadline(t, group)}</Hint>
       <MetaGrid>
-        <MetaField label="방향">
+        <MetaField label={t.group.direction}>
           {group.direction} <SeverityBadge severity={group.severity} />
         </MetaField>
-        <MetaField label="Capability">{group.capability}</MetaField>
-        <MetaField label="Zone">{formatZoneTransition(group.fromZone, group.toZone)}</MetaField>
-        <MetaField label="Effect">
-          {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
+        <MetaField label={t.group.capability}>{group.capability}</MetaField>
+        <MetaField label={t.group.zone}>
+          {formatZoneTransition(group.fromZone, group.toZone)}
         </MetaField>
-        <MetaField label="Program">{group.program ?? '-'}</MetaField>
-        <MetaField label="Action / Session">
+        <MetaField label={t.group.effect}>
+          {formatZoneTransition(t.effect[group.fromEffect], t.effect[group.toEffect])}
+        </MetaField>
+        <MetaField label={t.group.program}>{group.program ?? '-'}</MetaField>
+        <MetaField label={t.group.actionSession}>
           {group.actionCount} / {group.sessionCount}
         </MetaField>
       </MetaGrid>
       {group.direction === 'widening' ? (
         <PanelRow>
-          <SectionTitle as="span">판정</SectionTitle>
+          <SectionTitle as="span">{t.verdict.label}</SectionTitle>
           <VerdictSelect
             reviewId={reviewId}
             kind="change"
             groupKey={group.groupKey}
-            groupLabel={diffGroupLabel(group)}
+            groupLabel={diffGroupLabel(t, group)}
             verdict={group.verdict}
             disabled={review.status !== 'ready'}
           />
         </PanelRow>
       ) : null}
       <Hint>
-        검토를 마치려면{' '}
+        {t.group.backPrefix}
         <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
-          변경 검토로 돌아가세요
+          {t.group.backToChange}
         </TextLink>
-        .
+        {t.group.backSuffix}
       </Hint>
     </Stack>
   );
@@ -466,41 +471,42 @@ function AdoptionGroupSignature({
   review: ChangeReviewResponse;
   group: ReviewAdoptionGroupResponse;
 }) {
+  const t = useT();
   return (
     <Stack>
-      <Hint>{foldHomePaths(group.headline)}</Hint>
+      <Hint>{adoptionGroupHeadline(t, group)}</Hint>
       <MetaGrid>
-        <MetaField label="Effect">
-          <EffectBadge effect={group.effect}>{effectLabel(group.effect)}</EffectBadge>
+        <MetaField label={t.group.effect}>
+          <EffectBadge effect={group.effect}>{t.effect[group.effect]}</EffectBadge>
         </MetaField>
-        <MetaField label="Capability">{group.capability}</MetaField>
-        <MetaField label="Zone">{group.zone}</MetaField>
-        <MetaField label="Action / Session">
+        <MetaField label={t.group.capability}>{group.capability}</MetaField>
+        <MetaField label={t.group.zone}>{group.zone}</MetaField>
+        <MetaField label={t.group.actionSession}>
           {group.actionCount} / {group.sessionCount}
         </MetaField>
-        <MetaField label="분석 불가 Action">{group.analyzabilityNoneCount}</MetaField>
-        <MetaField label="기간">
+        <MetaField label={t.group.notAnalyzable}>{group.analyzabilityNoneCount}</MetaField>
+        <MetaField label={t.common.period}>
           {group.firstOccurredAt} → {group.lastOccurredAt}
         </MetaField>
       </MetaGrid>
       <ProgramMix group={group} />
       <PanelRow>
-        <SectionTitle as="span">판정</SectionTitle>
+        <SectionTitle as="span">{t.verdict.label}</SectionTitle>
         <VerdictSelect
           reviewId={reviewId}
           kind="adoption"
           groupKey={group.groupKey}
-          groupLabel={adoptionGroupLabel(group)}
+          groupLabel={adoptionGroupLabel(t, group)}
           verdict={group.verdict}
           disabled={review.status !== 'ready'}
         />
       </PanelRow>
       <Hint>
-        검토를 마치려면{' '}
+        {t.group.backPrefix}
         <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
-          최초 도입 검토로 돌아가세요
+          {t.group.backToAdoption}
         </TextLink>
-        .
+        {t.group.backSuffix}
       </Hint>
     </Stack>
   );
@@ -508,24 +514,24 @@ function AdoptionGroupSignature({
 
 /** The programs mixed into one group: the signature carries none, so the mix is shown here. */
 function ProgramMix({ group }: { group: ReviewAdoptionGroupResponse }) {
+  const t = useT();
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[0.9rem]">
         <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">
-          Program 구성: 서로 다른 program {group.distinctProgramCount}개, 상위{' '}
-          {group.programSummary.length}개 표시
+          {t.group.programMixCaption(group.distinctProgramCount, group.programSummary.length)}
         </caption>
         <thead>
           <tr>
-            <TableHeadCell>Program</TableHeadCell>
-            <TableHeadCell numeric>Action</TableHeadCell>
+            <TableHeadCell>{t.group.program}</TableHeadCell>
+            <TableHeadCell numeric>{t.review.action}</TableHeadCell>
           </tr>
         </thead>
         <tbody>
           {group.programSummary.map((entry) => (
             <tr key={entry.program ?? '__none__'}>
               <TableCell muted={entry.program === null} mono={entry.program !== null}>
-                {entry.program ?? '인식 안 됨'}
+                {entry.program ?? t.group.unrecognized}
               </TableCell>
               <TableCell numeric>{entry.count}</TableCell>
             </tr>
@@ -545,49 +551,44 @@ function SampleSection<S extends { action: { actionKey: string } }>({
   replayRunId: string | null;
   render: (sample: S) => ReactNode;
 }) {
+  const t = useT();
   if (replayRunId === null) {
-    return (
-      <EmptyState
-        title="샘플 없음"
-        message="replay run이 연결되기 전에는 sample을 볼 수 없습니다."
-      />
-    );
+    return <EmptyState title={t.group.noSamples} message={t.group.noReplayRun} />;
   }
   if (query.isPending) {
-    return <LoadingState label="Sample을 불러오는 중" />;
+    return <LoadingState label={t.group.loadingSamples} />;
   }
   if (query.isError) {
     return (
       <ErrorState
-        title="Sample을 불러오지 못했습니다"
-        message={query.error?.message ?? '알 수 없는 오류'}
+        title={t.group.samplesLoadFailed}
+        message={query.error?.message ?? t.common.unknownError}
       />
     );
   }
   if (!query.isSuccess || query.data.length === 0) {
-    return (
-      <EmptyState title="샘플 없음" message="보존 기간이 지나 action이 삭제되었을 수 있습니다." />
-    );
+    return <EmptyState title={t.group.noSamples} message={t.group.samplesExpired} />;
   }
 
   return (
     <Stack>
-      <SectionTitle>Sample ({query.data.length})</SectionTitle>
+      <SectionTitle>{t.group.samplesTitle(query.data.length)}</SectionTitle>
       {query.data.map(render)}
     </Stack>
   );
 }
 
 function ChangeSampleCard({ sample }: { sample: DiffSample }) {
+  const t = useT();
   const { action } = sample;
   return (
     <SampleCard>
       <div>
-        <SectionTitle as="h3">도구 입력(가림 처리)</SectionTitle>
+        <SectionTitle as="h3">{t.group.toolInput}</SectionTitle>
         <RedactedInput>{foldHomePaths(action.toolInputRedacted)}</RedactedInput>
       </div>
       <div>
-        <SectionTitle as="h3">Operations ({action.operations.length})</SectionTitle>
+        <SectionTitle as="h3">{t.group.operationsTitle(action.operations.length)}</SectionTitle>
         <IssueList>
           {action.operations.map((operation, position) => (
             <li key={operation.index}>
@@ -603,12 +604,12 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
       </div>
       <DecisionPair>
         <DecisionView
-          title="Baseline 결정"
+          title={t.group.baselineDecision}
           decision={sample.baselineDecision}
           rationales={sample.baselineRuleRationales}
         />
         <DecisionView
-          title="Candidate 결정"
+          title={t.group.candidateDecision}
           decision={sample.candidateDecision}
           rationales={sample.candidateRuleRationales}
         />
@@ -618,15 +619,16 @@ function ChangeSampleCard({ sample }: { sample: DiffSample }) {
 }
 
 function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
+  const t = useT();
   const { action } = sample;
   return (
     <SampleCard>
       <div>
-        <SectionTitle as="h3">도구 입력(가림 처리)</SectionTitle>
+        <SectionTitle as="h3">{t.group.toolInput}</SectionTitle>
         <RedactedInput>{foldHomePaths(action.toolInputRedacted)}</RedactedInput>
       </div>
       <div>
-        <SectionTitle as="h3">Operations ({action.operations.length})</SectionTitle>
+        <SectionTitle as="h3">{t.group.operationsTitle(action.operations.length)}</SectionTitle>
         <IssueList>
           {action.operations.map((operation, position) => (
             <li key={operation.index}>
@@ -639,7 +641,7 @@ function AdoptionSampleCard({ sample }: { sample: AdoptionSample }) {
       </div>
       <DecisionPair>
         <DecisionView
-          title="제안 정책 결정"
+          title={t.group.proposedDecision}
           decision={sample.candidateDecision}
           rationales={sample.candidateRuleRationales}
         />
@@ -664,24 +666,25 @@ function DecisionView({
   decision: Decision;
   rationales: Rationales;
 }) {
+  const t = useT();
   return (
     <Stack className="content-start">
       <RowBetween>
         <SectionTitle as="h4">{title}</SectionTitle>
-        <EffectBadge effect={decision.effect}>{effectLabel(decision.effect)}</EffectBadge>
+        <EffectBadge effect={decision.effect}>{t.effect[decision.effect]}</EffectBadge>
       </RowBetween>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[0.9rem]">
           <caption className="pb-2 text-left text-[0.85rem] text-[#6b7280]">
-            Operation별 결정
+            {t.group.perOperation}
           </caption>
           <thead>
             <tr>
-              <TableHeadCell>Op</TableHeadCell>
-              <TableHeadCell>Zone</TableHeadCell>
-              <TableHeadCell>Reversibility</TableHeadCell>
-              <TableHeadCell>Effect</TableHeadCell>
-              <TableHeadCell>근거</TableHeadCell>
+              <TableHeadCell>{t.group.operation}</TableHeadCell>
+              <TableHeadCell>{t.group.zone}</TableHeadCell>
+              <TableHeadCell>{t.group.reversibility}</TableHeadCell>
+              <TableHeadCell>{t.group.effect}</TableHeadCell>
+              <TableHeadCell>{t.group.rationale}</TableHeadCell>
             </tr>
           </thead>
           <tbody>
@@ -691,9 +694,7 @@ function DecisionView({
                 <TableCell>{operation.zone}</TableCell>
                 <TableCell>{operation.reversibility}</TableCell>
                 <TableCell nowrap>
-                  <EffectBadge effect={operation.effect}>
-                    {effectLabel(operation.effect)}
-                  </EffectBadge>
+                  <EffectBadge effect={operation.effect}>{t.effect[operation.effect]}</EffectBadge>
                 </TableCell>
                 <TableCell>
                   {operation.decidingRuleId === null
@@ -706,7 +707,7 @@ function DecisionView({
         </table>
       </div>
       <details>
-        <summary>기술 세부</summary>
+        <summary>{t.group.technicalDetails}</summary>
         <IssueList>
           {decision.operations.map((operation) => (
             <li key={operation.operationIndex} className="break-all font-mono text-[0.85em]">
