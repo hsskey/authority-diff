@@ -30,6 +30,7 @@ pnpm lint:css
 pnpm lint:boundaries
 pnpm check:evidence
 pnpm check:doc-invariance
+pnpm check:i18n
 pnpm test:int:db:up
 pnpm test:int
 pnpm test:int:db:down
@@ -38,7 +39,7 @@ pnpm test:e2e
 pnpm db:generate
 ```
 
-- `pnpm check` runs typecheck, lint, format check, CSS policy, boundaries, lint proof, evidence check, doc-invariance check, and unit tests.
+- `pnpm check` runs typecheck, lint, format check, CSS policy, boundaries, lint proof, evidence check, doc-invariance check, i18n key check, and unit tests.
 - `pnpm lint:boundaries:prove` inserts known violations and confirms each boundary rule still fails.
 - `pnpm test:int` needs the test database from `pnpm test:int:db:up`; stop it with `pnpm test:int:db:down`.
 - `pnpm test:e2e` needs the Chromium install above and starts the web dev server itself.
@@ -116,6 +117,8 @@ The ones agents miss most often:
 - The single stylesheet `apps/web/src/styles/app.css` may contain only `@import "tailwindcss"`, `@theme`, and `@layer base`, with zero unused class selectors (`pnpm lint:css`).
 - Colors come only from `@theme` tokens (`bg-surface`, `text-muted`).
 - Extract a React component when the same utility combination appears three times.
+- Screen text lives only in the `en.ts` and `ko.ts` catalogs under `apps/web/src/shared/i18n/`, read through `useT`; add every key to both (`pnpm check:i18n`, ADR-0012).
+- The chromium e2e project runs in Korean and the visual project in English.
 
 ## Data, evidence, and generated files
 
@@ -126,7 +129,8 @@ The ones agents miss most often:
   Figures shared across documents go in an `<!-- evidence-numbers -->` block after the stamp, which `pnpm check:evidence` cross-checks.
   Re-running a fresh volume is described in `docs/evidence/adoption-preview.md`.
 - `docs/design.md` and `docs/cutline.md` keep the same headings and numbers (`pnpm check:doc-invariance`).
-- Quotations of product output in docs stay Korean and are marked `<!-- ko-product-output -->`.
+- Server-produced user-facing text (Headlines, Evidence Report, error messages) is English and never feeds a hash; Korean UI text belongs to the web catalog.
+- Quotations of product output in docs keep the product's own language; Korean ones are marked `<!-- ko-product-output -->`.
 
 ## Do not
 

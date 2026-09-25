@@ -6,6 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 5173;
 const baseURL = `http://localhost:${PORT}`;
 
+// The chromium project renders the Korean catalog and the visual project the
+// English one; each follows the browser locale.
 // Visual screenshots pin rasterization to fonts shipped in the version-matched
 // Playwright image (mcr.microsoft.com/playwright:v1.63.0-noble): Liberation Sans
 // and Unifont. Capture and compare inside that image, on linux/amd64 like the
@@ -33,7 +35,7 @@ export default defineConfig({
     {
       name: 'chromium',
       testIgnore: /visual\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], locale: 'ko-KR' },
     },
     {
       name: 'visual',

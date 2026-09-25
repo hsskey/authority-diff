@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { clearAuthToken, readAuthToken } from '../auth.ts';
+import { setLanguage, useLanguage, useT } from '../i18n/use-t.ts';
 
 export function Layout({ children }: { children: ReactNode }) {
   useRouterState({ select: (state) => state.location.pathname });
   const hasToken = readAuthToken() !== null;
+  const t = useT();
+  const other = useLanguage() === 'ko' ? 'en' : 'ko';
 
   return (
     <div className="grid min-h-screen grid-rows-[auto_1fr]">
@@ -12,7 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
         href="#main-content"
         className="absolute top-3 left-3 z-10 -translate-y-[200%] rounded-md bg-gray-900 px-3 py-[0.4rem] text-white no-underline focus:translate-y-0"
       >
-        본문으로 건너뛰기
+        {t.layout.skipToContent}
       </a>
       <header className="border-b border-border bg-panel px-6 py-4">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-8 gap-y-4">
@@ -21,19 +24,27 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
           <nav
             className="flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap [&_[aria-current=page]]:font-bold [&_[aria-current=page]]:underline [&_[aria-current=page]]:underline-offset-[0.2em]"
-            aria-label="주 메뉴"
+            aria-label={t.layout.mainMenu}
           >
             <Link to="/" activeOptions={{ exact: true }} activeProps={{ 'aria-current': 'page' }}>
-              활동 분포
+              {t.layout.overview}
             </Link>
             <Link to="/conformance" activeProps={{ 'aria-current': 'page' }}>
-              적합성
+              {t.layout.conformance}
             </Link>
             {!hasToken ? (
               <Link to="/login" activeProps={{ 'aria-current': 'page' }}>
-                로그인
+                {t.layout.login}
               </Link>
             ) : null}
+            <button
+              type="button"
+              className="cursor-pointer"
+              lang={other}
+              onClick={() => setLanguage(other)}
+            >
+              {t.layout.otherLanguage}
+            </button>
           </nav>
           {hasToken ? (
             <button
@@ -44,7 +55,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 window.location.assign('/login');
               }}
             >
-              로그아웃
+              {t.layout.logout}
             </button>
           ) : null}
         </div>

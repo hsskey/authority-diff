@@ -16,13 +16,15 @@ import { MetaGrid, MONO } from '../shared/components/MetaGrid.tsx';
 import { SectionTitle } from '../shared/components/SectionTitle.tsx';
 import { Stack } from '../shared/components/Stack.tsx';
 import { usePageTitle } from '../shared/use-page-title.ts';
+import { useT } from '../shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/conformance')({
   component: ConformanceFindingListPage,
 });
 
 function ConformanceFindingListPage() {
-  usePageTitle('적합성');
+  const t = useT();
+  usePageTitle(t.conformance.title);
   const findingsQuery = useQuery({
     queryKey: ['conformance-findings'],
     queryFn: async () => {
@@ -36,12 +38,12 @@ function ConformanceFindingListPage() {
 
   return (
     <section>
-      <PageTitle>적합성</PageTitle>
-      {findingsQuery.isPending ? <LoadingState label="Conformance Finding을 불러오는 중" /> : null}
+      <PageTitle>{t.conformance.title}</PageTitle>
+      {findingsQuery.isPending ? <LoadingState label={t.conformance.loading} /> : null}
       {findingsQuery.isError ? (
         <ErrorState
-          title="Conformance Finding을 불러오지 못했습니다"
-          message={findingsQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.conformance.loadFailed}
+          message={findingsQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {findingsQuery.isSuccess ? <FindingList findings={findingsQuery.data} /> : null}
@@ -58,37 +60,40 @@ function sumActions(rows: readonly PermissionModeCount[]): number {
 }
 
 function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[] }) {
+  const t = useT();
   const total = sumActions(rows);
   const unguarded = sumActions(
     rows.filter((row) => UNGUARDED_PERMISSION_MODES.includes(row.permissionMode)),
   );
   return (
     <Stack as="section" aria-labelledby="permission-mode-title">
-      <SectionTitle id="permission-mode-title">permission mode별 Action</SectionTitle>
+      <SectionTitle id="permission-mode-title">{t.conformance.permissionModeTitle}</SectionTitle>
       {rows.length === 0 ? (
-        <p className="my-[1em] text-[0.9rem] text-muted">
-          이 run에는 permission mode 집계가 없습니다.
-        </p>
+        <p className="my-[1em] text-[0.9rem] text-muted">{t.conformance.noPermissionModes}</p>
       ) : (
         <>
           <MetaGrid>
             <div>
-              <dt>guard 없이 실행될 수 있는 Action</dt>
+              <dt>{t.conformance.unguarded}</dt>
               <dd>
-                {unguarded}건 / {total}건 ({UNGUARDED_PERMISSION_MODES.join(', ')})
+                {t.conformance.unguardedValue(
+                  unguarded,
+                  total,
+                  UNGUARDED_PERMISSION_MODES.join(', '),
+                )}
               </dd>
             </div>
           </MetaGrid>
           <DataTable>
-            <TableCaption>permission mode {rows.length}개, mode가 없는 관측은 unknown</TableCaption>
+            <TableCaption>{t.conformance.permissionModeCaption(rows.length)}</TableCaption>
             <thead>
               <tr>
-                <Th scope="col">permission mode</Th>
+                <Th scope="col">{t.conformance.permissionMode}</Th>
                 <Th scope="col" numeric>
-                  Action
+                  {t.conformance.action}
                 </Th>
                 <Th scope="col" numeric>
-                  finding Action
+                  {t.conformance.findingAction}
                 </Th>
               </tr>
             </thead>
@@ -109,30 +114,26 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
 }
 
 function FindingList({ findings }: { findings: ListConformanceFindingsResponse }) {
+  const t = useT();
   if (findings.run === null) {
-    return (
-      <EmptyState
-        title="아직 비교한 runtime 관측이 없습니다"
-        message="conformance run이 runtime 관측과 Policy Version을 비교하면 finding이 여기에 나타납니다."
-      />
-    );
+    return <EmptyState title={t.conformance.noRunTitle} message={t.conformance.noRunMessage} />;
   }
 
   return (
     <Stack>
       <MetaGrid>
         <div>
-          <dt>Policy Version</dt>
+          <dt>{t.conformance.policyVersion}</dt>
           <dd className={MONO}>{findings.run.policyVersionId}</dd>
         </div>
         <div>
-          <dt>기간</dt>
+          <dt>{t.common.period}</dt>
           <dd>
             {findings.run.windowFrom} → {findings.run.windowTo}
           </dd>
         </div>
         <div>
-          <dt>Replay Run</dt>
+          <dt>{t.conformance.replayRun}</dt>
           <dd className={MONO}>{findings.run.replayRunId}</dd>
         </div>
       </MetaGrid>
@@ -141,23 +142,23 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
 
       {findings.items.length === 0 ? (
         <EmptyState
-          title="finding 없음"
-          message="이 run에서 관측된 모든 Action이 Policy Version과 일치했습니다."
+          title={t.conformance.noFindingsTitle}
+          message={t.conformance.noFindingsMessage}
         />
       ) : (
         <DataTable>
-          <TableCaption>finding {findings.items.length}건, 시각은 UTC</TableCaption>
+          <TableCaption>{t.conformance.findingsCaption(findings.items.length)}</TableCaption>
           <thead>
             <tr>
-              <Th scope="col">종류</Th>
-              <Th scope="col">Capability</Th>
-              <Th scope="col">Zone</Th>
-              <Th scope="col">Program</Th>
+              <Th scope="col">{t.conformance.kind}</Th>
+              <Th scope="col">{t.conformance.capability}</Th>
+              <Th scope="col">{t.conformance.zone}</Th>
+              <Th scope="col">{t.conformance.program}</Th>
               <Th scope="col" numeric>
-                Action
+                {t.conformance.action}
               </Th>
-              <Th scope="col">최초</Th>
-              <Th scope="col">최근</Th>
+              <Th scope="col">{t.conformance.first}</Th>
+              <Th scope="col">{t.conformance.last}</Th>
             </tr>
           </thead>
           <tbody>

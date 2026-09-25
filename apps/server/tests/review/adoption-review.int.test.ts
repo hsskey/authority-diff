@@ -412,24 +412,28 @@ test('the adoption report carries the counts, both group tables, the decision, a
   }
   const report = result.value;
 
-  expect(report).toContain('기록 출처: 실제 transcript 4건 / synthetic 0건');
+  expect(report).toContain('Record sources: real transcript 4 / synthetic 0');
   expect(report).toContain(
-    '이 수치는 과거 행동에 정책을 적용한 결과이며 과거 runtime의 승인 여부를 복원한 것이 아닙니다.',
+    'These figures apply the policy to past behavior; they do not reconstruct what the runtime approved at the time.',
   );
-  expect(report).toContain('| 허용 | 0 | 0.0% |\n| 확인 필요 | 3 | 75.0% |\n| 차단 | 1 | 25.0% |');
-  expect(report).toContain('- 결정: 최초 정책 채택');
+  expect(report).toContain('| allow | 0 | 0.0% |\n| ask | 3 | 75.0% |\n| deny | 1 | 25.0% |');
+  expect(report).toContain('- Decision: First policy adopted');
   expect(report).toContain(
     `- Decision Record sequence: ${row.sequence}\n- Decision Record hash: \`${row.hash}\``,
   );
   expect(report).not.toContain('deny_credentials_access');
   expect(report).not.toContain('cat ~/.synthetic-credentials/token');
   const askSection = report.slice(
-    report.indexOf('## 확인 필요 Adoption Group과 Verdict'),
-    report.indexOf('## 차단 Adoption Group과 Verdict'),
+    report.indexOf("## 'ask' Adoption Groups and Verdicts"),
+    report.indexOf("## 'deny' Adoption Groups and Verdicts"),
   );
-  const denySection = report.slice(report.indexOf('## 차단 Adoption Group과 Verdict'));
-  expect(askSection).toContain("'확인 필요' 대상이 됩니다. | 3 | 1 |");
-  expect(denySection).toContain("'차단' 대상이 됩니다. | 1 | 1 |");
+  const denySection = report.slice(report.indexOf("## 'deny' Adoption Groups and Verdicts"));
+  expect(askSection).toContain(
+    "| This policy gives 'ask' to 3 execute Actions in the host Zone. | 3 | 1 |",
+  );
+  expect(denySection).toContain(
+    "| This policy gives 'deny' to 1 read Action in the credentials Zone. | 1 | 1 |",
+  );
 });
 
 test('a Policy has one open review across kinds: a second create is refused until the first is decided', async () => {

@@ -157,7 +157,7 @@ test('runs two bounded questions per Scenario and computes pTop and margin', asy
   const report = renderProbeReport([...result.value].reverse());
   expect(
     report.startsWith(
-      'exploratory semantic-policy evaluation, n=2. 이 표본 수로는 일치율 95%를 주장할 수 없음',
+      'exploratory semantic-policy evaluation, n=2. This sample size cannot claim 95% agreement',
     ),
   ).toBe(true);
   expect(report.indexOf('lower_margin')).toBeLessThan(report.indexOf('higher_margin'));

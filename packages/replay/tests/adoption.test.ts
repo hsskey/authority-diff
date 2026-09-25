@@ -385,7 +385,7 @@ describe('headline', () => {
     const result = computeAdoptionWith(evaluate, actions);
 
     expect(result.groups[0]?.headline).toBe(
-      "호스트에서의 읽기 2건이 이 정책에서 '확인 필요' 대상이 됩니다.",
+      "This policy gives 'ask' to 2 read Actions in the host Zone.",
     );
   });
 
@@ -397,7 +397,7 @@ describe('headline', () => {
     const result = computeAdoptionWith(evaluate, actions);
 
     expect(result.groups[0]?.headline).toBe(
-      "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.",
+      "This policy gives 'deny' to 1 read Action in the credentials Zone.",
     );
   });
 
@@ -495,6 +495,25 @@ describe('ordering and determinism', () => {
       expect(result).toEqual(reference);
     },
   );
+
+  test('resultHash and groupKeys are pinned to fixed values', () => {
+    const { actions, evaluate } = scenario(reviewCases());
+
+    const result = computeAdoptionWith(evaluate, actions);
+
+    expect({
+      resultHash: result.resultHash,
+      groupKeys: result.groups.map((group) => group.groupKey),
+    }).toEqual({
+      resultHash: '466a23342755a7afcb8bad9d650395c1dea7903e89e2cc080ffeb2196561e609',
+      groupKeys: [
+        '7586de0b344a5e367426d6c4587af4652e615c5ec40fa18f1942030c147f31b1',
+        '0faa462702eefe5b3854dd9821f349587cb4c215941bea619789a7b6ad941cb2',
+        'b3a0daf06e6afd5e93b7ebdc268be53b4ae61c44aa8126001afcb49d2fd71539',
+        '078ec3021340ce1d7fbe4abe47cc20ddfe5b9318cf516ce4b10f9e04034ccd76',
+      ],
+    });
+  });
 
   test('resultHash changes when only the program mix inside a group changes', () => {
     const git = computeAdoptionWith(...toArgs(scenario([askPush(1, 'git'), askPush(2, 'git')])));
