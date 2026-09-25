@@ -44,6 +44,7 @@ No repository names, host paths, device names, or raw command text appear below.
 | last observation | 2026-09-25T05:24:52Z |
 
 The stored count equals the line count of the five copies, so no line was dropped or stored twice.
+The 964 observed sessions exceed the snapshot's 891 because 209 of them have no transcript file in the snapshot: 198 have only session_end observations and 11 only pre_tool_use observations; the other 755 appear in both.
 The 3 permission_request observations are the AskUserQuestion dialogs `conformance.md` describes; the run reports 0 unpaired permission_requests.
 
 ## Conformance result
