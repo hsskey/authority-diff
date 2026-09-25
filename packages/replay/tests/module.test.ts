@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { IsoTimestampSchema } from '@authority/kernel';
 import {
   createFixedClock,
+  createMemoryJobQueue,
   createMemoryLogger,
   createSequentialIdGenerator,
 } from '@authority/platform/testing';
+import type { MemoryJobQueue } from '@authority/platform/testing';
 import { PolicyDocumentSchema, PolicyVersionIdSchema } from '@authority/policy/schema';
 import type { PolicyVersionId, PolicyVersionStatus } from '@authority/policy/schema';
 import type { ActionReader } from '@authority/trace';
@@ -15,8 +17,14 @@ import type {
   ObservationForReplay,
   StoredAgentAction,
 } from '@authority/trace/schema';
-import { assembleReplayModule } from '../index.ts';
-import type { AnalyzabilityCounts, AuthorityMapCell, PolicyReader, ReplayStore } from '../index.ts';
+import { assembleReplayModule, REPLAY_RUN_JOB } from '../index.ts';
+import type {
+  AnalyzabilityCounts,
+  AuthorityMapCell,
+  PolicyReader,
+  ReplayModule,
+  ReplayStore,
+} from '../index.ts';
 import { computeAdoption, computeDiff } from '../diff.ts';
 import { ReplayRunIdSchema, ReplayRunSchema } from '../schema.ts';
 import type {
@@ -110,10 +118,11 @@ function makeStore(): FakeStore {
     },
     markRunning: (id, startedAt) => {
       const run = runs.get(id);
-      if (run !== undefined) {
-        runs.set(id, { ...run, status: 'running', startedAt });
+      if (run?.status !== 'queued') {
+        return Promise.resolve(false);
       }
-      return Promise.resolve();
+      runs.set(id, { ...run, status: 'running', startedAt });
+      return Promise.resolve(true);
     },
     recordCompletion: (input) => {
       const run = runs.get(input.replayRunId);
@@ -153,6 +162,13 @@ function makeStore(): FakeStore {
     markFailed: (id, errorCode, completedAt) => {
       const run = runs.get(id);
       if (run !== undefined) {
+        runs.set(id, { ...run, status: 'failed', errorCode, completedAt });
+      }
+      return Promise.resolve();
+    },
+    failQueuedRun: (id, errorCode, completedAt) => {
+      const run = runs.get(id);
+      if (run?.status === 'queued') {
         runs.set(id, { ...run, status: 'failed', errorCode, completedAt });
       }
       return Promise.resolve();
@@ -198,6 +214,10 @@ function makeStore(): FakeStore {
       }
       return Promise.resolve(failed);
     },
+    listQueuedRunIds: () =>
+      Promise.resolve(
+        [...runs.values()].filter((run) => run.status === 'queued').map((run) => run.id),
+      ),
     findLatestConformanceRun: () => {
       const run = completedNewestFirst().find((candidate) => candidate.kind === 'conformance');
       return Promise.resolve(
@@ -283,35 +303,37 @@ function makePolicy(
 }
 
 function makeModule(
-  parts: { store?: FakeStore; reader?: ActionReader; policy?: PolicyReader } = {},
+  parts: { store?: FakeStore; reader?: ActionReader; policy?: PolicyReader; worker?: boolean } = {},
 ) {
   const store = parts.store ?? makeStore();
   const logger = createMemoryLogger();
-  return {
+  const jobs = createMemoryJobQueue();
+  const module = assembleReplayModule({
     store,
+    reader: parts.reader ?? makeReader(),
+    policy: parts.policy ?? makePolicy(),
+    jobQueue: jobs,
+    clock: createFixedClock(NOW),
+    idGenerator: createSequentialIdGenerator(),
     logger,
-    module: assembleReplayModule({
-      store,
-      reader: parts.reader ?? makeReader(),
-      policy: parts.policy ?? makePolicy(),
-      clock: createFixedClock(NOW),
-      idGenerator: createSequentialIdGenerator(),
-      logger,
-      classifierVersion: CLASSIFIER_VERSION,
-    }),
-  };
+    classifierVersion: CLASSIFIER_VERSION,
+  });
+  if (parts.worker ?? true) {
+    void jobs.work(REPLAY_RUN_JOB, module.runReplayJob);
+  }
+  return { store, logger, jobs, module };
 }
 
 function requestInput() {
   return { baselineVersionId, candidateVersionId, ...WINDOW };
 }
 
-async function runToCompletion(module: ReturnType<typeof makeModule>['module']) {
+async function runToCompletion(module: ReplayModule, jobs: MemoryJobQueue) {
   const result = await module.requestReplay(requestInput());
   if (!result.ok) {
     throw new Error(`requestReplay failed: ${result.error.code}`);
   }
-  await result.value.execution;
+  await jobs.drain();
   return result.value;
 }
 
@@ -322,9 +344,9 @@ describe('replay module', () => {
       ...makeStore(),
       recordCompletion: () => Promise.reject(cause),
     };
-    const { module, logger } = makeModule({ store: failingStore });
+    const { module, logger, jobs } = makeModule({ store: failingStore });
 
-    const { run } = await runToCompletion(module);
+    const { run } = await runToCompletion(module, jobs);
     const stored = await module.getRun(run.id);
 
     expect([stored?.status, stored?.errorCode]).toEqual(['failed', 'replay.persist_failed']);
@@ -338,14 +360,14 @@ describe('replay module', () => {
   });
 
   test('stores the same resultHash as the local diff pipeline for the same input', async () => {
-    const { module } = makeModule();
+    const { module, jobs } = makeModule();
     const local = computeDiff({
       actions,
       baseline: baselineDocument,
       candidate: candidateDocument,
     });
 
-    const { run } = await runToCompletion(module);
+    const { run } = await runToCompletion(module, jobs);
     const stored = await module.getRun(run.id);
 
     expect(stored?.status).toBe('completed');
@@ -354,14 +376,14 @@ describe('replay module', () => {
 
   // I6: a repeated request is idempotent by inputsHash.
   test('I6: the same request twice yields the same run id and resultHash', async () => {
-    const { module } = makeModule();
+    const { module, jobs } = makeModule();
 
     const first = await module.requestReplay(requestInput());
     if (!first.ok) {
       throw new Error(first.error.code);
     }
     expect(first.value.reused).toBe(false);
-    await first.value.execution;
+    await jobs.drain();
     const completed = await module.getRun(first.value.run.id);
 
     const second = await module.requestReplay(requestInput());
@@ -406,8 +428,8 @@ describe('replay module', () => {
   });
 
   test('samples recompute both decisions for the changed group', async () => {
-    const { module } = makeModule();
-    const { run } = await runToCompletion(module);
+    const { module, jobs } = makeModule();
+    const { run } = await runToCompletion(module, jobs);
 
     const listed = await module.listDiffGroups(run.id, { limit: 50 });
     if (!listed.ok) {
@@ -429,8 +451,8 @@ describe('replay module', () => {
   });
 
   test('samples carry each Operation Target key and the deciding rule rationale', async () => {
-    const { module } = makeModule();
-    const { run } = await runToCompletion(module);
+    const { module, jobs } = makeModule();
+    const { run } = await runToCompletion(module, jobs);
     const listed = await module.listDiffGroups(run.id, { limit: 50 });
     const groupKey = listed.ok ? listed.value.items[0]?.groupKey : undefined;
     if (groupKey === undefined) {
@@ -459,8 +481,8 @@ describe('replay module', () => {
   });
 
   test('authority-map returns the matrix of the completed run when the candidate is accepted', async () => {
-    const { module } = makeModule();
-    await runToCompletion(module);
+    const { module, jobs } = makeModule();
+    await runToCompletion(module, jobs);
 
     const map = await module.getAuthorityMap();
 
@@ -472,14 +494,125 @@ describe('replay module', () => {
   });
 
   test('authority-map returns run null when no completed run candidate is accepted', async () => {
-    const { module } = makeModule({ policy: makePolicy({ candidateStatus: 'draft' }) });
-    await runToCompletion(module);
+    const { module, jobs } = makeModule({ policy: makePolicy({ candidateStatus: 'draft' }) });
+    await runToCompletion(module, jobs);
 
     const map = await module.getAuthorityMap();
 
     expect(map.run).toBeNull();
     expect(map.cells).toEqual([]);
     expect(map.analyzability).toEqual({ full: 0, partial: 0, none: 0 });
+  });
+
+  test('a redelivered replay.run job leaves the completed run as it was', async () => {
+    let windowActions: readonly ActionForReplay[] = actions;
+    const { module, jobs } = makeModule({
+      reader: makeReader({
+        streamActions: async function* () {
+          await Promise.resolve();
+          yield windowActions;
+        },
+      }),
+    });
+    const { run } = await runToCompletion(module, jobs);
+    const completed = await module.getRun(run.id);
+    windowActions = actions.slice(0, 1);
+
+    await module.runReplayJob({ replayRunId: run.id });
+
+    expect(await module.getRun(run.id)).toEqual(completed);
+  });
+
+  test('a run whose Actions changed before its job ran fails with replay.inputs_changed', async () => {
+    let windowActions: readonly ActionForReplay[] = actions;
+    const { module, jobs } = makeModule({
+      worker: false,
+      reader: makeReader({
+        streamActions: async function* () {
+          await Promise.resolve();
+          yield windowActions;
+        },
+      }),
+    });
+    const requested = await module.requestReplay(requestInput());
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    windowActions = actions.slice(0, 1);
+
+    await jobs.work(REPLAY_RUN_JOB, module.runReplayJob);
+    await jobs.drain();
+
+    const stored = await module.getRun(requested.value.run.id);
+    expect([stored?.status, stored?.errorCode]).toEqual(['failed', 'replay.inputs_changed']);
+  });
+
+  test('a run another delivery completed stays completed when a later delivery sees changed inputs', async () => {
+    const store = makeStore();
+    const winnerResultHash = 'd'.repeat(64);
+    let windowActions: readonly ActionForReplay[] = actions;
+    let armed = false;
+    let raced = false;
+    const { module } = makeModule({
+      store,
+      worker: false,
+      reader: makeReader({
+        streamActions: async function* () {
+          await Promise.resolve();
+          if (armed && !raced) {
+            raced = true;
+            for (const [id, run] of [...store.runs]) {
+              if (run.status === 'queued') {
+                store.runs.set(id, {
+                  ...run,
+                  status: 'completed',
+                  resultHash: winnerResultHash,
+                  startedAt: NOW,
+                  completedAt: NOW,
+                });
+              }
+            }
+          }
+          yield windowActions;
+        },
+      }),
+    });
+    const requested = await module.requestReplay(requestInput());
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    windowActions = actions.slice(0, 1);
+    armed = true;
+
+    await module.runReplayJob({ replayRunId: requested.value.run.id });
+
+    const stored = await module.getRun(requested.value.run.id);
+    expect([stored?.status, stored?.resultHash]).toEqual(['completed', winnerResultHash]);
+  });
+
+  test('a replay.run payload without a run id is logged and dropped', async () => {
+    const { module, logger } = makeModule();
+
+    await module.runReplayJob({ runId: 'rpl_1' });
+
+    expect(logger.records.map((record) => [record.level, record.msg])).toEqual([
+      ['error', 'replay job payload invalid'],
+    ]);
+  });
+
+  test('recoverInterruptedRuns runs a queued run whose job was lost', async () => {
+    const store = makeStore();
+    const stopped = makeModule({ store, worker: false });
+    const requested = await stopped.module.requestReplay(requestInput());
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    const restarted = makeModule({ store });
+
+    await restarted.module.recoverInterruptedRuns();
+    await restarted.jobs.drain();
+
+    expect((await restarted.module.getRun(requested.value.run.id))?.status).toBe('completed');
   });
 
   test('recoverInterruptedRuns fails a run left running past 60 seconds', async () => {
@@ -515,7 +648,7 @@ describe('replay module', () => {
     if (pushAction === undefined) {
       throw new Error('fixture has a push Action');
     }
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({
         getObservations: () =>
           Promise.resolve([
@@ -529,7 +662,7 @@ describe('replay module', () => {
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
     const listed = await module.listConformanceFindings();
 
     expect(listed.run?.replayRunId).toBe(requested.value.run.id);
@@ -545,7 +678,7 @@ describe('replay module', () => {
     if (pushAction === undefined) {
       throw new Error('fixture has a push Action');
     }
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({
         getObservations: () =>
           Promise.resolve([
@@ -559,7 +692,7 @@ describe('replay module', () => {
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
     const listed = await module.listConformanceFindings();
     const findingKey = listed.items[0]?.findingKey;
     if (findingKey === undefined) {
@@ -585,7 +718,7 @@ describe('replay module', () => {
     if (target === undefined) {
       throw new Error('fixture has an Action');
     }
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({
         getObservations: () =>
           Promise.resolve([
@@ -598,7 +731,7 @@ describe('replay module', () => {
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
     const listed = await module.listConformanceFindings();
 
     expect(
@@ -628,7 +761,7 @@ describe('replay module', () => {
     if (target === undefined) {
       throw new Error('fixture has an Action');
     }
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({
         getObservations: () => Promise.resolve([observation(target, 'permission_request', null)]),
       }),
@@ -638,7 +771,7 @@ describe('replay module', () => {
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
     const listed = await module.listConformanceFindings();
 
     expect(listed.run?.unpairedPermissionRequests).toBe(1);
@@ -656,7 +789,7 @@ describe('replay module', () => {
       permissionMode: null,
       occurredAt: IsoTimestampSchema.parse('2026-01-02T02:46:00.000Z'),
     };
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({
         listObservationSessions: () => Promise.resolve([orphanSession]),
         getObservations: (sessionExternalIds) =>
@@ -668,7 +801,7 @@ describe('replay module', () => {
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
     const listed = await module.listConformanceFindings();
 
     expect(listed.run?.unpairedPermissionRequests).toBe(1);
@@ -676,14 +809,14 @@ describe('replay module', () => {
 
   test('a new observation makes a repeated conformance request run again', async () => {
     const observations: ObservationForReplay[] = [];
-    const { module } = makeModule({
+    const { module, jobs } = makeModule({
       reader: makeReader({ getObservations: () => Promise.resolve([...observations]) }),
     });
     const first = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
     if (!first.ok) {
       throw new Error(first.error.code);
     }
-    await first.value.execution;
+    await jobs.drain();
     const target = actions[0];
     if (target === undefined) {
       throw new Error('fixture has an Action');
@@ -696,12 +829,12 @@ describe('replay module', () => {
   });
 
   test('authority-map ignores a completed conformance run', async () => {
-    const { module } = makeModule();
+    const { module, jobs } = makeModule();
     const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
     if (!requested.ok) {
       throw new Error(requested.error.code);
     }
-    await requested.value.execution;
+    await jobs.drain();
 
     const map = await module.getAuthorityMap();
 
@@ -712,20 +845,20 @@ describe('replay module', () => {
     // The baseline fixture asks on the push Action, so the adoption preview has groups.
     const adoptionInput = () => ({ candidateVersionId: baselineVersionId, ...WINDOW });
 
-    async function runAdoption(module: ReturnType<typeof makeModule>['module']) {
+    async function runAdoption(module: ReplayModule, jobs: MemoryJobQueue) {
       const result = await module.requestAdoptionReplay(adoptionInput());
       if (!result.ok) {
         throw new Error(`requestAdoptionReplay failed: ${result.error.code}`);
       }
-      await result.value.execution;
+      await jobs.drain();
       return result.value;
     }
 
     test('stores kind adoption, no baseline, and the local adoption pipeline resultHash and stats', async () => {
-      const { module } = makeModule();
+      const { module, jobs } = makeModule();
       const local = computeAdoption({ actions, candidate: baselineDocument });
 
-      const { run } = await runAdoption(module);
+      const { run } = await runAdoption(module, jobs);
       const stored = await module.getRun(run.id);
 
       expect([run.kind, run.baselineVersionId, run.candidateVersionId]).toEqual([
@@ -739,9 +872,9 @@ describe('replay module', () => {
     });
 
     test('I6: the same adoption request twice yields the same run id and resultHash', async () => {
-      const { module } = makeModule();
+      const { module, jobs } = makeModule();
 
-      const first = await runAdoption(module);
+      const first = await runAdoption(module, jobs);
       const completed = await module.getRun(first.run.id);
       const second = await module.requestAdoptionReplay(adoptionInput());
       if (!second.ok) {
@@ -755,9 +888,9 @@ describe('replay module', () => {
     });
 
     test('lists the Adoption Groups in review order and filters by effect', async () => {
-      const { module } = makeModule();
+      const { module, jobs } = makeModule();
       const local = computeAdoption({ actions, candidate: baselineDocument });
-      const { run } = await runAdoption(module);
+      const { run } = await runAdoption(module, jobs);
 
       const all = await module.listAdoptionGroups(run.id, { limit: 50 });
       const denies = await module.listAdoptionGroups(run.id, { effect: 'deny', limit: 50 });
@@ -768,8 +901,8 @@ describe('replay module', () => {
     });
 
     test('adoption samples carry the candidate Decision, Target keys, and the deciding rule rationale', async () => {
-      const { module } = makeModule();
-      const { run } = await runAdoption(module);
+      const { module, jobs } = makeModule();
+      const { run } = await runAdoption(module, jobs);
       const listed = await module.listAdoptionGroups(run.id, { limit: 50 });
       const pushGroup = listed.ok
         ? listed.value.items.find((group) => group.capability === 'push')
@@ -790,8 +923,8 @@ describe('replay module', () => {
     });
 
     test('adoption samples of an unknown group return replay.group_not_found', async () => {
-      const { module } = makeModule();
-      const { run } = await runAdoption(module);
+      const { module, jobs } = makeModule();
+      const { run } = await runAdoption(module, jobs);
 
       const result = await module.getAdoptionSamples(run.id, 'f'.repeat(64));
 
@@ -810,8 +943,8 @@ describe('replay module', () => {
     });
 
     test('authority-map returns the cells of a completed adoption run whose candidate is accepted', async () => {
-      const { module } = makeModule();
-      const { run } = await runAdoption(module);
+      const { module, jobs } = makeModule();
+      const { run } = await runAdoption(module, jobs);
 
       const map = await module.getAuthorityMap();
 
@@ -820,8 +953,8 @@ describe('replay module', () => {
     });
 
     test('authority-map ignores a completed adoption run whose candidate is not accepted', async () => {
-      const { module } = makeModule({ policy: makePolicy({ baselineStatus: 'in_review' }) });
-      await runAdoption(module);
+      const { module, jobs } = makeModule({ policy: makePolicy({ baselineStatus: 'in_review' }) });
+      await runAdoption(module, jobs);
 
       const map = await module.getAuthorityMap();
 

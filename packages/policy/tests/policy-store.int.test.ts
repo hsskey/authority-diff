@@ -14,6 +14,7 @@ import {
   upgradePolicyDocument,
   type PolicyRepository,
 } from '../index.ts';
+import { IsoTimestampSchema } from '@authority/kernel';
 import { PolicyDocumentSchema, PolicyVersionIdSchema } from '../schema.ts';
 import { expectErr, expectOk } from './support/result.ts';
 import baselinePolicyFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
@@ -306,6 +307,47 @@ describe('policy store', () => {
 
     expect(expectOk(await repository.getVersion(initialVersion.id))).toEqual(initialVersion);
     expect(expectOk(await repository.getBaseline(policy.id))).toEqual(latest);
+  });
+
+  // Declarations one second apart in 2099, later than any other test's and in a minute of
+  // their own per test, so the order and the window contents are unambiguous.
+  async function declareThreeSecondsApart(minute: number) {
+    let tick = 0;
+    const declaring = createPolicyRepository({
+      db: database.db,
+      clock: {
+        now: () => IsoTimestampSchema.parse(`2099-01-01T00:0${minute}:0${tick++}.000Z`),
+      },
+      idGenerator: createUlidGenerator(),
+    });
+    const { initialVersion: first } = await seedAcceptedDefaultPolicy();
+    const { initialVersion: second } = await seedAcceptedDefaultPolicy();
+    const declare = async (id: typeof first.id) =>
+      expectOk(await declaring.declareActivation(id, { reason: 'applied', actorName: 'ops' }));
+    return [await declare(first.id), await declare(second.id), await declare(first.id)] as const;
+  }
+
+  test('findLatestActivation returns the latest declaration at or before the given time', async () => {
+    const [, atOneSecond] = await declareThreeSecondsApart(0);
+
+    const found = expectOk(
+      await repository.findLatestActivation(IsoTimestampSchema.parse('2099-01-01T00:00:01.000Z')),
+    );
+
+    expect(found).toEqual(atOneSecond);
+  });
+
+  test('listActivationsBetween excludes the start and includes the end', async () => {
+    const [, atOneSecond, atTwoSeconds] = await declareThreeSecondsApart(1);
+
+    const listed = expectOk(
+      await repository.listActivationsBetween(
+        IsoTimestampSchema.parse('2099-01-01T00:01:00.000Z'),
+        IsoTimestampSchema.parse('2099-01-01T00:01:02.000Z'),
+      ),
+    );
+
+    expect(listed).toEqual([atOneSecond, atTwoSeconds]);
   });
 
   test('declareActivation refuses a version that is not accepted', async () => {

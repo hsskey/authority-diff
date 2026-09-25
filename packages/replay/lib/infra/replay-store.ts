@@ -5,6 +5,7 @@ import { narrowTransaction } from '@authority/platform';
 import type { Database } from '@authority/platform';
 import {
   ConformanceFindingViewSchema,
+  ReplayRunIdSchema,
   ReplayRunSchema,
   StoredAdoptionGroupSchema,
   StoredDiffGroupSchema,
@@ -236,8 +237,13 @@ export function createReplayStore(database: Database): ReplayStore {
       await db.insert(replayRuns).values(runInsertValues(run));
     },
 
-    async markRunning(id: ReplayRunId, startedAt: IsoTimestamp): Promise<void> {
-      await setRunStatus(id, { status: 'running', startedAt });
+    async markRunning(id: ReplayRunId, startedAt: IsoTimestamp): Promise<boolean> {
+      const claimed = await db
+        .update(replayRuns)
+        .set({ status: 'running', startedAt })
+        .where(and(eq(replayRuns.id, id), eq(replayRuns.status, 'queued')))
+        .returning({ id: replayRuns.id });
+      return claimed.length > 0;
     },
 
     async recordCompletion(input: RecordCompletionInput): Promise<void> {
@@ -280,6 +286,17 @@ export function createReplayStore(database: Database): ReplayStore {
 
     async markFailed(id: ReplayRunId, errorCode: string, completedAt: IsoTimestamp): Promise<void> {
       await setRunStatus(id, { status: 'failed', errorCode, completedAt });
+    },
+
+    async failQueuedRun(
+      id: ReplayRunId,
+      errorCode: string,
+      completedAt: IsoTimestamp,
+    ): Promise<void> {
+      await db
+        .update(replayRuns)
+        .set({ status: 'failed', errorCode, completedAt })
+        .where(and(eq(replayRuns.id, id), eq(replayRuns.status, 'queued')));
     },
 
     async getRun(id: ReplayRunId): Promise<ReplayRun | null> {
@@ -367,6 +384,15 @@ export function createReplayStore(database: Database): ReplayStore {
         .where(and(eq(replayRuns.status, 'running'), lt(replayRuns.startedAt, olderThan)))
         .returning({ id: replayRuns.id });
       return returned.length;
+    },
+
+    async listQueuedRunIds(): Promise<readonly ReplayRunId[]> {
+      const rows = await db
+        .select({ id: replayRuns.id })
+        .from(replayRuns)
+        .where(eq(replayRuns.status, 'queued'))
+        .orderBy(asc(replayRuns.createdAt));
+      return rows.map((row) => ReplayRunIdSchema.parse(row.id));
     },
 
     async listCompletedRunsNewestFirst(): Promise<readonly AuthorityMapRunView[]> {

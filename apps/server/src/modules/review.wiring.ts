@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import { err, ok } from '@authority/kernel';
-import type { Clock, IdGenerator, Logger } from '@authority/kernel';
+import type { Clock, IdGenerator, JobQueue, Logger } from '@authority/kernel';
 import type { Database } from '@authority/platform';
 import { createPolicyRepository } from '@authority/policy';
 import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
@@ -71,6 +71,7 @@ function makePolicyReviewRepository(repository: PolicyRepository): PolicyReviewR
 export interface RegisterReviewModuleDeps {
   readonly trace: TraceModule;
   readonly database: Database;
+  readonly jobQueue: JobQueue;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly logger: Logger;
@@ -87,6 +88,7 @@ export function registerReviewModule(app: Hono<AppEnv>, deps: RegisterReviewModu
     database: deps.database,
     reader: deps.trace.reader,
     policy: makePolicyReader(repository),
+    jobQueue: deps.jobQueue,
     clock: deps.clock,
     idGenerator: deps.idGenerator,
     logger: deps.logger,

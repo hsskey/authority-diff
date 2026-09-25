@@ -9,10 +9,17 @@ import { createRequestIdMiddleware } from './middleware/request-id.ts';
 import { createRequestLogMiddleware } from './middleware/request-log.ts';
 import { registerAuditRoutes } from './routes/audit.routes.ts';
 import { registerHealthRoutes } from './routes/health.ts';
+import { registerJobs } from '../jobs/index.ts';
 import { registerReplayModule } from '../modules/replay.wiring.ts';
 import { registerReviewModule } from '../modules/review.wiring.ts';
 
-export function createApp(deps: ServerDeps): Hono<AppEnv> {
+export interface ServerApp {
+  readonly app: Hono<AppEnv>;
+  /** Settles once every job worker and schedule is registered; the server must not serve before. */
+  readonly jobsRegistered: Promise<void>;
+}
+
+export function createApp(deps: ServerDeps): ServerApp {
   const app = new Hono<AppEnv>();
 
   app.use('*', createRequestIdMiddleware(deps.idGenerator));
@@ -32,10 +39,12 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
 
   const trace = composeModules(app, deps.config);
 
-  registerReplayModule(app, {
+  const clock = createSystemClock();
+  const replay = registerReplayModule(app, {
     trace,
     database: deps.db,
-    clock: createSystemClock(),
+    jobQueue: deps.jobQueue,
+    clock,
     idGenerator: deps.idGenerator,
     logger: deps.logger,
   });
@@ -43,7 +52,17 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
   registerReviewModule(app, {
     trace,
     database: deps.db,
-    clock: createSystemClock(),
+    jobQueue: deps.jobQueue,
+    clock,
+    idGenerator: deps.idGenerator,
+    logger: deps.logger,
+  });
+
+  const jobsRegistered = registerJobs({
+    queue: deps.jobQueue,
+    replay,
+    database: deps.db,
+    clock,
     idGenerator: deps.idGenerator,
     logger: deps.logger,
   });
@@ -52,5 +71,5 @@ export function createApp(deps: ServerDeps): Hono<AppEnv> {
 
   app.get('*', serveStatic({ root: '../web/dist' }));
 
-  return app;
+  return { app, jobsRegistered };
 }

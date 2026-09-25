@@ -10,8 +10,7 @@ import {
 import type { Database } from '@authority/platform';
 import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyId, PolicyVersionId } from '@authority/policy/schema';
-import { createMemoryLogger } from '@authority/platform/testing';
-import { createReplayModule } from '@authority/replay';
+import { createMemoryJobQueue, createMemoryLogger } from '@authority/platform/testing';
 import type { PolicyReader } from '@authority/replay';
 import { createReviewModule } from '@authority/review';
 import type { ChangeReviewView, PolicyReviewRepository } from '@authority/review';
@@ -20,6 +19,7 @@ import type { ActionReader } from '@authority/trace';
 import { ActionForReplaySchema, StoredAgentActionSchema } from '@authority/trace/schema';
 import type { ObservationForReplay, StoredAgentAction } from '@authority/trace/schema';
 import actionFixture from '../../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
+import { createQueuedReplayModule } from '../support/queued-replay.ts';
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
 const WINDOW_FROM = IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z');
@@ -167,15 +167,19 @@ test('under_asked with allow is widening in Change Review', async () => {
     listObservationSessions: () => Promise.resolve([pushAction.sessionExternalId]),
     getObservations: () => Promise.resolve(observations),
   };
-  const replay = createReplayModule({
-    database,
-    reader,
-    policy: makePolicyReader(repository),
-    clock,
-    idGenerator,
-    logger: createMemoryLogger(),
-    classifierVersion: 'test-classifier-1',
-  });
+  const jobs = createMemoryJobQueue();
+  const replay = createQueuedReplayModule(
+    {
+      database,
+      reader,
+      policy: makePolicyReader(repository),
+      clock,
+      idGenerator,
+      logger: createMemoryLogger(),
+      classifierVersion: 'test-classifier-1',
+    },
+    jobs,
+  );
   const review = createReviewModule({
     database,
     replay,
@@ -194,7 +198,7 @@ test('under_asked with allow is widening in Change Review', async () => {
   if (!requested.ok) {
     throw new Error(requested.error.code);
   }
-  await requested.value.execution;
+  await jobs.drain();
   const finding = (await replay.listConformanceFindings()).items.find(
     (item) => item.kind === 'under_asked' && item.capability === 'push',
   );
