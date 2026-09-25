@@ -8,9 +8,11 @@ export type TrackedFile = { readonly path: string; readonly content: string };
 /**
  * Korean text is allowed only in these places:
  * - the files in `KOREAN_FILES`: the Korean README, the web Korean message catalog, and its tests;
- * - the web e2e specs matched by `KOREAN_E2E_SPEC_RE`: they run in the ko-KR locale and assert the
- *   Korean UI literally, because expected values must be hand-checked literals rather than labels
- *   read back from the catalog;
+ * - the web e2e specs matched by `KOREAN_E2E_SPEC_RE`, which are the specs of the `chromium`
+ *   project in `playwright.config.ts`: that project runs in the ko-KR locale and its specs assert
+ *   the Korean UI literally, because expected values must be hand-checked literals rather than
+ *   labels read back from the catalog. `visual.spec.ts` runs in the en-US `visual` project and
+ *   stays English;
  * - a quotation of product output marked with `PRODUCT_OUTPUT_MARKER`: a marker directly before
  *   a double quote covers the quoted text, and any other marker covers the text after it up to
  *   the next Latin letter, digit, or `<`, so each Korean run in unquoted text needs its own marker;
@@ -21,7 +23,7 @@ export const KOREAN_FILES: ReadonlySet<string> = new Set([
   'apps/web/src/shared/i18n/ko.ts',
   'scripts/tests/check-i18n-keys.test.ts',
 ]);
-export const KOREAN_E2E_SPEC_RE = /^apps\/web\/tests\/e2e\/[^/]+\.spec\.ts$/;
+export const KOREAN_E2E_SPEC_RE = /^apps\/web\/tests\/e2e\/(?!visual\.spec\.ts$)[^/]+\.spec\.ts$/;
 export const PRODUCT_OUTPUT_MARKER = '<!-- ko-product-output -->';
 export const GLOSSARY_FILE = 'CONTEXT.md';
 

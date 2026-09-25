@@ -132,7 +132,7 @@ The ones agents miss most often:
 - `docs/design.md` and `docs/cutline.md` keep the same headings and numbers (`pnpm check:doc-invariance`).
 - Server-produced user-facing text (Headlines, Evidence Report, error messages) is English and never feeds a hash; Korean UI text belongs to the web catalog.
 - Quotations of product output in docs keep the product's own language; Korean ones are marked `<!-- ko-product-output -->`.
-- Korean text outside that marker, `README.ko.md`, the web `ko.ts` catalog and its tests (including the Korean-locale e2e specs), and parentheses in `CONTEXT.md` `_Avoid_:` lines fails `pnpm check:korean`; the allowlist and marker rules are in `scripts/check-korean-text.ts`.
+- Korean text outside that marker, `README.ko.md`, the web `ko.ts` catalog and its tests (including the ko-KR `chromium` e2e specs, not `visual.spec.ts`), and parentheses in `CONTEXT.md` `_Avoid_:` lines fails `pnpm check:korean`; the allowlist and marker rules are in `scripts/check-korean-text.ts`.
 
 ## Do not
 

@@ -28,12 +28,13 @@ describe('koreanTextFailures', () => {
     expect(koreanTextFailures([{ path, content: `${WORD} and ${OTHER_WORD}\n` }])).toEqual([]);
   });
 
-  it('accepts Korean text in a web e2e spec', () => {
+  it('accepts Korean text in a web e2e spec of the ko-KR project', () => {
     const path = 'apps/web/tests/e2e/overview.spec.ts';
     expect(koreanTextFailures([{ path, content: `getByText('${WORD}')\n` }])).toEqual([]);
   });
 
   it.each([
+    'apps/web/tests/e2e/visual.spec.ts',
     'apps/web/tests/e2e/fixtures.ts',
     'apps/web/tests/e2e/nested/overview.spec.ts',
     'apps/web/tests/overview.spec.ts',
