@@ -121,10 +121,11 @@ Delegated Mandates split evenly between implied and not_authorized, and every de
 ## Reproduce
 
 ```sh
-pnpm exec tsx tools/local-pipeline/policy-init.ts > .local/default-policy.json
-TYPESAFE_API_KEY=<key> pnpm authority probe --policy .local/default-policy.json --provider jev
+TYPESAFE_API_KEY=<key> pnpm authority probe --policy tests/fixtures/default-policy-v1.json --provider jev
 ```
 
+The run above used the schemaVersion 1 default template, kept as `tests/fixtures/default-policy-v1.json` (contentHash `eea676ae…c48b`).
+`tools/local-pipeline/policy-init.ts` now prints the schemaVersion 2 default template, which is the policy for the rerun.
 The command writes `.local/probe/<contentHash>.md`.
 The recorded fixture responses cover the 35 Scenarios measured above.
 The 20 schemaVersion 2 Scenarios below have no recorded response, so `--provider fixture` replays only a Scenario file limited to the measured 35.
@@ -137,7 +138,7 @@ There are no figures in this section; every figure above belongs to the schemaVe
 
 ### What changed for the rerun
 
-- The default template is schemaVersion 2 (docs/acr/0015-policy-schema-version-2.md).
+- The default template is schemaVersion 2 (docs/acr/0016-policy-schema-version-2.md).
   `ask_external_disclosure` and `ask_production_deploy` carry a Mandate Exception; `ask_agent_config_change` has none and is the control.
 - `ask_irreversible_local` no longer lists deploy, so a production deploy is decided by `ask_production_deploy` alone and its Mandate Exception is not hidden by a second `ask` Rule.
 - `renderPolicyProse` now renders each Rule's reversibility and analyzability conditions and its Mandate Exception clause.

@@ -13,6 +13,7 @@ import { collectS1Actions } from '../../../tests/workloads/generate-s1.ts';
 import actionFixture from '../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import baselineFixture from '../../../tests/fixtures/baseline-policy.json' with { type: 'json' };
 import candidateFixture from '../../../tests/fixtures/candidate-policy.json' with { type: 'json' };
+import defaultV1Fixture from '../../../tests/fixtures/default-policy-v1.json' with { type: 'json' };
 
 // resultHash values computed before schemaVersion 2 existed, from schemaVersion 1 inputs only.
 const FIXTURE_DIFF_RESULT_HASH = '132207d7a511e9690eaa6a1214e217caf679e15dd643a0c3196751a461342268';
@@ -23,6 +24,8 @@ const S1_DEFAULT_ADOPTION_RESULT_HASH =
 const fixtureActions = z.array(ActionForReplaySchema).parse(actionFixture);
 const baseline = PolicyDocumentSchema.parse(baselineFixture);
 const candidate = PolicyDocumentSchema.parse(candidateFixture);
+// The schemaVersion 1 default template as it was before schemaVersion 2 (contentHash eea676ae…c48b).
+const defaultV1 = PolicyDocumentSchema.parse(defaultV1Fixture);
 const s1Actions = collectS1Actions({
   principalCount: 40,
   dayCount: 30,
@@ -40,15 +43,17 @@ function syntheticAction(actionKeyDigit: string, operation: Omit<Operation, 'ind
   });
 }
 
+const PRODUCTION_DEPLOY = syntheticAction('d', {
+  capability: 'deploy',
+  target: { kind: 'deploy_target', label: 'synthetic-service' },
+  analyzability: 'full',
+  program: 'helm',
+  fragment: 'synthetic redacted deploy production',
+  signals: [],
+});
+
 const MANDATE_ACTIONS: readonly ActionForReplay[] = [
-  syntheticAction('d', {
-    capability: 'deploy',
-    target: { kind: 'deploy_target', label: 'synthetic-service' },
-    analyzability: 'full',
-    program: 'helm',
-    fragment: 'synthetic redacted deploy production',
-    signals: [],
-  }),
+  PRODUCTION_DEPLOY,
   syntheticAction('e', {
     capability: 'write',
     target: { kind: 'path', path: '~/.claude/settings.json', isInsideWorkspace: false },
@@ -65,7 +70,13 @@ const DEFAULT_WITHOUT_EXCEPTIONS: PolicyDocumentV2 = {
   rules: DEFAULT_POLICY_DOCUMENT.rules.map((rule) => ({ ...rule, mandateException: null })),
 };
 
-describe('replay result under schemaVersion 2', () => {
+function adoptionGroupsOf(document: typeof defaultV1) {
+  return computeAdoption({ actions: [PRODUCTION_DEPLOY], candidate: document }).groups.map(
+    (group) => [group.effect, group.groupKey, group.decidingRuleIds],
+  );
+}
+
+describe('a Mandate Exception never changes the replay result of a fixed document', () => {
   test('the Action set has Mandate-dependent Decisions under both Mandate Exceptions', () => {
     const evaluate = createEvaluator(DEFAULT_POLICY_DOCUMENT);
     const decidingRuleIds = new Set(
@@ -80,42 +91,13 @@ describe('replay result under schemaVersion 2', () => {
     ]);
   });
 
-  test.each([
-    [
-      'fixture diff',
-      () => computeDiff({ actions: fixtureActions, baseline, candidate }).resultHash,
-      FIXTURE_DIFF_RESULT_HASH,
-    ],
-    [
-      'S1 diff',
-      () => computeDiff({ actions: s1Actions, baseline, candidate }).resultHash,
-      S1_DIFF_RESULT_HASH,
-    ],
-  ])('schemaVersion 1 inputs keep the %s resultHash', (_label, resultHash, expected) => {
-    expect(resultHash()).toBe(expected);
-  });
-
-  test('upgrading both schemaVersion 1 documents keeps the diff resultHash', () => {
-    const result = computeDiff({
-      actions: fixtureActions,
-      baseline: upgradePolicyDocument(baseline),
-      candidate: upgradePolicyDocument(candidate),
-    });
-    expect(result.resultHash).toBe(FIXTURE_DIFF_RESULT_HASH);
-  });
-
-  test('the schemaVersion 2 default template keeps the adoption resultHash of the schemaVersion 1 template', () => {
-    const result = computeAdoption({ actions: s1Actions, candidate: DEFAULT_POLICY_DOCUMENT });
-    expect(result.resultHash).toBe(S1_DEFAULT_ADOPTION_RESULT_HASH);
-  });
-
-  test('Mandate Exceptions leave the adoption result unchanged', () => {
+  test('the adoption result is the same with and without the Mandate Exceptions', () => {
     const withExceptions = computeAdoption({ actions, candidate: DEFAULT_POLICY_DOCUMENT });
     const withoutExceptions = computeAdoption({ actions, candidate: DEFAULT_WITHOUT_EXCEPTIONS });
     expect(withExceptions).toEqual(withoutExceptions);
   });
 
-  test('Mandate Exceptions leave the diff result unchanged', () => {
+  test('the diff result is the same with and without the Mandate Exceptions', () => {
     const withExceptions = computeDiff({
       actions,
       baseline: upgradePolicyDocument(baseline),
@@ -127,5 +109,61 @@ describe('replay result under schemaVersion 2', () => {
       candidate: DEFAULT_WITHOUT_EXCEPTIONS,
     });
     expect(withExceptions).toEqual(withoutExceptions);
+  });
+
+  test('upgrading both schemaVersion 1 documents keeps the diff resultHash', () => {
+    const result = computeDiff({
+      actions: fixtureActions,
+      baseline: upgradePolicyDocument(baseline),
+      candidate: upgradePolicyDocument(candidate),
+    });
+    expect(result.resultHash).toBe(FIXTURE_DIFF_RESULT_HASH);
+  });
+});
+
+describe('schemaVersion 1 documents replay as before schemaVersion 2', () => {
+  test.each([
+    [
+      'fixture diff',
+      () => computeDiff({ actions: fixtureActions, baseline, candidate }).resultHash,
+      FIXTURE_DIFF_RESULT_HASH,
+    ],
+    [
+      'S1 diff',
+      () => computeDiff({ actions: s1Actions, baseline, candidate }).resultHash,
+      S1_DIFF_RESULT_HASH,
+    ],
+    [
+      'S1 adoption of the schemaVersion 1 default template',
+      () => computeAdoption({ actions: s1Actions, candidate: defaultV1 }).resultHash,
+      S1_DEFAULT_ADOPTION_RESULT_HASH,
+    ],
+  ])('keeps the %s resultHash', (_label, resultHash, expected) => {
+    expect(resultHash()).toBe(expected);
+  });
+});
+
+describe('the schemaVersion 2 default template against the schemaVersion 1 default template', () => {
+  test('gives the same adoption resultHash on Actions without a production deploy', () => {
+    const result = computeAdoption({ actions: s1Actions, candidate: DEFAULT_POLICY_DOCUMENT });
+    expect(result.resultHash).toBe(S1_DEFAULT_ADOPTION_RESULT_HASH);
+  });
+
+  test('decides a production deploy by ask_production_deploy instead of ask_irreversible_local, with the same Effect and groupKey', () => {
+    const [v1Group] = adoptionGroupsOf(defaultV1);
+    const [v2Group] = adoptionGroupsOf(DEFAULT_POLICY_DOCUMENT);
+    expect({ v1: v1Group, v2: v2Group }).toEqual({
+      v1: ['ask', v1Group?.[1], ['ask_irreversible_local']],
+      v2: ['ask', v1Group?.[1], ['ask_production_deploy']],
+    });
+  });
+
+  test('changes the adoption resultHash of a production deploy', () => {
+    const v1 = computeAdoption({ actions: [PRODUCTION_DEPLOY], candidate: defaultV1 });
+    const v2 = computeAdoption({
+      actions: [PRODUCTION_DEPLOY],
+      candidate: DEFAULT_POLICY_DOCUMENT,
+    });
+    expect(v2.resultHash).not.toBe(v1.resultHash);
   });
 });

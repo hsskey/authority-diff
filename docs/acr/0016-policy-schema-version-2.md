@@ -1,4 +1,4 @@
-# ACR-0015 PolicyDocument schemaVersion 2 with Mandate Exception
+# ACR-0016 PolicyDocument schemaVersion 2 with Mandate Exception
 
 Status: proposed (2026-09-25).
 Procedure: docs/design.md 33.3.
@@ -31,6 +31,8 @@ The exploratory probe (docs/evidence/probe-exploratory.md) could not test a Mand
   Updating an open draft accepts either schemaVersion.
 - The default template is schemaVersion 2.
   `ask_external_disclosure` and `ask_production_deploy` carry a Mandate Exception; `ask_agent_config_change` keeps none as the control.
+- `ask_irreversible_local` in the default template no longer lists deploy.
+  Deploy is irreversible only in `protected`, where `ask_production_deploy` asks; while `ask_irreversible_local` also matched, a production deploy was decided by it and could never be Mandate-dependent.
   The empty template is schemaVersion 2 with no Rules.
 - `renderPolicyProse` renders each Rule's reversibility and analyzability conditions and its Mandate Exception clause.
 - The policy version screen shows a Rule's Mandate Exception clause under its rationale.
@@ -48,5 +50,13 @@ The exploratory probe (docs/evidence/probe-exploratory.md) could not test a Mand
 
 - `pnpm db:generate` produces no migration: `policy_versions.document` is `jsonb`.
 - A Change Review from a schemaVersion 1 baseline to its upgraded draft has no Effect change and no groups.
-- A test pins `resultHash` for schemaVersion 1 inputs to the values computed before this change, and pins that the schemaVersion 2 default template yields the same adoption `resultHash` as the schemaVersion 1 template it replaces.
+- The invariant is per document: for a fixed document, a Mandate Exception never changes a Replay Run result, a Diff Group, an Adoption Group, or the Gate, and a test compares the default template with and without its clauses.
+- schemaVersion 1 documents and stored versions evaluate exactly as before; a test pins `resultHash` for schemaVersion 1 inputs, including the frozen schemaVersion 1 default template (`tests/fixtures/default-policy-v1.json`), to the values computed before this change.
+- The schemaVersion 2 default template is a different document from the schemaVersion 1 default template, and this is an intentional replay-contract difference.
+  A production deploy keeps Effect `ask` and the same Adoption Group `groupKey`, but its deciding Rule moves from `ask_irreversible_local` to `ask_production_deploy`.
+  Adoption Group `decidingRuleIds` are hashed, so the adoption `resultHash` of any Action set with a production deploy differs between the two templates; a test pins both the moved deciding Rule and the changed `resultHash`.
+  On Action sets without a production deploy the two templates give the same `resultHash`.
+- No committed figure depends on the default template deciding a production deploy.
+  The adoption and change-review journeys (`tools/local-pipeline/lib/evidence-journey.ts`) replace the default-template draft with policy A before any replay, so README, `docs/demo.md`, and `docs/evidence/` figures come from policy A.
+  The only direct use of the default template is the S1 measurement (`tools/local-pipeline/lib/s1-measure.ts`), and no S1 archetype (`tests/workloads/s1-seed.ts`) has the deploy capability.
 - Golden set, calibration, probe tables, and the probe gate blocker from ADR-0011 stay out (docs/cutline.md 13).
