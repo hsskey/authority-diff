@@ -166,6 +166,13 @@ function makeStore(): FakeStore {
       }
       return Promise.resolve();
     },
+    failQueuedRun: (id, errorCode, completedAt) => {
+      const run = runs.get(id);
+      if (run?.status === 'queued') {
+        runs.set(id, { ...run, status: 'failed', errorCode, completedAt });
+      }
+      return Promise.resolve();
+    },
     getRun: (id) => Promise.resolve(runs.get(id) ?? null),
     listDiffGroups: (query) => {
       const items = (groups.get(query.replayRunId) ?? [])
@@ -538,6 +545,49 @@ describe('replay module', () => {
 
     const stored = await module.getRun(requested.value.run.id);
     expect([stored?.status, stored?.errorCode]).toEqual(['failed', 'replay.inputs_changed']);
+  });
+
+  test('a run another delivery completed stays completed when a later delivery sees changed inputs', async () => {
+    const store = makeStore();
+    const winnerResultHash = 'd'.repeat(64);
+    let windowActions: readonly ActionForReplay[] = actions;
+    let armed = false;
+    let raced = false;
+    const { module } = makeModule({
+      store,
+      worker: false,
+      reader: makeReader({
+        streamActions: async function* () {
+          await Promise.resolve();
+          if (armed && !raced) {
+            raced = true;
+            for (const [id, run] of [...store.runs]) {
+              if (run.status === 'queued') {
+                store.runs.set(id, {
+                  ...run,
+                  status: 'completed',
+                  resultHash: winnerResultHash,
+                  startedAt: NOW,
+                  completedAt: NOW,
+                });
+              }
+            }
+          }
+          yield windowActions;
+        },
+      }),
+    });
+    const requested = await module.requestReplay(requestInput());
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    windowActions = actions.slice(0, 1);
+    armed = true;
+
+    await module.runReplayJob({ replayRunId: requested.value.run.id });
+
+    const stored = await module.getRun(requested.value.run.id);
+    expect([stored?.status, stored?.resultHash]).toEqual(['completed', winnerResultHash]);
   });
 
   test('a replay.run payload without a run id is logged and dropped', async () => {

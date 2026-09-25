@@ -124,6 +124,8 @@ export interface ReplayStore {
   markRunning(id: ReplayRunId, startedAt: IsoTimestamp): Promise<boolean>;
   recordCompletion(input: RecordCompletionInput): Promise<void>;
   markFailed(id: ReplayRunId, errorCode: string, completedAt: IsoTimestamp): Promise<void>;
+  /** Fails a run only while it is still `queued`; a no-op once it is claimed or completed. */
+  failQueuedRun(id: ReplayRunId, errorCode: string, completedAt: IsoTimestamp): Promise<void>;
   getRun(id: ReplayRunId): Promise<ReplayRun | null>;
   listDiffGroups(query: ListDiffGroupsQuery): Promise<DiffGroupsPage>;
   getDiffGroup(id: ReplayRunId, groupKey: string): Promise<StoredDiffGroup | null>;

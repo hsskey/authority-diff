@@ -326,11 +326,16 @@ async function collectActions(
 export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModule {
   const { store, reader, policy, jobQueue, clock, idGenerator, logger, classifierVersion } = deps;
 
-  const fail = async (run: ReplayRun, errorCode: string, cause: unknown): Promise<void> => {
+  const persistFailure = async (
+    run: ReplayRun,
+    errorCode: string,
+    cause: unknown,
+    mark: () => Promise<void>,
+  ): Promise<void> => {
     // The failure is durable state, not a thrown error: the run is marked
     // failed in the DB and the job completes.
     logger.error('replay run failed', { runId: run.id, errorCode, cause });
-    await store.markFailed(run.id, errorCode, clock.now()).catch((markCause: unknown) => {
+    await mark().catch((markCause: unknown) => {
       logger.error('replay run could not be marked failed', {
         runId: run.id,
         errorCode,
@@ -338,6 +343,14 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
       });
     });
   };
+
+  const fail = (run: ReplayRun, errorCode: string, cause: unknown): Promise<void> =>
+    persistFailure(run, errorCode, cause, () => store.markFailed(run.id, errorCode, clock.now()));
+
+  const failQueued = (run: ReplayRun, errorCode: string, cause: unknown): Promise<void> =>
+    persistFailure(run, errorCode, cause, () =>
+      store.failQueuedRun(run.id, errorCode, clock.now()),
+    );
 
   const execute = async (run: ReplayRun, compute: () => Completion): Promise<void> => {
     let errorCode = 'replay.execution_failed';
@@ -589,11 +602,11 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
     }
     const planned = await planFor(run);
     if (!planned.ok) {
-      await fail(run, planned.error.code, null);
+      await failQueued(run, planned.error.code, null);
       return;
     }
     if (planned.value.inputsHash !== run.inputsHash) {
-      await fail(run, 'replay.inputs_changed', null);
+      await failQueued(run, 'replay.inputs_changed', null);
       return;
     }
     const { compute } = planned.value;

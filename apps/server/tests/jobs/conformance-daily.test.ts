@@ -111,6 +111,13 @@ function makeStore(): ReplayStore {
       }
       return Promise.resolve();
     },
+    failQueuedRun: (id, errorCode, completedAt) => {
+      const run = runs.get(id);
+      if (run?.status === 'queued') {
+        runs.set(id, { ...run, status: 'failed', errorCode, completedAt });
+      }
+      return Promise.resolve();
+    },
     getRun: (id) => Promise.resolve(runs.get(id) ?? null),
     listDiffGroups: unused,
     getDiffGroup: unused,

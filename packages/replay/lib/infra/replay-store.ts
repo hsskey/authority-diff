@@ -288,6 +288,17 @@ export function createReplayStore(database: Database): ReplayStore {
       await setRunStatus(id, { status: 'failed', errorCode, completedAt });
     },
 
+    async failQueuedRun(
+      id: ReplayRunId,
+      errorCode: string,
+      completedAt: IsoTimestamp,
+    ): Promise<void> {
+      await db
+        .update(replayRuns)
+        .set({ status: 'failed', errorCode, completedAt })
+        .where(and(eq(replayRuns.id, id), eq(replayRuns.status, 'queued')));
+    },
+
     async getRun(id: ReplayRunId): Promise<ReplayRun | null> {
       const [row] = await db.select().from(replayRuns).where(eq(replayRuns.id, id)).limit(1);
       return row === undefined ? null : toRun(row);
