@@ -117,7 +117,7 @@ function wideningGroup(store: Store): unknown {
     lastOccurredAt: TS,
     baselineRuleIds: ['baseline_rule'],
     candidateRuleIds: ['candidate_rule'],
-    targetSummary: [{ key: 'host', count: 3 }],
+    targetSummary: [{ key: 'Users/e2e-user', count: 3 }],
     headline: "Users/e2e-user 등 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
     sampleActionKeys: [ACTION_KEY],
     verdict: store.verdict,
@@ -360,7 +360,7 @@ test('draft policy is reviewed, a verdict opens the gate, accepted, and a report
   await expect(page.getByRole('heading', { name: 'Diff Group', level: 1 })).toBeVisible();
   await expect(page.getByText('bash ~/scripts/run.sh')).toBeVisible();
   await expect(
-    page.getByText("~ 등 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다."),
+    page.getByText("~ 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다."),
   ).toBeVisible();
   await expect(page.getByText('e2e-user')).toHaveCount(0);
   await expect(page.getByText('Baseline 결정')).toBeVisible();

@@ -34,7 +34,8 @@ import {
   Th,
   TwoColumn,
 } from '../features/activity-overview/ui.tsx';
-import { effectLabel, formatShare } from '../features/change-review/format.ts';
+import { formatShare } from '../features/change-review/format.ts';
+import { useT } from '../shared/i18n/use-t.ts';
 import { TextLink } from '../shared/components/TextLink.tsx';
 
 export const Route = createFileRoute('/')({
@@ -56,11 +57,6 @@ const ANALYZABILITY_EFFECT_CLASS: Record<AnalyzabilityLevel, Effect> = {
   full: 'allow',
   partial: 'ask',
   none: 'deny',
-};
-const ANALYZABILITY_LABEL: Record<AnalyzabilityLevel, string> = {
-  full: '완전 분석',
-  partial: '부분 분석',
-  none: '분석 불가',
 };
 const CAPABILITIES: readonly Capability[] = [
   'read',
@@ -85,16 +81,6 @@ const TARGET_KINDS: readonly TargetKind[] = [
   'deploy_target',
   'unknown',
 ];
-const TARGET_KIND_LABEL: Record<TargetKind, string> = {
-  workspace_path: '작업 공간 경로',
-  other_path: '작업 공간 밖 경로',
-  vcs_remote: 'VCS 원격',
-  host: 'host',
-  package: 'package',
-  mcp: 'MCP tool',
-  deploy_target: '배포 대상',
-  unknown: '인식 안 됨',
-};
 
 function rankedCounts<K extends string>(
   keys: readonly K[],
@@ -107,7 +93,8 @@ function rankedCounts<K extends string>(
 }
 
 function ActivityShapePage() {
-  usePageTitle('활동 분포');
+  const t = useT();
+  usePageTitle(t.overview.title);
   const overviewQuery = useQuery({
     queryKey: ['activity-overview', WINDOW_DAYS],
     queryFn: async () => {
@@ -134,21 +121,21 @@ function ActivityShapePage() {
 
   return (
     <section className="grid gap-5">
-      <h1 className="m-0 mb-4 text-2xl leading-normal">활동 분포</h1>
-      {overviewQuery.isPending ? <LoadingState label="가져온 활동을 집계하는 중" /> : null}
+      <h1 className="m-0 mb-4 text-2xl leading-normal">{t.overview.title}</h1>
+      {overviewQuery.isPending ? <LoadingState label={t.overview.loadingOverview} /> : null}
       {overviewQuery.isError ? (
         <ErrorState
-          title="활동 개요를 불러오지 못했습니다"
-          message={overviewQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.overview.overviewLoadFailed}
+          message={overviewQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {overviewQuery.isSuccess ? <ActivityOverview overview={overviewQuery.data} /> : null}
 
-      {policiesQuery.isPending ? <LoadingState label="정책을 확인하는 중" /> : null}
+      {policiesQuery.isPending ? <LoadingState label={t.overview.loadingPolicies} /> : null}
       {policiesQuery.isError ? (
         <ErrorState
-          title="정책을 불러오지 못했습니다"
-          message={policiesQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.overview.policiesLoadFailed}
+          message={policiesQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {policiesQuery.isSuccess ? (
@@ -162,6 +149,7 @@ function ActivityShapePage() {
 }
 
 function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) {
+  const t = useT();
   const evaluable = overview.evaluableActionCount;
   const capabilities = rankedCounts(CAPABILITIES, overview.capabilityCounts);
   const targetKinds = rankedCounts(TARGET_KINDS, overview.targetKindCounts);
@@ -173,40 +161,35 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
   return (
     <Stack aria-labelledby="activity-overview-title">
       <SectionTitle id="activity-overview-title">
-        가져온 활동 개요 (최근 {overview.windowDays}일)
+        {t.overview.overviewTitle(overview.windowDays)}
       </SectionTitle>
-      <Hint>
-        transcript에서 가져온 Action만 집계합니다. Effect와 Zone은 정책이 있어야 계산됩니다.
-      </Hint>
+      <Hint>{t.overview.overviewHint}</Hint>
       <MetaGrid>
         <div>
-          <dt>기간</dt>
+          <dt>{t.common.period}</dt>
           <dd>
             {overview.windowFrom} → {overview.windowTo}
           </dd>
         </div>
         <div>
-          <dt>Session</dt>
+          <dt>{t.overview.sessions}</dt>
           <dd>{overview.sessionCount}</dd>
         </div>
         <div>
-          <dt>Action (중복 제거)</dt>
+          <dt>{t.overview.actionsDeduplicated}</dt>
           <dd>{overview.actionCount}</dd>
         </div>
         <div>
-          <dt>평가 가능 Action</dt>
+          <dt>{t.overview.evaluableActions}</dt>
           <dd>{evaluable}</dd>
         </div>
       </MetaGrid>
 
       {overview.actionCount === 0 ? (
-        <EmptyState
-          title="이 기간에 가져온 Action이 없습니다"
-          message="authority import로 transcript를 가져오면 여기에 활동이 집계됩니다."
-        />
+        <EmptyState title={t.overview.emptyTitle} message={t.overview.emptyMessage} />
       ) : (
         <>
-          <SectionTitle as="h3">분석 가능성 (Action 기준)</SectionTitle>
+          <SectionTitle as="h3">{t.overview.analyzabilityTitle}</SectionTitle>
           <EffectSummary data-testid="overview-analyzability">
             {ANALYZABILITY_ORDER.map((level) => {
               const count = overview.analyzability[level];
@@ -214,7 +197,7 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
                 <EffectTile
                   key={level}
                   effect={ANALYZABILITY_EFFECT_CLASS[level]}
-                  label={ANALYZABILITY_LABEL[level]}
+                  label={t.overview.analyzability[level]}
                   count={count}
                   percent={formatShare(count, evaluable)}
                 />
@@ -224,15 +207,15 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
 
           <TwoColumn>
             <DataTable>
-              <TableCaption>Capability 분포 (Operation {operationCount}건)</TableCaption>
+              <TableCaption>{t.overview.capabilityCaption(operationCount)}</TableCaption>
               <thead>
                 <tr>
-                  <Th scope="col">Capability</Th>
+                  <Th scope="col">{t.overview.capability}</Th>
                   <Th scope="col" numeric>
-                    Operation
+                    {t.overview.operation}
                   </Th>
                   <Th scope="col" numeric>
-                    비율
+                    {t.overview.share}
                   </Th>
                 </tr>
               </thead>
@@ -247,22 +230,22 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
               </tbody>
             </DataTable>
             <DataTable>
-              <TableCaption>Target 종류 분포 (Operation 기준)</TableCaption>
+              <TableCaption>{t.overview.targetKindCaption}</TableCaption>
               <thead>
                 <tr>
-                  <Th scope="col">Target 종류</Th>
+                  <Th scope="col">{t.overview.targetKindHeader}</Th>
                   <Th scope="col" numeric>
-                    Operation
+                    {t.overview.operation}
                   </Th>
                   <Th scope="col" numeric>
-                    비율
+                    {t.overview.share}
                   </Th>
                 </tr>
               </thead>
               <tbody>
                 {targetKinds.map((entry) => (
                   <tr key={entry.key}>
-                    <Td>{TARGET_KIND_LABEL[entry.key]}</Td>
+                    <Td>{t.overview.targetKind[entry.key]}</Td>
                     <Td numeric>{entry.count}</Td>
                     <Td numeric>{formatShare(entry.count, operationCount)}</Td>
                   </tr>
@@ -282,14 +265,15 @@ function ActivityOverview({ overview }: { overview: ActivityOverviewResponse }) 
 }
 
 function TopPrograms({ programs }: { programs: ActivityOverviewResponse['topPrograms'] }) {
+  const t = useT();
   return (
     <DataTable>
-      <TableCaption>자주 쓴 program 상위 {programs.length}개</TableCaption>
+      <TableCaption>{t.overview.topProgramsCaption(programs.length)}</TableCaption>
       <thead>
         <tr>
-          <Th scope="col">Program</Th>
+          <Th scope="col">{t.overview.program}</Th>
           <Th scope="col" numeric>
-            Operation
+            {t.overview.operation}
           </Th>
         </tr>
       </thead>
@@ -297,7 +281,7 @@ function TopPrograms({ programs }: { programs: ActivityOverviewResponse['topProg
         {programs.length === 0 ? (
           <tr>
             <Td colSpan={2} muted>
-              program을 인식한 Operation이 없습니다.
+              {t.overview.noPrograms}
             </Td>
           </tr>
         ) : (
@@ -315,6 +299,7 @@ function TopPrograms({ programs }: { programs: ActivityOverviewResponse['topProg
 
 /** Remote Keys are shown by host only: owner and repository names stay off this screen. */
 function RemoteHosts({ remoteKeys }: { remoteKeys: ActivityOverviewResponse['topRemoteKeys'] }) {
+  const t = useT();
   const byHost = new Map<string, { remotes: number; count: number }>();
   for (const entry of remoteKeys) {
     const host = entry.remoteKey.split('/')[0] ?? entry.remoteKey;
@@ -327,17 +312,15 @@ function RemoteHosts({ remoteKeys }: { remoteKeys: ActivityOverviewResponse['top
 
   return (
     <DataTable>
-      <TableCaption>
-        VCS 원격 host (상위 {remoteKeys.length}개 Remote Key 기준, 저장소 이름은 가림)
-      </TableCaption>
+      <TableCaption>{t.overview.remoteHostsCaption(remoteKeys.length)}</TableCaption>
       <thead>
         <tr>
-          <Th scope="col">Host</Th>
+          <Th scope="col">{t.overview.host}</Th>
           <Th scope="col" numeric>
-            저장소
+            {t.overview.repositories}
           </Th>
           <Th scope="col" numeric>
-            Operation
+            {t.overview.operation}
           </Th>
         </tr>
       </thead>
@@ -345,7 +328,7 @@ function RemoteHosts({ remoteKeys }: { remoteKeys: ActivityOverviewResponse['top
         {hosts.length === 0 ? (
           <tr>
             <Td colSpan={3} muted>
-              Remote Key를 인식한 Operation이 없습니다.
+              {t.overview.noRemotes}
             </Td>
           </tr>
         ) : (
@@ -369,6 +352,7 @@ function PolicyState({
   policies: readonly PolicyResponse[];
   hasMore: boolean;
 }) {
+  const t = useT();
   const [policy, ...rest] = policies;
   if (policy === undefined) {
     return <FirstPolicyPanel />;
@@ -376,11 +360,8 @@ function PolicyState({
   if (rest.length > 0 || hasMore) {
     return (
       <Panel className="grid gap-5 text-red-700" role="alert">
-        <SectionTitle>지원하지 않는 상태: 조직 정책이 2개 이상입니다</SectionTitle>
-        <StateMessage>
-          Authority Diff는 조직 정책 하나만 다룹니다. 어느 정책도 자동으로 고르지 않으며, 정책을
-          하나만 남긴 뒤 다시 시작하세요.
-        </StateMessage>
+        <SectionTitle>{t.overview.multiplePoliciesTitle}</SectionTitle>
+        <StateMessage>{t.overview.multiplePoliciesMessage}</StateMessage>
       </Panel>
     );
   }
@@ -388,6 +369,7 @@ function PolicyState({
 }
 
 function FirstPolicyPanel() {
+  const t = useT();
   const navigate = useNavigate();
   const create = useMutation({
     mutationFn: async () => {
@@ -409,11 +391,8 @@ function FirstPolicyPanel() {
 
   return (
     <Panel className="grid gap-5">
-      <SectionTitle>아직 조직 정책이 없습니다</SectionTitle>
-      <Hint>
-        기본 template으로 첫 정책의 draft version 1을 만들고 편집 화면으로 이동합니다. 채택 전에는
-        어떤 판정도 내리지 않습니다.
-      </Hint>
+      <SectionTitle>{t.overview.firstPolicyTitle}</SectionTitle>
+      <Hint>{t.overview.firstPolicyHint}</Hint>
       <Actions>
         <PrimaryButton
           type="button"
@@ -421,12 +400,12 @@ function FirstPolicyPanel() {
           aria-busy={create.isPending}
           onClick={() => create.mutate()}
         >
-          {create.isPending ? '만드는 중…' : '첫 조직 정책 만들기'}
+          {create.isPending ? t.common.creating : t.overview.createFirstPolicy}
         </PrimaryButton>
       </Actions>
       {create.error ? (
         <StateMessage className="text-red-700" role="alert">
-          정책 생성 실패: {create.error.message}
+          {t.overview.createPolicyFailed}: {create.error.message}
         </StateMessage>
       ) : null}
     </Panel>
@@ -447,6 +426,7 @@ function latestOf(
 }
 
 function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
+  const t = useT();
   const versionsQuery = useQuery({
     queryKey: ['policy-versions', policy.id],
     queryFn: async () => {
@@ -462,13 +442,13 @@ function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
   });
 
   if (versionsQuery.isPending) {
-    return <LoadingState label="정책 version을 확인하는 중" />;
+    return <LoadingState label={t.overview.loadingVersions} />;
   }
   if (versionsQuery.isError) {
     return (
       <ErrorState
-        title="정책 version을 불러오지 못했습니다"
-        message={versionsQuery.error?.message ?? '알 수 없는 오류'}
+        title={t.overview.versionsLoadFailed}
+        message={versionsQuery.error?.message ?? t.common.unknownError}
       />
     );
   }
@@ -485,16 +465,14 @@ function SinglePolicyState({ policy }: { policy: PolicyResponse }) {
   const latest = latestOf(versions, ['rejected']);
   return (
     <Panel className="grid gap-5">
-      <SectionTitle>채택된 정책도 열린 draft도 없습니다</SectionTitle>
-      <Hint>
-        최초 도입 검토가 반려된 상태입니다. 마지막 version에서 새 draft를 만들어 다시 검토하세요.
-      </Hint>
+      <SectionTitle>{t.overview.noPolicyStateTitle}</SectionTitle>
+      <Hint>{t.overview.noPolicyStateHint}</Hint>
       {latest !== null ? (
         <TextLink
           to="/policies/$policyId/versions/$versionId"
           params={{ policyId: policy.id, versionId: latest.id }}
         >
-          version #{latest.versionNumber} 보기
+          {t.overview.viewVersion(latest.versionNumber)}
         </TextLink>
       ) : null}
     </Panel>
@@ -536,30 +514,28 @@ function InitialSetupState({
   policy: PolicyResponse;
   candidate: PolicyVersionResponse;
 }) {
+  const t = useT();
   const reviewQuery = useOpenReview(policy.id, candidate.id);
 
   return (
     <Panel className="grid gap-5">
-      <SectionTitle>최초 정책 설정 진행 중</SectionTitle>
-      <Hint>
-        draft version #{candidate.versionNumber}이 있고 채택된 version은 아직 없습니다. 제안 정책을
-        과거 Action에 적용해 보고 확인 필요·차단 group을 판정한 뒤 채택합니다.
-      </Hint>
+      <SectionTitle>{t.overview.initialSetupTitle}</SectionTitle>
+      <Hint>{t.overview.initialSetupHint(candidate.versionNumber)}</Hint>
       <Actions>
         <Link
           className={BUTTON_LINK}
           to="/policies/$policyId/versions/$versionId"
           params={{ policyId: policy.id, versionId: candidate.id }}
         >
-          최초 정책 설정 계속하기
+          {t.overview.continueInitialSetup}
         </Link>
       </Actions>
-      <SectionTitle as="h3">도입 preview</SectionTitle>
-      {reviewQuery.isPending ? <LoadingState label="도입 검토를 확인하는 중" /> : null}
+      <SectionTitle as="h3">{t.overview.adoptionPreview}</SectionTitle>
+      {reviewQuery.isPending ? <LoadingState label={t.overview.loadingAdoptionReview} /> : null}
       {reviewQuery.isError ? (
         <ErrorState
-          title="도입 검토를 불러오지 못했습니다"
-          message={reviewQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.overview.adoptionReviewLoadFailed}
+          message={reviewQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {reviewQuery.isSuccess ? <AdoptionPreview review={reviewQuery.data} /> : null}
@@ -568,13 +544,14 @@ function InitialSetupState({
 }
 
 function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
+  const t = useT();
   const runId = review?.replaySummary.replayRunId ?? null;
   const runQuery = useQuery({
     queryKey: ['replay-run', runId],
     enabled: runId !== null && review?.status === 'ready',
     queryFn: async () => {
       if (runId === null) {
-        throw new Error('replay run이 아직 연결되지 않았습니다');
+        throw new Error(t.common.replayRunNotLinked);
       }
       const result = await callRoute(routes.getReplayRun, { params: { id: runId } });
       if (!result.ok) {
@@ -585,19 +562,14 @@ function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
   });
 
   if (review === null) {
-    return (
-      <Hint>
-        아직 최초 도입 검토를 만들지 않았습니다. draft 편집 화면에서 "최초 도입 검토 만들기"를
-        누르면 제안 정책 적용 결과가 여기에 나타납니다.
-      </Hint>
-    );
+    return <Hint>{t.overview.noAdoptionReview}</Hint>;
   }
   if (review.status === 'computing') {
     return (
       <Hint role="status">
-        제안 정책을 과거 Action에 적용하는 중입니다.{' '}
+        {t.overview.applyingProposedPolicy}{' '}
         <TextLink to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
-          검토 화면 열기
+          {t.overview.openReview}
         </TextLink>
       </Hint>
     );
@@ -607,33 +579,32 @@ function AdoptionPreview({ review }: { review: ChangeReviewResponse | null }) {
       {runQuery.isSuccess ? <AdoptionEffectTiles run={runQuery.data} /> : null}
       {runQuery.isError ? (
         <ErrorState
-          title="적용 결과를 불러오지 못했습니다"
-          message={runQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.overview.resultsLoadFailed}
+          message={runQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       <Link className={BUTTON_LINK} to="/change-reviews/$reviewId" params={{ reviewId: review.id }}>
-        최초 도입 검토 계속하기
+        {t.overview.continueAdoptionReview}
       </Link>
     </Stack>
   );
 }
 
 function AdoptionEffectTiles({ run }: { run: ReplayRunResponse }) {
+  const t = useT();
   if (run.kind !== 'adoption' || run.stats === null) {
     return null;
   }
   const { effectCounts, evaluatedActions } = run.stats;
   return (
     <Stack>
-      <Hint>
-        제안 정책을 적용하면 평가한 Action {evaluatedActions}건이 각각 아래 Effect를 받습니다.
-      </Hint>
+      <Hint>{t.overview.adoptionTilesHint(evaluatedActions)}</Hint>
       <EffectSummary data-testid="adoption-preview">
         {EFFECT_ORDER.map((effect) => (
           <EffectTile
             key={effect}
             effect={effect}
-            label={effectLabel(effect)}
+            label={t.effect[effect]}
             count={effectCounts[effect]}
             percent={formatShare(effectCounts[effect], evaluatedActions)}
           />
@@ -652,6 +623,7 @@ function AcceptedPolicyState({
   accepted: PolicyVersionResponse;
   candidate: PolicyVersionResponse | null;
 }) {
+  const t = useT();
   const mapQuery = useQuery({
     queryKey: ['authority-map'],
     queryFn: async () => {
@@ -666,17 +638,15 @@ function AcceptedPolicyState({
   return (
     <Stack>
       <Panel className="grid gap-5">
-        <SectionTitle>채택된 정책: version #{accepted.versionNumber}</SectionTitle>
-        <Hint>
-          채택은 검토 기록입니다. runtime에 반영하는 일은 Authority Diff 밖에서 이루어집니다.
-        </Hint>
+        <SectionTitle>{t.overview.acceptedTitle(accepted.versionNumber)}</SectionTitle>
+        <Hint>{t.overview.acceptedHint}</Hint>
         <Actions>
           <Link
             className={BUTTON_LINK}
             to="/policies/$policyId/versions/$versionId"
             params={{ policyId: policy.id, versionId: accepted.id }}
           >
-            채택된 version 보기
+            {t.overview.viewAccepted}
           </Link>
           {candidate !== null ? (
             <Link
@@ -684,17 +654,17 @@ function AcceptedPolicyState({
               to="/policies/$policyId/versions/$versionId"
               params={{ policyId: policy.id, versionId: candidate.id }}
             >
-              변경 draft #{candidate.versionNumber} 계속하기
+              {t.overview.continueChangeDraft(candidate.versionNumber)}
             </Link>
           ) : null}
         </Actions>
       </Panel>
-      <SectionTitle>채택된 정책 기준 활동 분포</SectionTitle>
-      {mapQuery.isPending ? <LoadingState label="활동 분포를 불러오는 중" /> : null}
+      <SectionTitle>{t.overview.mapTitle}</SectionTitle>
+      {mapQuery.isPending ? <LoadingState label={t.overview.loadingMap} /> : null}
       {mapQuery.isError ? (
         <ErrorState
-          title="활동 분포를 불러오지 못했습니다"
-          message={mapQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.overview.mapLoadFailed}
+          message={mapQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {mapQuery.isSuccess ? <AuthorityMap map={mapQuery.data} /> : null}
@@ -703,13 +673,9 @@ function AcceptedPolicyState({
 }
 
 function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
+  const t = useT();
   if (map.run === null || map.cells.length === 0) {
-    return (
-      <EmptyState
-        title="완료된 replay run이 없습니다"
-        message="채택된 version의 최초 도입 검토나 변경 검토 replay가 완료되면 Effect 분포가 여기에 나타납니다."
-      />
-    );
+    return <EmptyState title={t.overview.mapEmptyTitle} message={t.overview.mapEmptyMessage} />;
   }
 
   const total = map.cells.reduce((sum, cell) => sum + cell.count, 0);
@@ -727,17 +693,17 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
     <Stack>
       <MetaGrid>
         <div>
-          <dt>기준 version</dt>
+          <dt>{t.common.baselineVersion}</dt>
           <Mono>{map.run.policyVersionId}</Mono>
         </div>
         <div>
-          <dt>기간</dt>
+          <dt>{t.common.period}</dt>
           <dd>
             {map.run.windowFrom} → {map.run.windowTo}
           </dd>
         </div>
         <div>
-          <dt>Replay Run</dt>
+          <dt>{t.overview.replayRun}</dt>
           <Mono>{map.run.replayRunId}</Mono>
         </div>
       </MetaGrid>
@@ -749,7 +715,7 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
             <EffectTile
               key={effect}
               effect={effect}
-              label={effectLabel(effect)}
+              label={t.effect[effect]}
               count={count}
               percent={formatShare(count, total)}
             />
@@ -757,7 +723,7 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
         })}
       </EffectSummary>
 
-      <SectionTitle as="h3">분석 가능성 (평가한 Action 기준)</SectionTitle>
+      <SectionTitle as="h3">{t.overview.mapAnalyzabilityTitle}</SectionTitle>
       <EffectSummary data-testid="map-analyzability">
         {ANALYZABILITY_ORDER.map((level) => {
           const count = map.analyzability[level];
@@ -765,7 +731,7 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
             <EffectTile
               key={level}
               effect={ANALYZABILITY_EFFECT_CLASS[level]}
-              label={ANALYZABILITY_LABEL[level]}
+              label={t.overview.analyzability[level]}
               count={count}
               percent={formatShare(count, total)}
             />
@@ -774,16 +740,14 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
       </EffectSummary>
 
       <DataTable>
-        <TableCaption>
-          평가한 Action {total}건, Capability × Zone cell {map.cells.length}개
-        </TableCaption>
+        <TableCaption>{t.overview.mapCaption(total, map.cells.length)}</TableCaption>
         <thead>
           <tr>
-            <Th scope="col">Capability</Th>
-            <Th scope="col">Zone</Th>
-            <Th scope="col">Effect</Th>
+            <Th scope="col">{t.overview.capability}</Th>
+            <Th scope="col">{t.overview.zone}</Th>
+            <Th scope="col">{t.overview.effect}</Th>
             <Th scope="col" numeric>
-              Action
+              {t.overview.action}
             </Th>
           </tr>
         </thead>
@@ -793,7 +757,7 @@ function AuthorityMap({ map }: { map: AuthorityMapResponse }) {
               <Td>{cell.capability}</Td>
               <Td>{cell.zone}</Td>
               <Td nowrap>
-                <EffectBadge effect={cell.effect}>{effectLabel(cell.effect)}</EffectBadge>
+                <EffectBadge effect={cell.effect}>{t.effect[cell.effect]}</EffectBadge>
               </Td>
               <Td numeric>{cell.count}</Td>
             </tr>

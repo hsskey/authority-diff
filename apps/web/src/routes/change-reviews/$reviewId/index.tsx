@@ -13,17 +13,16 @@ import { ErrorState } from '../../../shared/components/ErrorState.tsx';
 import { LoadingState } from '../../../shared/components/LoadingState.tsx';
 import {
   adoptionGroupLabel,
-  blockerLabel,
   bySeverityThenImpact,
   diffGroupLabel,
-  effectLabel,
   formatShare,
   formatZoneTransition,
-  traceSourcesLabel,
 } from '../../../features/change-review/format.ts';
 import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
 import { usePageTitle } from '../../../shared/use-page-title.ts';
 import { TextLink } from '../../../shared/components/TextLink.tsx';
+import { EmphasizedText } from '../../../shared/components/EmphasizedText.tsx';
+import { useT } from '../../../shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/')({
   component: ChangeReviewPage,
@@ -35,25 +34,6 @@ type ReviewStatus = ChangeReviewResponse['status'];
 type Severity = ReviewDiffGroupResponse['severity'];
 
 const EFFECTS: readonly Effect[] = ['allow', 'ask', 'deny'];
-
-const PAGE_TITLE: Record<ReviewKind, string> = {
-  change: '변경 검토',
-  adoption: '최초 도입 검토',
-};
-
-const STATUS_LABEL: Record<ReviewStatus, string> = {
-  computing: '계산 중',
-  ready: '판정 대기',
-  accepted: '채택됨',
-  rejected: '반려됨',
-  failed: '실패',
-  withdrawn: '철회됨',
-};
-
-const DECISION_LABEL: Record<ReviewKind, { accept: string; reject: string; title: string }> = {
-  change: { accept: '정책 변경 수락', reject: '정책 변경 반려', title: '정책 변경 결정' },
-  adoption: { accept: '최초 정책 채택', reject: '최초 정책 반려', title: '최초 정책 채택 결정' },
-};
 
 const STATUS_TONE: Record<ReviewStatus, string> = {
   computing: 'text-blue-700',
@@ -227,6 +207,7 @@ function StatusBadge({ status, label }: { status: ReviewStatus; label: string })
 
 function ChangeReviewPage() {
   const { reviewId } = Route.useParams();
+  const t = useT();
   const queryClient = useQueryClient();
   const reviewQuery = useQuery({
     queryKey: ['change-review', reviewId],
@@ -287,22 +268,23 @@ function ChangeReviewPage() {
 
   const groupsQuery = kind === 'adoption' ? adoptionGroupsQuery : diffGroupsQuery;
   const isPending = reviewQuery.isPending || (kind !== undefined && groupsQuery.isPending);
-  usePageTitle(kind === undefined ? '검토' : PAGE_TITLE[kind]);
+  const title = kind === undefined ? t.review.pendingTitle : t.review.title[kind];
+  usePageTitle(title);
 
   return (
     <section>
-      <h1 className="m-0 mb-4 text-[1.5rem]">{kind === undefined ? '검토' : PAGE_TITLE[kind]}</h1>
-      {isPending ? <LoadingState label="검토를 불러오는 중" /> : null}
+      <h1 className="m-0 mb-4 text-[1.5rem]">{title}</h1>
+      {isPending ? <LoadingState label={t.review.loading} /> : null}
       {reviewQuery.isError ? (
         <ErrorState
-          title="검토를 불러오지 못했습니다"
-          message={reviewQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.review.loadFailed}
+          message={reviewQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {groupsQuery.isError ? (
         <ErrorState
-          title="group을 불러오지 못했습니다"
-          message={groupsQuery.error?.message ?? '알 수 없는 오류'}
+          title={t.review.groupsLoadFailed}
+          message={groupsQuery.error?.message ?? t.common.unknownError}
         />
       ) : null}
       {reviewQuery.isSuccess && reviewQuery.data.kind === 'change' && diffGroupsQuery.isSuccess ? (
@@ -334,6 +316,7 @@ function ChangeReviewDetail({
   review: ChangeReviewResponse;
   groups: readonly ReviewDiffGroupResponse[];
 }) {
+  const t = useT();
   const widening = groups.filter((group) => group.direction === 'widening');
   const narrowing = groups.filter((group) => group.direction === 'narrowing');
 
@@ -342,7 +325,7 @@ function ChangeReviewDetail({
       <TraceSources review={review} />
       {review.status === 'computing' ? (
         <PanelMessage muted role="status">
-          과거 Action에 두 version을 대입하는 중입니다. 완료되면 화면이 갱신됩니다.
+          {t.review.computingChange}
         </PanelMessage>
       ) : null}
       <ReviewMeta review={review} />
@@ -367,6 +350,7 @@ function AdoptionReviewDetail({
   review: ChangeReviewResponse;
   groups: readonly ReviewAdoptionGroupResponse[];
 }) {
+  const t = useT();
   const ask = groups.filter((group) => group.effect === 'ask');
   const deny = groups.filter((group) => group.effect === 'deny');
   const canJudge = review.status === 'ready';
@@ -378,14 +362,14 @@ function AdoptionReviewDetail({
       <AdoptionSummary review={review} />
       <AdoptionGroups
         reviewId={reviewId}
-        title="확인 필요 group"
+        title={t.review.askGroups}
         effect="ask"
         groups={ask}
         canJudge={canJudge}
       />
       <AdoptionGroups
         reviewId={reviewId}
-        title="차단 group"
+        title={t.review.denyGroups}
         effect="deny"
         groups={deny}
         canJudge={canJudge}
@@ -399,38 +383,40 @@ function AdoptionReviewDetail({
 }
 
 function TraceSources({ review }: { review: ChangeReviewResponse }) {
-  return (
-    <PanelMessage testId="trace-sources">{traceSourcesLabel(review.traceSources)}</PanelMessage>
-  );
+  const t = useT();
+  return <PanelMessage testId="trace-sources">{t.traceSources(review.traceSources)}</PanelMessage>;
 }
 
 function ReviewMeta({ review }: { review: ChangeReviewResponse }) {
+  const t = useT();
   return (
     <dl className={`${META_GRID} rounded-lg border border-border bg-panel px-5 py-4`}>
       <div>
-        <dt className={META_TERM}>검토</dt>
+        <dt className={META_TERM}>{t.review.meta.review}</dt>
         <dd className={`${META_VALUE} ${MONO}`}>{review.id}</dd>
       </div>
       <div>
-        <dt className={META_TERM}>상태</dt>
+        <dt className={META_TERM}>{t.review.meta.status}</dt>
         <dd className={META_VALUE}>
-          <StatusBadge status={review.status} label={STATUS_LABEL[review.status]} />
+          <StatusBadge status={review.status} label={t.review.status[review.status]} />
         </dd>
       </div>
       <div>
         <dt className={META_TERM}>
-          {review.kind === 'adoption' ? '제안 version' : '변경안 version'}
+          {review.kind === 'adoption'
+            ? t.review.meta.proposedVersion
+            : t.review.meta.candidateVersion}
         </dt>
         <dd className={`${META_VALUE} ${MONO}`}>{review.candidateVersionId}</dd>
       </div>
       <div>
-        <dt className={META_TERM}>기준 version</dt>
+        <dt className={META_TERM}>{t.common.baselineVersion}</dt>
         <dd className={review.baselineVersionId === null ? META_VALUE : `${META_VALUE} ${MONO}`}>
-          {review.baselineVersionId ?? '없음 (최초 도입)'}
+          {review.baselineVersionId ?? t.review.meta.noBaseline}
         </dd>
       </div>
       <div>
-        <dt className={META_TERM}>기간</dt>
+        <dt className={META_TERM}>{t.common.period}</dt>
         <dd className={META_VALUE}>
           {review.windowFrom} → {review.windowTo}
         </dd>
@@ -448,6 +434,7 @@ function SummaryLines({
   widening: readonly ReviewDiffGroupResponse[];
   narrowing: readonly ReviewDiffGroupResponse[];
 }) {
+  const t = useT();
   const stats = review.replaySummary.stats;
   const wideningActions = widening.reduce((sum, group) => sum + group.actionCount, 0);
   const narrowingActions = narrowing.reduce((sum, group) => sum + group.actionCount, 0);
@@ -455,15 +442,15 @@ function SummaryLines({
   return (
     <ol className={SUMMARY_LINES}>
       <li>
-        평가한 action <strong>{stats ? stats.evaluatedActions : '계산 중'}</strong>건
+        <EmphasizedText
+          parts={t.review.evaluatedActions(stats ? stats.evaluatedActions : t.review.computing)}
+        />
       </li>
       <li>
-        넓어진 action <strong>{wideningActions}</strong>건, widening group{' '}
-        <strong>{widening.length}</strong>개
+        <EmphasizedText parts={t.review.widenedActions(wideningActions, widening.length)} />
       </li>
       <li>
-        좁아진 action <strong>{narrowingActions}</strong>건, narrowing group{' '}
-        <strong>{narrowing.length}</strong>개
+        <EmphasizedText parts={t.review.narrowedActions(narrowingActions, narrowing.length)} />
       </li>
     </ol>
   );
@@ -471,13 +458,14 @@ function SummaryLines({
 
 /** An adoption review's counts live on its replay run, not on the review summary. */
 function AdoptionSummary({ review }: { review: ChangeReviewResponse }) {
+  const t = useT();
   const runId = review.replaySummary.replayRunId;
   const runQuery = useQuery({
     queryKey: ['replay-run', runId],
     enabled: runId !== null && review.status !== 'computing',
     queryFn: async () => {
       if (runId === null) {
-        throw new Error('replay run이 아직 연결되지 않았습니다');
+        throw new Error(t.common.replayRunNotLinked);
       }
       const result = await callRoute(routes.getReplayRun, { params: { id: runId } });
       if (!result.ok) {
@@ -490,18 +478,18 @@ function AdoptionSummary({ review }: { review: ChangeReviewResponse }) {
   if (review.status === 'computing') {
     return (
       <PanelMessage muted role="status">
-        제안 정책을 과거 Action에 적용하는 중입니다. 완료되면 화면이 갱신됩니다.
+        {t.review.computingAdoption}
       </PanelMessage>
     );
   }
   if (runQuery.isPending) {
-    return <LoadingState label="적용 결과를 불러오는 중" />;
+    return <LoadingState label={t.review.loadingResults} />;
   }
   if (runQuery.isError) {
     return (
       <ErrorState
-        title="적용 결과를 불러오지 못했습니다"
-        message={runQuery.error?.message ?? '알 수 없는 오류'}
+        title={t.review.resultsLoadFailed}
+        message={runQuery.error?.message ?? t.common.unknownError}
       />
     );
   }
@@ -509,6 +497,7 @@ function AdoptionSummary({ review }: { review: ChangeReviewResponse }) {
 }
 
 function AdoptionStats({ run }: { run: ReplayRunResponse }) {
+  const t = useT();
   if (run.kind !== 'adoption' || run.stats === null) {
     return null;
   }
@@ -518,19 +507,21 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
     <Stack>
       <ol className={SUMMARY_LINES}>
         <li>
-          평가한 action <strong>{evaluatedActions}</strong>건 (전체 {totalActions}건, Operation이
-          없어 제외 {excludedActions}건)
+          <EmphasizedText
+            parts={t.review.adoptionEvaluated(evaluatedActions, totalActions, excludedActions)}
+          />
         </li>
         <li>
-          분석 불가(analyzability none) action <strong>{analyzability.none}</strong>건 (
-          {formatShare(analyzability.none, evaluatedActions)})
+          <EmphasizedText
+            parts={t.review.adoptionNotAnalyzable(
+              analyzability.none,
+              formatShare(analyzability.none, evaluatedActions),
+            )}
+          />
         </li>
       </ol>
-      <SectionTitle>제안 정책 적용 시 Effect</SectionTitle>
-      <Hint>
-        과거 Action에 제안 정책을 적용한 결과입니다. 과거 runtime의 승인 여부를 복원한 것이
-        아닙니다.
-      </Hint>
+      <SectionTitle>{t.review.adoptionEffectsTitle}</SectionTitle>
+      <Hint>{t.review.adoptionEffectsHint}</Hint>
       <div className="grid grid-cols-3 gap-3" data-testid="adoption-effects">
         {EFFECTS.map((effect) => (
           <div
@@ -538,7 +529,7 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
             className={`grid gap-[0.15rem] rounded-lg border bg-panel px-5 py-4 text-center ${EFFECT_TONE[effect]}`}
           >
             <span className="text-[0.7rem] tracking-[0.05em] text-muted uppercase">
-              {effectLabel(effect)}
+              {t.effect[effect]}
             </span>
             <span className="text-[1.5rem] font-semibold tabular-nums">{effectCounts[effect]}</span>
             <span className="text-[0.8rem] text-muted">
@@ -552,6 +543,7 @@ function AdoptionStats({ run }: { run: ReplayRunResponse }) {
 }
 
 function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
+  const t = useT();
   const stats = review.replaySummary.stats;
   if (stats === null) {
     return null;
@@ -563,14 +555,14 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
 
   return (
     <Stack>
-      <SectionTitle id="effect-transitions">Effect 전이</SectionTitle>
+      <SectionTitle id="effect-transitions">{t.review.transitionsTitle}</SectionTitle>
       <DataTable labelledBy="effect-transitions">
         <thead>
           <tr>
-            <HeaderCell>기준 \ 변경안</HeaderCell>
+            <HeaderCell>{t.review.transitionsCorner}</HeaderCell>
             {EFFECTS.map((to) => (
               <HeaderCell key={to} numeric>
-                {effectLabel(to)}
+                {t.effect[to]}
               </HeaderCell>
             ))}
           </tr>
@@ -578,7 +570,7 @@ function TransitionMatrix({ review }: { review: ChangeReviewResponse }) {
         <tbody>
           {EFFECTS.map((from) => (
             <tr key={from}>
-              <HeaderCell scope="row">{effectLabel(from)}</HeaderCell>
+              <HeaderCell scope="row">{t.effect[from]}</HeaderCell>
               {EFFECTS.map((to) => {
                 const count = counts.get(`${from}->${to}`) ?? 0;
                 const isDiagonal = from === to;
@@ -605,27 +597,28 @@ function WideningGroups({
   groups: readonly ReviewDiffGroupResponse[];
   canJudge: boolean;
 }) {
+  const t = useT();
   const sorted = [...groups].sort(bySeverityThenImpact);
 
   return (
     <Stack>
-      <SectionTitle id="widening-groups">Widening group ({groups.length})</SectionTitle>
+      <SectionTitle id="widening-groups">{t.review.wideningTitle(groups.length)}</SectionTitle>
       {sorted.length === 0 ? (
-        <Hint>넓어진 group이 없습니다.</Hint>
+        <Hint>{t.review.noWidening}</Hint>
       ) : (
         <TableScroll>
           <DataTable labelledBy="widening-groups">
             <thead>
               <tr>
-                <HeaderCell>Severity</HeaderCell>
-                <HeaderCell>Capability</HeaderCell>
-                <HeaderCell>Zone</HeaderCell>
-                <HeaderCell>Effect</HeaderCell>
-                <HeaderCell>Program</HeaderCell>
-                <HeaderCell numeric>Action</HeaderCell>
-                <HeaderCell numeric>Session</HeaderCell>
-                <HeaderCell>판정</HeaderCell>
-                <HeaderCell>상세</HeaderCell>
+                <HeaderCell>{t.review.severity}</HeaderCell>
+                <HeaderCell>{t.review.capability}</HeaderCell>
+                <HeaderCell>{t.review.zone}</HeaderCell>
+                <HeaderCell>{t.review.effect}</HeaderCell>
+                <HeaderCell>{t.review.program}</HeaderCell>
+                <HeaderCell numeric>{t.review.action}</HeaderCell>
+                <HeaderCell numeric>{t.review.session}</HeaderCell>
+                <HeaderCell>{t.review.verdict}</HeaderCell>
+                <HeaderCell>{t.review.detail}</HeaderCell>
               </tr>
             </thead>
             <tbody>
@@ -639,10 +632,7 @@ function WideningGroups({
                   <Cell>{group.capability}</Cell>
                   <Cell nowrap>{formatZoneTransition(group.fromZone, group.toZone)}</Cell>
                   <Cell nowrap>
-                    {formatZoneTransition(
-                      effectLabel(group.fromEffect),
-                      effectLabel(group.toEffect),
-                    )}
+                    {formatZoneTransition(t.effect[group.fromEffect], t.effect[group.toEffect])}
                   </Cell>
                   <Cell>{group.program ?? '-'}</Cell>
                   <Cell numeric>{group.actionCount}</Cell>
@@ -652,7 +642,7 @@ function WideningGroups({
                       reviewId={reviewId}
                       kind="change"
                       groupKey={group.groupKey}
-                      groupLabel={diffGroupLabel(group)}
+                      groupLabel={diffGroupLabel(t, group)}
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />
@@ -662,7 +652,7 @@ function WideningGroups({
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
-                      보기
+                      {t.common.view}
                     </TextLink>
                   </Cell>
                 </tr>
@@ -682,21 +672,22 @@ function NarrowingGroups({
   reviewId: string;
   groups: readonly ReviewDiffGroupResponse[];
 }) {
+  const t = useT();
   if (groups.length === 0) {
     return null;
   }
   return (
     <Stack>
-      <SectionTitle id="narrowing-groups">Narrowing group ({groups.length})</SectionTitle>
+      <SectionTitle id="narrowing-groups">{t.review.narrowingTitle(groups.length)}</SectionTitle>
       <TableScroll>
         <DataTable labelledBy="narrowing-groups">
           <thead>
             <tr>
-              <HeaderCell>Capability</HeaderCell>
-              <HeaderCell>Zone</HeaderCell>
-              <HeaderCell>Effect</HeaderCell>
-              <HeaderCell numeric>Action</HeaderCell>
-              <HeaderCell>상세</HeaderCell>
+              <HeaderCell>{t.review.capability}</HeaderCell>
+              <HeaderCell>{t.review.zone}</HeaderCell>
+              <HeaderCell>{t.review.effect}</HeaderCell>
+              <HeaderCell numeric>{t.review.action}</HeaderCell>
+              <HeaderCell>{t.review.detail}</HeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -705,7 +696,7 @@ function NarrowingGroups({
                 <Cell>{group.capability}</Cell>
                 <Cell nowrap>{formatZoneTransition(group.fromZone, group.toZone)}</Cell>
                 <Cell nowrap>
-                  {formatZoneTransition(effectLabel(group.fromEffect), effectLabel(group.toEffect))}
+                  {formatZoneTransition(t.effect[group.fromEffect], t.effect[group.toEffect])}
                 </Cell>
                 <Cell numeric>{group.actionCount}</Cell>
                 <Cell nowrap>
@@ -713,7 +704,7 @@ function NarrowingGroups({
                     to="/change-reviews/$reviewId/groups/$groupKey"
                     params={{ reviewId, groupKey: group.groupKey }}
                   >
-                    보기
+                    {t.common.view}
                   </TextLink>
                 </Cell>
               </tr>
@@ -738,25 +729,26 @@ function AdoptionGroups({
   groups: readonly ReviewAdoptionGroupResponse[];
   canJudge: boolean;
 }) {
+  const t = useT();
   return (
     <Stack>
       <SectionTitle id={`adoption-groups-${effect}`}>
         {title} ({groups.length})
       </SectionTitle>
       {groups.length === 0 ? (
-        <Hint>이 정책에서 '{effectLabel(effect)}' 대상이 되는 group이 없습니다.</Hint>
+        <Hint>{t.review.noAdoptionGroups(t.effect[effect])}</Hint>
       ) : (
         <TableScroll>
           <DataTable labelledBy={`adoption-groups-${effect}`}>
             <thead>
               <tr>
-                <HeaderCell>Capability</HeaderCell>
-                <HeaderCell>Zone</HeaderCell>
-                <HeaderCell numeric>Program 수</HeaderCell>
-                <HeaderCell numeric>Action</HeaderCell>
-                <HeaderCell numeric>Session</HeaderCell>
-                <HeaderCell>판정</HeaderCell>
-                <HeaderCell>상세</HeaderCell>
+                <HeaderCell>{t.review.capability}</HeaderCell>
+                <HeaderCell>{t.review.zone}</HeaderCell>
+                <HeaderCell numeric>{t.review.programs}</HeaderCell>
+                <HeaderCell numeric>{t.review.action}</HeaderCell>
+                <HeaderCell numeric>{t.review.session}</HeaderCell>
+                <HeaderCell>{t.review.verdict}</HeaderCell>
+                <HeaderCell>{t.review.detail}</HeaderCell>
               </tr>
             </thead>
             <tbody>
@@ -772,7 +764,7 @@ function AdoptionGroups({
                       reviewId={reviewId}
                       kind="adoption"
                       groupKey={group.groupKey}
-                      groupLabel={adoptionGroupLabel(group)}
+                      groupLabel={adoptionGroupLabel(t, group)}
                       verdict={group.verdict}
                       disabled={!canJudge}
                     />
@@ -782,7 +774,7 @@ function AdoptionGroups({
                       to="/change-reviews/$reviewId/groups/$groupKey"
                       params={{ reviewId, groupKey: group.groupKey }}
                     >
-                      보기
+                      {t.common.view}
                     </TextLink>
                   </Cell>
                 </tr>
@@ -796,18 +788,17 @@ function AdoptionGroups({
 }
 
 function GateBlockers({ review }: { review: ChangeReviewResponse }) {
+  const t = useT();
   const { gate } = review;
   return (
     <PanelStack role="status" tone={gate.isOpen ? 'ok' : 'error'}>
-      <SectionTitle>
-        Gate: {gate.isOpen ? '열림' : `blocker ${gate.blockers.length}건`}
-      </SectionTitle>
+      <SectionTitle>{t.review.gateTitle(gate.isOpen, gate.blockers.length)}</SectionTitle>
       {gate.isOpen ? (
-        <p className="m-0">승인을 막는 blocker가 없습니다.</p>
+        <p className="m-0">{t.review.gateOpen}</p>
       ) : (
         <ul className={ISSUE_LIST}>
           {gate.blockers.map((blocker) => (
-            <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
+            <li key={blocker.code}>{t.blocker[blocker.code](blocker.count)}</li>
           ))}
         </ul>
       )}
@@ -819,7 +810,8 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   const queryClient = useQueryClient();
   const [reviewerName, setReviewerName] = useState('');
   const [note, setNote] = useState('');
-  const labels = DECISION_LABEL[review.kind];
+  const t = useT();
+  const labels = t.review.decision[review.kind];
 
   const decide = useMutation({
     mutationFn: async (decision: 'accept' | 'reject') => {
@@ -847,10 +839,10 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   if (isDecided) {
     return (
       <PanelStack>
-        <SectionTitle>결정 기록</SectionTitle>
+        <SectionTitle>{t.review.decisionRecord}</SectionTitle>
         <dl className={META_GRID}>
           <div>
-            <dt className={META_TERM}>결정</dt>
+            <dt className={META_TERM}>{t.review.decisionTerm}</dt>
             <dd className={META_VALUE}>
               <StatusBadge
                 status={review.status}
@@ -859,22 +851,20 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
             </dd>
           </div>
           <div>
-            <dt className={META_TERM}>결정자</dt>
-            <dd className={META_VALUE}>{review.decidedBy ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>{t.review.decidedBy}</dt>
+            <dd className={META_VALUE}>{review.decidedBy ?? t.review.notRecorded}</dd>
           </div>
           <div>
-            <dt className={META_TERM}>시각</dt>
-            <dd className={META_VALUE}>{review.decidedAt ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>{t.review.decidedAt}</dt>
+            <dd className={META_VALUE}>{review.decidedAt ?? t.review.notRecorded}</dd>
           </div>
           <div>
-            <dt className={META_TERM}>사유</dt>
-            <dd className={META_VALUE}>{review.decisionNote ?? '기록 없음'}</dd>
+            <dt className={META_TERM}>{t.review.reason}</dt>
+            <dd className={META_VALUE}>{review.decisionNote ?? t.review.notRecorded}</dd>
           </div>
         </dl>
         {review.kind === 'adoption' && review.status === 'accepted' ? (
-          <Hint>
-            채택은 검토 기록입니다. runtime 설정 반영은 Authority Diff 밖에서 이루어집니다.
-          </Hint>
+          <Hint>{t.review.adoptionAcceptedHint}</Hint>
         ) : null}
       </PanelStack>
     );
@@ -886,7 +876,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
     <PanelStack>
       <SectionTitle>{labels.title}</SectionTitle>
       <label className={FIELD}>
-        검토자 이름
+        {t.review.reviewerName}
         <input
           type="text"
           className={FIELD_INPUT}
@@ -895,7 +885,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
         />
       </label>
       <label className={FIELD}>
-        사유
+        {t.review.reason}
         <input
           type="text"
           className={FIELD_INPUT}
@@ -906,7 +896,7 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
       {!review.gate.isOpen ? (
         <ul className={ISSUE_LIST}>
           {review.gate.blockers.map((blocker) => (
-            <li key={blocker.code}>{blockerLabel(blocker.code, blocker.count)}</li>
+            <li key={blocker.code}>{t.blocker[blocker.code](blocker.count)}</li>
           ))}
         </ul>
       ) : null}
@@ -930,12 +920,17 @@ function DecisionPanel({ reviewId, review }: { reviewId: string; review: ChangeR
           {labels.reject}
         </button>
       </Actions>
-      {decide.error ? <ErrorMessage>결정 실패: {decide.error.message}</ErrorMessage> : null}
+      {decide.error ? (
+        <ErrorMessage>
+          {t.review.decisionFailed}: {decide.error.message}
+        </ErrorMessage>
+      ) : null}
     </PanelStack>
   );
 }
 
 function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeReviewResponse }) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   const withdraw = useMutation({
@@ -960,18 +955,15 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
   if (review.status === 'withdrawn') {
     return (
       <PanelStack>
-        <SectionTitle>검토 철회됨</SectionTitle>
-        <Hint>
-          이 검토는 결정 없이 닫혔고 version이 draft로 돌아갔습니다. draft를 고친 뒤 새 검토를 만들
-          수 있습니다.
-        </Hint>
+        <SectionTitle>{t.review.withdrawnTitle}</SectionTitle>
+        <Hint>{t.review.withdrawnHint}</Hint>
         <Actions>
           <Link
             className={BUTTON_LINK}
             to="/policies/$policyId/versions/$versionId"
             params={{ policyId: review.policyId, versionId: review.candidateVersionId }}
           >
-            draft version 열기
+            {t.review.openDraft}
           </Link>
         </Actions>
       </PanelStack>
@@ -983,8 +975,8 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
 
   return (
     <PanelStack>
-      <SectionTitle>검토 철회</SectionTitle>
-      <Hint>결정 없이 이 검토를 닫고 version을 draft로 되돌립니다. 결정 기록은 남지 않습니다.</Hint>
+      <SectionTitle>{t.review.withdrawTitle}</SectionTitle>
+      <Hint>{t.review.withdrawHint}</Hint>
       <Actions>
         <button
           type="button"
@@ -993,15 +985,20 @@ function WithdrawPanel({ reviewId, review }: { reviewId: string; review: ChangeR
           aria-busy={withdraw.isPending}
           onClick={() => withdraw.mutate()}
         >
-          검토 철회
+          {t.review.withdraw}
         </button>
       </Actions>
-      {withdraw.error ? <ErrorMessage>철회 실패: {withdraw.error.message}</ErrorMessage> : null}
+      {withdraw.error ? (
+        <ErrorMessage>
+          {t.review.withdrawFailed}: {withdraw.error.message}
+        </ErrorMessage>
+      ) : null}
     </PanelStack>
   );
 }
 
 function ReportDownload({ reviewId, kind }: { reviewId: string; kind: ReviewKind }) {
+  const t = useT();
   const download = useMutation({
     mutationFn: async () => {
       const result = await callRoute(routes.getChangeReviewReport, { params: { id: reviewId } });
@@ -1014,8 +1011,8 @@ function ReportDownload({ reviewId, kind }: { reviewId: string; kind: ReviewKind
 
   return (
     <PanelStack>
-      <SectionTitle>보고서</SectionTitle>
-      <Hint>결정 근거로 남길 Evidence Report를 Markdown으로 내려받습니다.</Hint>
+      <SectionTitle>{t.review.reportTitle}</SectionTitle>
+      <Hint>{t.review.reportHint}</Hint>
       <Actions>
         <button
           type="button"
@@ -1024,11 +1021,13 @@ function ReportDownload({ reviewId, kind }: { reviewId: string; kind: ReviewKind
           aria-busy={download.isPending}
           onClick={() => download.mutate()}
         >
-          보고서 다운로드
+          {t.review.downloadReport}
         </button>
       </Actions>
       {download.error ? (
-        <ErrorMessage>보고서 다운로드 실패: {download.error.message}</ErrorMessage>
+        <ErrorMessage>
+          {t.review.downloadFailed}: {download.error.message}
+        </ErrorMessage>
       ) : null}
     </PanelStack>
   );

@@ -490,7 +490,9 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     name: 'overview-state-c',
     path: '/',
     ready: async (page) => {
-      await expect(page.getByRole('heading', { name: '채택된 정책: version #1' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Accepted policy: version #1' }),
+      ).toBeVisible();
       await expect(page.getByTestId('map-effects')).toBeVisible();
     },
   },
@@ -498,8 +500,8 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     name: 'change-review',
     path: `/change-reviews/${CHANGE_REVIEW_ID}`,
     ready: async (page) => {
-      await expect(page.getByRole('heading', { name: '변경 검토', level: 1 })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Widening group (1)' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Change review', level: 1 })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Widening groups (1)' })).toBeVisible();
     },
   },
   {
@@ -507,14 +509,16 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     path: `/change-reviews/${CHANGE_REVIEW_ID}/groups/${WIDENING_GROUP_KEY}`,
     ready: async (page) => {
       await expect(page.getByRole('heading', { name: 'Diff Group', level: 1 })).toBeVisible();
-      await expect(page.getByText('Baseline 결정')).toBeVisible();
+      await expect(page.getByText('Baseline decision')).toBeVisible();
     },
   },
   {
     name: 'adoption-review',
     path: `/change-reviews/${ADOPTION_REVIEW_ID}`,
     ready: async (page) => {
-      await expect(page.getByRole('heading', { name: '최초 도입 검토', level: 1 })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Initial adoption review', level: 1 }),
+      ).toBeVisible();
       await expect(page.getByTestId('adoption-effects')).toBeVisible();
     },
   },
@@ -522,7 +526,7 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     name: 'conformance',
     path: '/conformance',
     ready: async (page) => {
-      await expect(page.getByRole('heading', { name: '적합성', level: 1 })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Conformance', level: 1 })).toBeVisible();
       await expect(page.getByRole('row').filter({ hasText: 'under_asked' })).toBeVisible();
     },
   },
@@ -531,7 +535,7 @@ const SCREENS: { name: string; path: string; ready: (page: Page) => Promise<void
     path: `/policies/${POLICY_ID}/versions/${DRAFT_VERSION_ID}`,
     ready: async (page) => {
       await expect(page.getByRole('heading', { name: 'Policy Version', level: 1 })).toBeVisible();
-      await expect(page.getByLabel('정책 문서 JSON')).toBeVisible();
+      await expect(page.getByLabel('Policy document JSON')).toBeVisible();
     },
   },
 ];
