@@ -250,7 +250,7 @@ critical = widening and one of
   - reversibility on the baseline is irreversible
   - analyzability of the deciding Operation is none
 headline example:
-  "github.com/acme-oss/toolkit and 2 other Targets: 15 push Actions change from 'ask' to 'allow'.
+  "github.com/acme-oss/toolkit and 1 other Target: 15 push Actions change from 'ask' to 'allow'.
    The Zone changes from unknown remote in the baseline to trusted remote in the candidate."
 ```
 
