@@ -38,8 +38,9 @@ function inWindow(action: StoredAgentAction, query: WindowQuery): boolean {
 /**
  * A pure, in-memory {@link TraceStore} for tests. It mirrors the drizzle
  * store's idempotency: an existing actionKey or observationKey is a duplicate,
- * never a second row. `dump()` returns every stored value so a test can assert
- * no secret survived storage.
+ * never a second row, and a duplicate Action only refreshes `observedOutcome`.
+ * `dump()` returns every stored value so a test can assert no secret survived
+ * storage.
  */
 export interface InMemoryTraceStore extends TraceStore {
   dump(): {
@@ -80,9 +81,12 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
       }
       let inserted = 0;
       for (const action of input.actions) {
-        if (!actions.has(action.actionKey)) {
+        const existing = actions.get(action.actionKey);
+        if (existing === undefined) {
           actions.set(action.actionKey, action);
           inserted++;
+        } else if (existing.observedOutcome !== action.observedOutcome) {
+          actions.set(action.actionKey, { ...existing, observedOutcome: action.observedOutcome });
         }
       }
       const duplicateCount = input.attemptedCount - inserted;

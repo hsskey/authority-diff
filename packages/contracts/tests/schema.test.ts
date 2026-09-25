@@ -177,7 +177,7 @@ describe('contracts DTO round-trip', () => {
       lastOccurredAt: TS,
       decidingRuleIds: ['deny_credentials_access'],
       targetSummary: [{ key: '~/.synthetic-credentials', count: 1 }],
-      headline: "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.",
+      headline: "This policy gives 'deny' to 1 read Action in the credentials Zone.",
       sampleActionKeys: [HASH],
       verdict: null,
     };

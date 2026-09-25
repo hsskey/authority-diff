@@ -146,7 +146,7 @@ export function renderProbeReport(results: readonly ProbeResult[]): string {
       first.margin - second.margin || first.scenario.id.localeCompare(second.scenario.id),
   );
   const lines = [
-    `exploratory semantic-policy evaluation, n=${results.length}. 이 표본 수로는 일치율 95%를 주장할 수 없음`,
+    `exploratory semantic-policy evaluation, n=${results.length}. This sample size cannot claim 95% agreement`,
     '',
     '| margin | pTop | scenario | target Rule | Effect | expected Effect | mandate reading | Effect distribution | mandate distribution | provider model |',
     '| ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |',

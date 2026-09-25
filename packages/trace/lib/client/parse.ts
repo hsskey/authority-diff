@@ -137,19 +137,19 @@ const BLOCK_MARKERS: readonly string[] = [
   '<tool_use_error>Blocked:',
   'Dangerous rm operation detected',
 ];
-const PRETOOLUSE_BLOCK_RE = /PreToolUse:\S+ hook error:/;
+const PRETOOLUSE_BLOCK_RE = /^PreToolUse:\S+ hook error:/;
 
 function isBlocked(text: string): boolean {
-  if (BLOCK_MARKERS.some((marker) => text.includes(marker))) {
-    return true;
-  }
-  return PRETOOLUSE_BLOCK_RE.test(text);
+  return BLOCK_MARKERS.some((marker) => text.startsWith(marker)) || PRETOOLUSE_BLOCK_RE.test(text);
 }
 
 interface ToolResultInfo {
   readonly text: string;
+  readonly isError: boolean;
 }
 
+// A marker counts only as the leading text of an is_error result; the same
+// words inside a successful result are output, not a refusal or a block.
 function deriveOutcome(
   toolUseId: string | null,
   results: Map<string, ToolResultInfo>,
@@ -161,7 +161,10 @@ function deriveOutcome(
   if (result === undefined) {
     return 'unknown';
   }
-  if (result.text.includes(REFUSAL_MARKER)) {
+  if (!result.isError) {
+    return 'executed';
+  }
+  if (result.text.startsWith(REFUSAL_MARKER)) {
     return 'rejected_by_human';
   }
   if (isBlocked(result.text)) {
@@ -243,7 +246,7 @@ export const parseTranscript: ParseTranscript = ({ sessionExternalId, lines }) =
       } else if (block.type === 'tool_result' && role === 'user') {
         const id = block.tool_use_id;
         if (typeof id === 'string') {
-          results.set(id, { text: blockText(block.content) });
+          results.set(id, { text: blockText(block.content), isError: block.is_error === true });
         }
       }
     }

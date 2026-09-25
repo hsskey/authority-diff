@@ -1987,7 +1987,7 @@ Rules:
 {
   "error": {
     "code": "review.gate_blocked",
-    "message": <!-- ko-product-output -->"판정하지 않은 widening group이 3개 있습니다.",
+    "message": "the acceptance gate is closed; resolve every blocker before accepting",
     "isRetryable": false,
     "details": { "blockers": [{ "code": "widening_unreviewed", "count": 3 }] },
     "requestId": "req_01J..."

@@ -63,6 +63,26 @@ describe('I5 idempotent import', () => {
     expect(second.duplicateCount).toBe(total);
     expect(module.store.dump().actions.length).toBe(total);
   });
+
+  test('re-importing refreshes a changed observedOutcome and keeps the other fields', async () => {
+    const module = createTestTraceModule({ classify });
+    // The canary tool_uses have no tool_result, so the parser reads each as unknown.
+    const session = loadCanarySession();
+    await module.importTrace({
+      ...session,
+      toolCalls: session.toolCalls.map((call) => ({
+        ...call,
+        observedOutcome: 'blocked_by_runtime' as const,
+      })),
+    });
+    const stale = module.store.dump().actions;
+
+    await module.importTrace(session);
+
+    expect(module.store.dump().actions).toEqual(
+      stale.map((action) => ({ ...action, observedOutcome: 'unknown' })),
+    );
+  });
 });
 
 describe('NUL in tool input', () => {

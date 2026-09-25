@@ -47,16 +47,15 @@ describe('computeDiff integration (shared synthetic fixtures)', () => {
     expect(second.resultHash).toBe(first.resultHash);
   });
 
-  test('headline is plain Korean with no ruleId, raw command, or regex', () => {
+  test('headline is plain English with no ruleId, raw command, or regex', () => {
     const result = computeDiff({ actions, baseline, candidate });
     const group = result.groups[0];
     if (group === undefined) {
       throw new Error('expected one group');
     }
     expect(group.headline).toBe(
-      'example.invalid/synthetic/project 1곳으로의 push 1건이 ' +
-        "'확인 필요'에서 '허용'으로 바뀝니다. " +
-        '기준 정책에서는 신뢰 목록에 없는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다.',
+      "example.invalid/synthetic/project only: 1 push Action changes from 'ask' to 'allow'. " +
+        'The Zone changes from unknown remote in the baseline to trusted remote in the candidate.',
     );
     expect(group.headline.includes('push_policy')).toBe(false);
   });

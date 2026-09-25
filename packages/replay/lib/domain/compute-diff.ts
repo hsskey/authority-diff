@@ -7,8 +7,8 @@ import type { ActionForReplay } from '@authority/trace/schema';
 import type { DiffGroup, DiffResult, ReplayStats } from '../../schema.ts';
 import {
   CAPABILITY_WORD,
+  countOf,
   deriveTargetKey,
-  directionalParticle,
   EFFECT_ORDER,
   EFFECT_RANK,
   EFFECT_WORD,
@@ -34,28 +34,31 @@ const CRITICAL_BASELINE_ZONES: ReadonlySet<Zone> = new Set([
 type HeadlineInput = Omit<DiffGroup, 'headline'>;
 
 /**
- * Renders the fixed plain-Korean Headline for a Diff Group.
+ * Renders the fixed plain-English Headline for a Diff Group.
  *
  * The template carries no command text, ruleId, or regular expression.
  * `targetCount` is the number of distinct Target keys over the whole group,
  * not the length of the five-entry Target Summary. A Zone change adds one
- * sentence.
+ * sentence. The top Target key leads, followed by a space, so that
+ * foldHomePaths can fold a `Users/<name>` key.
  */
 export function renderHeadline(group: HeadlineInput, targetCount: number): string {
   const top = group.targetSummary[0];
   invariant(top !== undefined, 'a Diff Group always has at least one Target Summary entry');
-  const toEffectWord = EFFECT_WORD[group.toEffect];
-  const where = targetCount === 1 ? `${top.key} 1곳으로의` : `${top.key} 등 ${targetCount}곳으로의`;
+  const where =
+    targetCount === 1
+      ? `${top.key} only`
+      : `${top.key} and ${countOf(targetCount - 1, 'other Target')}`;
+  const verb = group.actionCount === 1 ? 'changes' : 'change';
   const sentence =
-    `${where} ${CAPABILITY_WORD[group.capability]} ${group.actionCount}건이 ` +
-    `'${EFFECT_WORD[group.fromEffect]}'에서 '${toEffectWord}'${directionalParticle(toEffectWord)} 바뀝니다.`;
+    `${where}: ${countOf(group.actionCount, `${CAPABILITY_WORD[group.capability]} Action`)} ` +
+    `${verb} from '${EFFECT_WORD[group.fromEffect]}' to '${EFFECT_WORD[group.toEffect]}'.`;
   if (group.fromZone === group.toZone) {
     return sentence;
   }
-  const toZoneWord = ZONE_WORD[group.toZone];
   return (
-    `${sentence} 기준 정책에서는 ${ZONE_WORD[group.fromZone]}이었고 ` +
-    `변경안에서는 ${toZoneWord}${directionalParticle(toZoneWord)} 분류됩니다.`
+    `${sentence} The Zone changes from ${ZONE_WORD[group.fromZone]} in the baseline ` +
+    `to ${ZONE_WORD[group.toZone]} in the candidate.`
   );
 }
 

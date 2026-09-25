@@ -328,10 +328,10 @@ test('the report has the fixed notice and no raw command text, ruleId, or regex'
   const report = reportResult.value;
 
   expect(report).toContain(
-    '이 기록은 정책 변경을 위 과거 기록에 비추어 검토했다는 사실을 남깁니다.',
+    'This record states that the policy change was reviewed against the past records above.',
   );
   expect(report).toContain(
-    'Authority Diff는 정책을 배포하거나 강제하지 않았고, runtime이 이 정책대로 동작하는지는 측정하지 않았습니다.',
+    'Authority Diff did not deploy or enforce the policy and did not measure whether the runtime behaves as the policy says.',
   );
 
   // The candidate's rule id (allow_everything) is in the diff data but must not surface.
@@ -461,7 +461,7 @@ test("a decided review's report carries the audit chain tail as of generation", 
   // real chain row later than this review's own decision, rather than comparing
   // against a separate global tail query that would race the report's own read.
   const match = report.value.match(
-    /audit chain sequence: (\d+)\n- 보고서 생성 시점의 audit chain hash: `([0-9a-f]{64})`/,
+    /Audit chain sequence when the report was generated: (\d+)\n- Audit chain hash when the report was generated: `([0-9a-f]{64})`/,
   );
   const tailSequence = match?.[1];
   const tailHash = match?.[2];

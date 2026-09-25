@@ -23,8 +23,12 @@ describe('foldHomePaths', () => {
     ['home/alice', '~'],
     ['/Users/alice/.ssh/config', '~/.ssh/config'],
     [
-      "Users/alice 등 2곳으로의 읽기 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
-      "~ 등 2곳으로의 읽기 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+      "Users/alice and 1 other Target: 3 read Actions change from 'ask' to 'allow'.",
+      "~ and 1 other Target: 3 read Actions change from 'ask' to 'allow'.",
+    ],
+    [
+      "Users/alice only: 1 read Action changes from 'ask' to 'allow'.",
+      "~ only: 1 read Action changes from 'ask' to 'allow'.",
     ],
     ['{"file_path":"/Users/alice/work/a.ts"}', '{"file_path":"~/work/a.ts"}'],
     ['cat /home/alice/a /Users/bob/b', 'cat ~/a ~/b'],

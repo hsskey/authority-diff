@@ -16,7 +16,7 @@ adoption.resultHash: 099321d3…0215
 gate2.a-vs-b.resultHash: 547da885…2735
 gate2.a-vs-bp.resultHash: a3e33bde…3904
 gate2.a-vs-b.changed: 169
-conformance.resultHash: 898affd1…1ca8
+conformance.resultHash: 42318e75…1863
 -->
 
 # Adoption preview (first Policy)
@@ -140,7 +140,7 @@ It reads what the server returns, not what the screens render; the screen checks
 | 6 verdicts | verdicts | 24 groups set to `expected`; `adoption_unreviewed` blocks the gate until the last one, then the gate opens |
 | 7 adopt | decision | review `accepted`, version 1 `accepted` |
 | 8 report | Evidence Report | adoption Evidence Report carries resultHash `099321d3…0215` |
-| 9 conformance | `authority spool-flush`, replay run | 2 spool copies sent; conformance run for version 1 completed with 86 findings, resultHash `898affd1…1ca8` |
+| 9 conformance | `authority spool-flush`, replay run | 2 spool copies sent; conformance run for version 1 completed with 86 findings, resultHash `42318e75…1863` |
 | 10 change review B' | policy version, change review | draft version 2 with B' (`ebea9a23…0cc9`), kind `change`, baseline version 1; changed 169, Widening group 7; resultHash `a3e33bde…3904` equals the local Gate 2 run |
 | 11 unexpected, reject, B, accept | verdicts, decisions | 5 groups `expected`, 2 `unexpected` → `widening_unexpected` blocks and accept is refused; rejected; draft version 3 with B (`45197245…6515`): changed 169, Widening group 5, resultHash `547da885…2735` equals the local Gate 2 run; all `expected` → accepted |
 | 12 audit | `authority verify-audit` | intact, 3 decision records |
@@ -522,6 +522,11 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
+
 | step | screen | result |
 | --- | --- | --- |
 | 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
@@ -721,6 +726,11 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
+
 | step | screen | result |
 | --- | --- | --- |
 | 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
@@ -879,6 +889,11 @@ It reads what the server returns, not what the screens render; the screen checks
 Run on 2026-09-24 on a compose project of its own with an empty volume, server image built from the commit that carries classifier 0.2.2 and the chunked replay inserts, and the web app served from `apps/web` against that server.
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop times are Agent tool latency, not a person's reading time.
+
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
 
 | step | screen | result |
 | --- | --- | --- |
