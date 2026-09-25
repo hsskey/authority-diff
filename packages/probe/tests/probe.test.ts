@@ -24,7 +24,7 @@ const POLICY = PolicyDocumentSchema.parse({
         analyzability: null,
       },
       effect: 'allow',
-      rationale: 'Tracked workspace edits are safe. 작업 공간 변경은 추적됩니다.',
+      rationale: 'Tracked workspace edits are safe.',
     },
   ],
 });
@@ -55,7 +55,7 @@ describe('renderPolicyProse', () => {
     const prose = renderPolicyProse(POLICY);
     expect(prose).toContain(
       'Rule allow_workspace_write: capability write on zone workspace: allow. ' +
-        'Rationale: Tracked workspace edits are safe. 작업 공간 변경은 추적됩니다.',
+        'Rationale: Tracked workspace edits are safe.',
     );
     expect(prose).toContain(
       'Environment: credentialPaths, agentConfigPaths, trustedRemotes, publicRemotes, ' +

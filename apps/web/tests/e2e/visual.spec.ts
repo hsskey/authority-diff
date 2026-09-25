@@ -244,7 +244,8 @@ function wideningGroup(): unknown {
     candidateRuleIds: ['allow_trusted_fetch'],
     targetSummary: [{ key: 'github.com/synthetic-org/repo-a', count: 3 }],
     headline:
-      "github.com/synthetic-org/repo-a 등 1곳으로의 가져오기 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+      "github.com/synthetic-org/repo-a only: 3 fetch Actions change from 'ask' to 'allow'. " +
+      'The Zone changes from unknown remote in the baseline to trusted remote in the candidate.',
     sampleActionKeys: [ACTION_KEY],
     verdict: null,
   };
@@ -267,7 +268,7 @@ function adoptionGroups(): unknown[] {
       lastOccurredAt: TS,
       decidingRuleIds: ['deny_credentials_access'],
       targetSummary: [{ key: '~/.synthetic-credentials', count: 1 }],
-      headline: "자격 증명에서의 읽기 1건이 이 정책에서 '차단' 대상이 됩니다.",
+      headline: "This policy gives 'deny' to 1 read Action in the credentials Zone.",
       sampleActionKeys: [ACTION_KEY],
       verdict: null,
     },
@@ -290,7 +291,7 @@ function adoptionGroups(): unknown[] {
       lastOccurredAt: TS,
       decidingRuleIds: [],
       targetSummary: [{ key: 'unknown', count: 250 }],
-      headline: "호스트에서의 실행 250건이 이 정책에서 '확인 필요' 대상이 됩니다.",
+      headline: "This policy gives 'ask' to 250 execute Actions in the host Zone.",
       sampleActionKeys: [],
       verdict: null,
     },

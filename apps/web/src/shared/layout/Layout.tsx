@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { clearAuthToken, readAuthToken } from '../auth.ts';
-import { setLanguage, useLanguage, useT } from '../i18n/use-t.ts';
+import { messagesFor, setLanguage, useLanguage, useT } from '../i18n/use-t.ts';
 
 export function Layout({ children }: { children: ReactNode }) {
   useRouterState({ select: (state) => state.location.pathname });
@@ -43,7 +43,7 @@ export function Layout({ children }: { children: ReactNode }) {
               lang={other}
               onClick={() => setLanguage(other)}
             >
-              {t.layout.otherLanguage}
+              {messagesFor(other).layout.languageName}
             </button>
           </nav>
           {hasToken ? (

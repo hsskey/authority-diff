@@ -155,7 +155,7 @@ Server and local agreement: the adoption run on the server gave the local `resul
 
 Findings from this run (none blocks the journey):
 
-- After "token 저장" on `/login`, the header now shows "로그아웃" without a reload; the 0.2.3 finding on this is resolved.
+- After "token <!-- ko-product-output -->저장" on `/login`, the header now shows "<!-- ko-product-output -->로그아웃" without a reload; the 0.2.3 finding on this is resolved.
 - The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
 
 ## Re-run procedure (fresh volume)
@@ -176,15 +176,15 @@ Commands below omit the corpus and policy file paths; they live under `.local/` 
 Adoption stage:
 
 1. `pnpm authority import <snapshot>` into the fresh stack. Expected: 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed.
-2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "아직 조직 정책이 없습니다".
-3. "첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft 저장" (the content hash becomes `f96ed41d…beb8`), "검증" reads "검증: 통과".
-4. "최초 도입 검토 만들기". The review is kind `adoption`, "기준 VERSION 없음 (최초 도입)". Confirm on the review and on `/` ("도입 preview"): evaluated 34,033; 허용 17,801 (52.3%); 확인 필요 16,212 (47.6%); 차단 20 (the tile rounds to 0.1%); "확인 필요 group (22)", "차단 group (2)".
-5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "기술 세부" toggle.
-6. Set every one of the 24 groups to 의도한 제한. "Gate: 열림" appears only after the last one; before that the blocker reads "판정하지 않은 group N개" and "최초 정책 채택" is disabled.
-7. Enter a reviewer name and "최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says 적용됨, 활성, or enforced. `/` now shows "채택된 정책: version #1" with the Effect distribution.
+2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "<!-- ko-product-output -->아직 조직 정책이 없습니다".
+3. "<!-- ko-product-output -->첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft <!-- ko-product-output -->저장" (the content hash becomes `f96ed41d…beb8`), "<!-- ko-product-output -->검증" reads "<!-- ko-product-output -->검증: 통과".
+4. "<!-- ko-product-output -->최초 도입 검토 만들기". The review is kind `adoption`, "<!-- ko-product-output -->기준 VERSION <!-- ko-product-output -->없음 (최초 도입)". Confirm on the review and on `/` ("<!-- ko-product-output -->도입 preview"): evaluated 34,033; <!-- ko-product-output -->허용 17,801 (52.3%); <!-- ko-product-output -->확인 필요 16,212 (47.6%); <!-- ko-product-output -->차단 20 (the tile rounds to 0.1%); "<!-- ko-product-output -->확인 필요 group (22)", "<!-- ko-product-output -->차단 group (2)".
+5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "<!-- ko-product-output -->기술 세부" toggle.
+6. Set every one of the 24 groups to <!-- ko-product-output -->의도한 제한. "Gate: <!-- ko-product-output -->열림" appears only after the last one; before that the blocker reads "<!-- ko-product-output -->판정하지 않은 group N<!-- ko-product-output -->개" and "<!-- ko-product-output -->최초 정책 채택" is disabled.
+7. Enter a reviewer name and "<!-- ko-product-output -->최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says <!-- ko-product-output -->적용됨, 활성, or enforced. `/` now shows "<!-- ko-product-output -->채택된 정책: version #1" with the Effect distribution.
 8. Download the Evidence Report: policy hash, window, scale, allow/ask/deny counts and shares, the two group tables with Verdicts, the decision, the Decision Record hash, the notice that the figures apply the Policy to past behavior and do not recover past runtime approvals. No path or command text in it.
 
-Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "변경 검토 만들기", then Gate 3 items 3 to 7 (the two `unknown_remote → trusted_remote` groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
+Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "<!-- ko-product-output -->변경 검토 만들기", then Gate 3 items 3 to 7 (the two `unknown_remote → trusted_remote` groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
 
 Conformance stage: copy the hook spool files into a scratch home, `spool-flush` them to the fresh server, request a `conformance` run for the accepted version over the observation window, and read `/conformance`.
 
@@ -339,7 +339,7 @@ Server and local agreement: the adoption run on the server gave the local `resul
 
 Findings from this run (none blocks the journey):
 
-- After "token 저장" on `/login`, the header now shows "로그아웃" without a reload; the 0.2.3 finding on this is resolved.
+- After "token <!-- ko-product-output -->저장" on `/login`, the header now shows "<!-- ko-product-output -->로그아웃" without a reload; the 0.2.3 finding on this is resolved.
 - The deny share renders as `0.1%` because tiles show one decimal; the count 20 is exact.
 
 ### Re-run procedure (fresh volume)
@@ -360,15 +360,15 @@ Commands below omit the corpus and policy file paths; they live under `.local/` 
 Adoption stage:
 
 1. `pnpm authority import <snapshot>` into the fresh stack. Expected: 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed.
-2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "아직 조직 정책이 없습니다".
-3. "첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft 저장" (the content hash becomes `f96ed41d…beb8`), "검증" reads "검증: 통과".
-4. "최초 도입 검토 만들기". The review is kind `adoption`, "기준 VERSION 없음 (최초 도입)". Confirm on the review and on `/` ("도입 preview"): evaluated 34,490; 허용 17,801 (51.6%); 확인 필요 16,669 (48.3%); 차단 20 (the tile rounds to 0.1%); "확인 필요 group (22)", "차단 group (2)".
-5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "기술 세부" toggle.
-6. Set every one of the 24 groups to 의도한 제한. "Gate: 열림" appears only after the last one; before that the blocker reads "판정하지 않은 group N개" and "최초 정책 채택" is disabled.
-7. Enter a reviewer name and "최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says 적용됨, 활성, or enforced. `/` now shows "채택된 정책: version #1" with the Effect distribution.
+2. `/` with no Policy shows the Activity Overview (Sessions, Actions, evaluable Actions, analyzability, Capability and Target Kind tables, top programs, remote hosts) and "<!-- ko-product-output -->아직 조직 정책이 없습니다".
+3. "<!-- ko-product-output -->첫 조직 정책 만들기" opens draft version 1 (default template). Replace the document with policy A, "draft <!-- ko-product-output -->저장" (the content hash becomes `f96ed41d…beb8`), "<!-- ko-product-output -->검증" reads "<!-- ko-product-output -->검증: 통과".
+4. "<!-- ko-product-output -->최초 도입 검토 만들기". The review is kind `adoption`, "<!-- ko-product-output -->기준 VERSION <!-- ko-product-output -->없음 (최초 도입)". Confirm on the review and on `/` ("<!-- ko-product-output -->도입 preview"): evaluated 34,490; <!-- ko-product-output -->허용 17,801 (51.6%); <!-- ko-product-output -->확인 필요 16,669 (48.3%); <!-- ko-product-output -->차단 20 (the tile rounds to 0.1%); "<!-- ko-product-output -->확인 필요 group (22)", "<!-- ko-product-output -->차단 group (2)".
+5. Open one deny group and one ask group: the Headline, the Program Summary, and the Target Summary are outside the sample panel; command text, paths, and ruleId are only inside the sample panel and the "<!-- ko-product-output -->기술 세부" toggle.
+6. Set every one of the 24 groups to <!-- ko-product-output -->의도한 제한. "Gate: <!-- ko-product-output -->열림" appears only after the last one; before that the blocker reads "<!-- ko-product-output -->판정하지 않은 group N<!-- ko-product-output -->개" and "<!-- ko-product-output -->최초 정책 채택" is disabled.
+7. Enter a reviewer name and "<!-- ko-product-output -->최초 정책 채택". The decision record appears, version 1 is `accepted`, the verdict controls are disabled, and no screen says <!-- ko-product-output -->적용됨, 활성, or enforced. `/` now shows "<!-- ko-product-output -->채택된 정책: version #1" with the Effect distribution.
 8. Download the Evidence Report: policy hash, window, scale, allow/ask/deny counts and shares, the two group tables with Verdicts, the decision, the Decision Record hash, the notice that the figures apply the Policy to past behavior and do not recover past runtime approvals. No path or command text in it.
 
-Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "변경 검토 만들기", then Gate 3 items 3 to 7 (the two `unknown_remote → trusted_remote` groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
+Change-review stage (the Gate 3 journey, unchanged): from the accepted version 1 make draft version 2 with B', "<!-- ko-product-output -->변경 검토 만들기", then Gate 3 items 3 to 7 (the two `unknown_remote → trusted_remote` groups critical with a self-explaining Headline; no path, fragment, or ruleId outside the sample panel; unexpected locks accept with blocker copy; reject, edit to B, accept; the downloaded report carries both content hashes, inputsHash, resultHash, the audit tail, the `none` share, and the Operation section; `pnpm authority verify-audit` intact).
 
 Conformance stage: copy the hook spool files into a scratch home, `spool-flush` them to the fresh server, request a `conformance` run for the accepted version over the observation window, and read `/conformance`.
 
@@ -406,7 +406,7 @@ Every number in the main sections below is labelled **classifier 0.2.4, policy A
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
 Judge: Agent. No person has recorded a Verdict on these groups.
-Journey grade: **medium** (중): real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
+Journey grade: **medium**: real-record Adoption Groups were reviewable and the preview matched the expected shape; nothing stronger is claimed.
 
 ### Result
 

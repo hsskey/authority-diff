@@ -24,7 +24,7 @@ export const ko: Messages = {
     conformance: '적합성',
     login: '로그인',
     logout: '로그아웃',
-    otherLanguage: 'English',
+    languageName: '한국어',
   },
   apiError: {
     tokenMissing: '로그인이 필요합니다. token을 입력하세요.',

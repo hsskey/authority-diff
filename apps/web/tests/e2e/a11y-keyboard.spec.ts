@@ -127,7 +127,9 @@ function wideningGroup(verdict: 'expected' | 'investigate' | 'unexpected' | null
     baselineRuleIds: [],
     candidateRuleIds: [],
     targetSummary: [{ key: 'host', count: 1 }],
-    headline: "실행이 '확인 필요'에서 '허용'으로 바뀝니다.",
+    headline:
+      "host only: 1 execute Action changes from 'ask' to 'allow'." +
+      ' The Zone changes from workspace in the baseline to host in the candidate.',
     sampleActionKeys: [ACTION_KEY],
     verdict,
     note: '',
