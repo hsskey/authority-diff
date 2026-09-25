@@ -319,7 +319,14 @@ function RuleTable({ rules }: { rules: readonly PolicyRule[] }) {
                     {t.effect[rule.effect]}
                   </span>
                 </Td>
-                <Td>{rule.rationale}</Td>
+                <Td>
+                  {rule.rationale}
+                  {'mandateException' in rule && rule.mandateException !== null ? (
+                    <p className="mt-1 text-muted">
+                      {t.policy.mandateException}: {rule.mandateException.clause}
+                    </p>
+                  ) : null}
+                </Td>
               </tr>
             ))}
           </tbody>

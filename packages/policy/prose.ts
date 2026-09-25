@@ -13,10 +13,23 @@ function renderValues(values: '*' | readonly string[]): string {
   return values === '*' ? 'any' : values.join(', ');
 }
 
+function renderCondition(name: string, values: readonly string[] | null): string {
+  return values === null ? '' : ` with ${name} ${values.join(', ')}`;
+}
+
+function renderMandateException(rule: PolicyRule): string {
+  return 'mandateException' in rule && rule.mandateException !== null
+    ? ` Mandate Exception: allow when ${rule.mandateException.clause}.`
+    : '';
+}
+
 function renderRule(rule: PolicyRule): string {
   return (
     `Rule ${rule.ruleId}: capability ${renderValues(rule.match.capabilities)} ` +
-    `on zone ${renderValues(rule.match.zones)}: ${rule.effect}. Rationale: ${rule.rationale}`
+    `on zone ${renderValues(rule.match.zones)}` +
+    renderCondition('reversibility', rule.match.reversibility) +
+    renderCondition('analyzability', rule.match.analyzability) +
+    `: ${rule.effect}.${renderMandateException(rule)} Rationale: ${rule.rationale}`
   );
 }
 

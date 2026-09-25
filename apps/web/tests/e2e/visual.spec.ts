@@ -328,6 +328,7 @@ function diffSamples(): unknown {
         baselineDecision: {
           effect: 'ask',
           decidingOperationIndex: 0,
+          isMandateDependent: false,
           operations: [
             {
               operationIndex: 0,
@@ -336,12 +337,14 @@ function diffSamples(): unknown {
               matchedRuleIds: [],
               decidingRuleId: null,
               effect: 'ask',
+              isMandateDependent: false,
             },
           ],
         },
         candidateDecision: {
           effect: 'allow',
           decidingOperationIndex: 0,
+          isMandateDependent: false,
           operations: [
             {
               operationIndex: 0,
@@ -350,6 +353,7 @@ function diffSamples(): unknown {
               matchedRuleIds: ['allow_trusted_fetch'],
               decidingRuleId: 'allow_trusted_fetch',
               effect: 'allow',
+              isMandateDependent: false,
             },
           ],
         },
