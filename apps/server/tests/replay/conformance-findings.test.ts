@@ -1,13 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { err, ok } from '@authority/kernel';
+import { IsoTimestampSchema, err, ok } from '@authority/kernel';
 import {
   ConformanceFindingResponseSchema,
   ErrorEnvelopeSchema,
+  ListConformanceFindingsResponseSchema,
   PolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
 import { DEFAULT_POLICY_DOCUMENT } from '@authority/policy';
-import { PolicyVersionSchema } from '@authority/policy/schema';
-import { ConformanceFindingViewSchema } from '@authority/replay/schema';
+import { PolicyVersionIdSchema, PolicyVersionSchema } from '@authority/policy/schema';
+import { ConformanceFindingViewSchema, ReplayRunIdSchema } from '@authority/replay/schema';
 import { Hono } from 'hono';
 import { createSequentialIdGenerator } from '@authority/platform/testing';
 import type { ReplayModule } from '@authority/replay';
@@ -68,6 +69,38 @@ function buildApp(
   }
   return app;
 }
+
+describe('GET /api/v1/conformance-findings', () => {
+  test('returns the observation gaps of the latest run window', async () => {
+    const gap = {
+      from: IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z'),
+      to: IsoTimestampSchema.parse('2026-01-03T00:00:00.000Z'),
+    };
+    const app = buildApp(
+      makeModule({
+        listConformanceFindings: () =>
+          Promise.resolve({
+            run: {
+              replayRunId: ReplayRunIdSchema.parse(`rpl_${'A'.repeat(26)}`),
+              policyVersionId: PolicyVersionIdSchema.parse(`pver_${'B'.repeat(26)}`),
+              windowFrom: IsoTimestampSchema.parse('2026-01-01T00:00:00.000Z'),
+              windowTo: IsoTimestampSchema.parse('2026-01-07T23:59:59.999Z'),
+              unpairedPermissionRequests: 0,
+              byPermissionMode: [],
+              observationGaps: [gap],
+            },
+            items: [],
+          }),
+      }),
+    );
+
+    const res = await app.request('/api/v1/conformance-findings', authed({ method: 'GET' }));
+
+    expect(
+      ListConformanceFindingsResponseSchema.parse(await res.json()).run?.observationGaps,
+    ).toEqual([gap]);
+  });
+});
 
 describe('PUT /api/v1/conformance-findings/:id', () => {
   test('acknowledges the finding and returns it', async () => {

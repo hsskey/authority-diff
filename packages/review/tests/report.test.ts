@@ -16,6 +16,7 @@ const CONFORMANCE = {
   policyVersionId: 'pver_0123456789abcdefghjkmnpqrs',
   windowFrom: IsoTimestampSchema.parse('2026-01-15T00:00:00.000Z'),
   windowTo: IsoTimestampSchema.parse('2026-02-01T00:00:00.000Z'),
+  observationGaps: [],
   byPermissionMode: [
     { permissionMode: 'bypassPermissions', actionCount: 30, findingCount: 12 },
     { permissionMode: 'default', actionCount: 17, findingCount: 3 },
@@ -91,6 +92,30 @@ test('the report sums the modes that never prompt as the workload that could run
   );
   expect(report).toContain('| bypassPermissions | 30 | 12 |');
   expect(report).toContain('rpl_0123456789abcdefghjkmnpqrs');
+});
+
+test('the report states each observation gap of the conformance window', () => {
+  const report = renderReport(
+    makeInput({
+      conformance: {
+        ...CONFORMANCE,
+        observationGaps: [
+          {
+            from: IsoTimestampSchema.parse('2026-01-20T08:00:00.000Z'),
+            to: IsoTimestampSchema.parse('2026-01-22T09:30:00.000Z'),
+          },
+        ],
+      },
+    }),
+  );
+  expect(report).toContain(
+    '- Observation window: 2026-01-15T00:00:00.000Z ~ 2026-02-01T00:00:00.000Z\n- No observations from 2026-01-20T08:00:00.000Z to 2026-01-22T09:30:00.000Z.\n',
+  );
+});
+
+test('the report has no observation gap line when the window has none', () => {
+  const report = renderReport(makeInput());
+  expect(report).not.toContain('No observations');
 });
 
 test('the report says so when no conformance run has completed', () => {

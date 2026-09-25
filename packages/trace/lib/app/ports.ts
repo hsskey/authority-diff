@@ -52,6 +52,7 @@ export interface TraceStore {
   writeImport(input: WriteImportInput): Promise<WriteCounts>;
   writeObservations(observations: readonly RuntimeObservation[]): Promise<WriteCounts>;
   listObservationSessions(query: WindowQuery): Promise<readonly string[]>;
+  listObservationTimes(query: WindowQuery): Promise<readonly IsoTimestamp[]>;
   getObservations(sessionExternalIds: readonly string[]): Promise<readonly ObservationForReplay[]>;
   getActions(actionKeys: readonly string[]): Promise<readonly StoredAgentAction[]>;
   streamActions(query: StreamActionsQuery): AsyncIterable<readonly ActionForReplay[]>;
@@ -74,6 +75,8 @@ export interface ActionReader {
   countStaleClassifications(query: WindowQuery): Promise<number>;
   /** Distinct Sessions that have at least one observation in the window. */
   listObservationSessions(query: WindowQuery): Promise<readonly string[]>;
+  /** The distinct times of the observations in the window, ascending. */
+  listObservationTimes(query: WindowQuery): Promise<readonly IsoTimestamp[]>;
   /** Every observation of the given Sessions, in no particular order. */
   getObservations(sessionExternalIds: readonly string[]): Promise<readonly ObservationForReplay[]>;
 }

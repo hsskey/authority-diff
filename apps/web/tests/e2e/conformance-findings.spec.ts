@@ -22,6 +22,7 @@ test('lists each finding with its kind, capability, zone, and counts', async ({ 
         windowFrom: TS,
         windowTo: TS,
         unpairedPermissionRequests: 0,
+        observationGaps: [],
         byPermissionMode: [
           { permissionMode: 'bypassPermissions', actionCount: 6, findingCount: 4 },
           { permissionMode: 'default', actionCount: 3, findingCount: 0 },
@@ -66,6 +67,7 @@ test('shows the Action counts per permission mode and the workload that could ru
         windowFrom: TS,
         windowTo: TS,
         unpairedPermissionRequests: 0,
+        observationGaps: [],
         byPermissionMode: [
           { permissionMode: 'auto', actionCount: 2, findingCount: 1 },
           { permissionMode: 'bypassPermissions', actionCount: 6, findingCount: 4 },
@@ -94,4 +96,32 @@ test('shows the empty screen when no conformance run has completed', async ({ pa
 
   await expect(page.getByRole('heading', { name: '적합성' })).toBeVisible();
   await expect(page.getByText('아직 비교한 runtime 관측이 없습니다')).toBeVisible();
+});
+
+test('states each observation gap of the run window above the run details', async ({ page }) => {
+  await page.route(
+    CONFORMANCE_FINDINGS,
+    fulfillWith({
+      run: {
+        replayRunId: `rpl_${SUFFIX}`,
+        policyVersionId: `pver_${SUFFIX}`,
+        windowFrom: '2026-09-01T00:00:00.000Z',
+        windowTo: '2026-09-07T23:59:59.999Z',
+        unpairedPermissionRequests: 0,
+        byPermissionMode: [],
+        observationGaps: [{ from: '2026-09-02T10:00:00.000Z', to: '2026-09-04T08:30:00.000Z' }],
+      },
+      items: [],
+    }),
+  );
+
+  await page.goto('/conformance');
+
+  const gaps = page.getByRole('status').filter({ hasText: '관측 없음' });
+  await expect(gaps).toHaveText(
+    '2026-09-02T10:00:00.000Z부터 2026-09-04T08:30:00.000Z까지 관측 없음',
+  );
+  const gapBox = await gaps.boundingBox();
+  const runBox = await page.getByText('Policy Version', { exact: true }).boundingBox();
+  expect(gapBox?.y).toBeLessThan(runBox?.y ?? 0);
 });

@@ -1,3 +1,4 @@
+import type { IsoTimestamp } from '@authority/kernel';
 import type {
   ActionForReplay,
   ObservationForReplay,
@@ -118,6 +119,16 @@ export function createInMemoryTraceStore(): InMemoryTraceStore {
         }
       }
       return Promise.resolve([...sessions]);
+    },
+
+    listObservationTimes(query: WindowQuery): Promise<readonly IsoTimestamp[]> {
+      const times = new Set<IsoTimestamp>();
+      for (const observation of observations.values()) {
+        if (observation.occurredAt >= query.from && observation.occurredAt <= query.to) {
+          times.add(observation.occurredAt);
+        }
+      }
+      return Promise.resolve([...times].sort());
     },
 
     getObservations(

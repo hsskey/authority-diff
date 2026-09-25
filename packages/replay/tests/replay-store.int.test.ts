@@ -411,6 +411,7 @@ test('acknowledging a stored finding persists status and note', async () => {
       Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
     countStaleClassifications: () => Promise.resolve(0),
     listObservationSessions: () => Promise.resolve([pushAction.sessionExternalId]),
+    listObservationTimes: () => Promise.resolve([]),
     getObservations: () => Promise.resolve(observations),
   };
   const { replay, jobs } = replayOnQueue({
@@ -597,6 +598,7 @@ function syntheticReader(actions: readonly ActionForReplay[]): ActionReader {
     },
     countStaleClassifications: () => Promise.resolve(0),
     listObservationSessions: () => Promise.resolve([]),
+    listObservationTimes: () => Promise.resolve([]),
     getObservations: () => Promise.resolve([]),
   };
 }

@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { UNGUARDED_PERMISSION_MODES } from '@authority/contracts/schema';
 import type {
   ListConformanceFindingsResponse,
+  ObservationGap,
   PermissionModeCount,
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
@@ -13,6 +14,7 @@ import { LoadingState } from '../shared/components/LoadingState.tsx';
 import { PageTitle } from '../shared/components/PageTitle.tsx';
 import { DataTable, TableCaption, Td, Th } from '../shared/components/DataTable.tsx';
 import { MetaGrid, MONO } from '../shared/components/MetaGrid.tsx';
+import { Panel } from '../shared/components/Panel.tsx';
 import { SectionTitle } from '../shared/components/SectionTitle.tsx';
 import { Stack } from '../shared/components/Stack.tsx';
 import { usePageTitle } from '../shared/use-page-title.ts';
@@ -113,6 +115,22 @@ function PermissionModeBreakdown({ rows }: { rows: readonly PermissionModeCount[
   );
 }
 
+function ObservationGaps({ gaps }: { gaps: readonly ObservationGap[] }) {
+  const t = useT();
+  if (gaps.length === 0) {
+    return null;
+  }
+  return (
+    <Panel role="status">
+      {gaps.map((gap) => (
+        <p key={gap.from} className="m-0">
+          {t.conformance.noObservations(gap.from, gap.to)}
+        </p>
+      ))}
+    </Panel>
+  );
+}
+
 function FindingList({ findings }: { findings: ListConformanceFindingsResponse }) {
   const t = useT();
   if (findings.run === null) {
@@ -121,6 +139,7 @@ function FindingList({ findings }: { findings: ListConformanceFindingsResponse }
 
   return (
     <Stack>
+      <ObservationGaps gaps={findings.run.observationGaps} />
       <MetaGrid>
         <div>
           <dt>{t.conformance.policyVersion}</dt>

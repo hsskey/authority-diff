@@ -278,6 +278,7 @@ function makeReader(overrides: Partial<ActionReader> = {}): ActionReader {
       Promise.resolve(storedActions.filter((action) => keys.includes(action.actionKey))),
     countStaleClassifications: () => Promise.resolve(0),
     listObservationSessions: () => Promise.resolve([]),
+    listObservationTimes: () => Promise.resolve([]),
     getObservations: () => Promise.resolve([]),
     ...overrides,
   };
@@ -739,6 +740,30 @@ describe('replay module', () => {
     ).toEqual([
       ['bypassPermissions', 1],
       ['unknown', actions.length - 1],
+    ]);
+  });
+
+  test('a conformance listing states the periods of its window with no observation', async () => {
+    const { module, jobs } = makeModule({
+      reader: makeReader({
+        listObservationTimes: () =>
+          Promise.resolve([
+            IsoTimestampSchema.parse('2026-01-10T00:00:00.000Z'),
+            IsoTimestampSchema.parse('2026-01-10T12:00:00.000Z'),
+          ]),
+      }),
+    });
+
+    const requested = await module.requestConformanceReplay({ candidateVersionId, ...WINDOW });
+    if (!requested.ok) {
+      throw new Error(requested.error.code);
+    }
+    await jobs.drain();
+    const listed = await module.listConformanceFindings();
+
+    expect(listed.run?.observationGaps).toEqual([
+      { from: '2026-01-01T00:00:00.000Z', to: '2026-01-10T00:00:00.000Z' },
+      { from: '2026-01-10T12:00:00.000Z', to: '2026-01-31T23:59:59.999Z' },
     ]);
   });
 

@@ -9,7 +9,12 @@ import type {
   ObservationForReplay,
   ObservedOutcome,
 } from '@authority/trace/schema';
-import { computeConformanceWith, deriveDisposition, pairPermissionRequests } from '../diff.ts';
+import {
+  computeConformanceWith,
+  deriveDisposition,
+  findObservationGaps,
+  pairPermissionRequests,
+} from '../diff.ts';
 
 type Evidence = Pick<ObservationForReplay, 'event' | 'hookDecision'>;
 
@@ -412,5 +417,96 @@ describe('computeConformanceWith', () => {
     );
 
     expect(reversed.resultHash).toBe(forward.resultHash);
+  });
+});
+
+describe('conformance resultHash', () => {
+  // Recorded before observation gaps existed; the gaps are read at listing time and never enter the run.
+  const PINNED_RESULT_HASH = '7c1d3294cc5a1ad7701605bc44c698afa3d1d5f9162c57dd6f60acc737a34e5e';
+
+  test('a fixed run keeps its recorded resultHash', () => {
+    const target = action('a', [operation(0, 'push', 'git')]);
+
+    const result = computeConformanceWith(
+      () => decision(['allow'], 'public_remote'),
+      [target],
+      observationsFor(target, [PRE, ASKED], 'default'),
+      WINDOW,
+    );
+
+    expect(result.resultHash).toBe(PINNED_RESULT_HASH);
+  });
+});
+
+describe('findObservationGaps', () => {
+  const at = (iso: string) => IsoTimestampSchema.parse(iso);
+  const window = (from: string, to: string) => ({ from: at(from), to: at(to) });
+
+  test.each<
+    [
+      string,
+      readonly string[],
+      { from: string; to: string },
+      readonly (readonly [string, string])[],
+    ]
+  >([
+    [
+      'observations under 24 hours apart leave no gap',
+      ['2026-03-01T06:00:00.000Z', '2026-03-02T05:59:59.999Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-02T23:59:59.999Z' },
+      [],
+    ],
+    [
+      'exactly 24 hours between two observations is a gap',
+      ['2026-03-01T06:00:00.000Z', '2026-03-02T06:00:00.000Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-02T23:59:59.999Z' },
+      [['2026-03-01T06:00:00.000Z', '2026-03-02T06:00:00.000Z']],
+    ],
+    [
+      'the window start bounds a gap before the first observation',
+      ['2026-03-03T12:00:00.000Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-03T23:59:59.999Z' },
+      [['2026-03-01T00:00:00.000Z', '2026-03-03T12:00:00.000Z']],
+    ],
+    [
+      'the window end bounds a gap after the last observation',
+      ['2026-03-01T01:00:00.000Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-03T00:00:00.000Z' },
+      [['2026-03-01T01:00:00.000Z', '2026-03-03T00:00:00.000Z']],
+    ],
+    [
+      'a whole inclusive UTC day with no observation is one gap',
+      [],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-01T23:59:59.999Z' },
+      [['2026-03-01T00:00:00.000Z', '2026-03-01T23:59:59.999Z']],
+    ],
+    [
+      'a window shorter than a whole day with no observation has no gap',
+      [],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-01T23:59:59.998Z' },
+      [],
+    ],
+    [
+      'a last observation a whole inclusive day before the window end leaves a gap',
+      ['2026-03-01T12:00:00.000Z'],
+      { from: '2026-03-01T00:00:00.000Z', to: '2026-03-02T11:59:59.999Z' },
+      [['2026-03-01T12:00:00.000Z', '2026-03-02T11:59:59.999Z']],
+    ],
+    [
+      'a gap is measured across a year end',
+      ['2026-12-31T12:00:00.000Z', '2027-01-01T11:59:59.999Z', '2027-01-02T12:00:00.000Z'],
+      { from: '2026-12-31T00:00:00.000Z', to: '2027-01-02T23:59:59.999Z' },
+      [['2027-01-01T11:59:59.999Z', '2027-01-02T12:00:00.000Z']],
+    ],
+    [
+      'a leap day counts as a day',
+      ['2028-02-28T12:00:00.000Z', '2028-02-29T11:59:59.999Z', '2028-03-01T12:00:00.000Z'],
+      { from: '2028-02-28T00:00:00.000Z', to: '2028-03-01T23:59:59.999Z' },
+      [['2028-02-29T11:59:59.999Z', '2028-03-01T12:00:00.000Z']],
+    ],
+  ])('%s', (_name, times, bounds, expected) => {
+    const gaps = findObservationGaps(times.map(at), window(bounds.from, bounds.to));
+
+    expect(gaps).toEqual(expected.map(([from, to]) => ({ from, to })));
   });
 });
