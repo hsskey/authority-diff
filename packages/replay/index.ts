@@ -1,4 +1,4 @@
-import type { Clock, IdGenerator, Logger } from '@authority/kernel';
+import type { Clock, IdGenerator, JobQueue, Logger } from '@authority/kernel';
 import type { Database } from '@authority/platform';
 import type { ActionReader } from '@authority/trace';
 import { assembleReplayModule } from './lib/app/module.ts';
@@ -9,6 +9,7 @@ export interface CreateReplayModuleDeps {
   readonly database: Database;
   readonly reader: ActionReader;
   readonly policy: PolicyReader;
+  readonly jobQueue: JobQueue;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly logger: Logger;
@@ -21,6 +22,7 @@ export function createReplayModule(deps: CreateReplayModuleDeps) {
     store: createReplayStore(deps.database),
     reader: deps.reader,
     policy: deps.policy,
+    jobQueue: deps.jobQueue,
     clock: deps.clock,
     idGenerator: deps.idGenerator,
     logger: deps.logger,
@@ -28,7 +30,7 @@ export function createReplayModule(deps: CreateReplayModuleDeps) {
   });
 }
 
-export { assembleReplayModule } from './lib/app/module.ts';
+export { assembleReplayModule, REPLAY_RUN_JOB } from './lib/app/module.ts';
 export type {
   AdoptionGroupSample,
   AdoptionGroupsResult,

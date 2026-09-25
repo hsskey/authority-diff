@@ -11,7 +11,6 @@ import type { Database } from '@authority/platform';
 import { createPolicyRepository, EMPTY_POLICY_DOCUMENT } from '@authority/policy';
 import type { PolicyDocument, PolicyId, PolicyVersionId } from '@authority/policy/schema';
 import { createMemoryLogger } from '@authority/platform/testing';
-import { createReplayModule } from '@authority/replay';
 import type { PolicyReader, ReplayModule } from '@authority/replay';
 import { createTraceModule } from '@authority/trace';
 import type { ActionReader, TraceModule } from '@authority/trace';
@@ -21,6 +20,7 @@ import type { ChangeReviewView, PolicyReviewRepository, ReviewModule } from '@au
 import type { ChangeReviewId } from '@authority/review/schema';
 import actionFixture from '../../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import sessionFixture from '../../../../tests/fixtures/parsed-session.json' with { type: 'json' };
+import { createQueuedReplayModule } from '../support/queued-replay.ts';
 
 const TEST_DB_URL = 'postgres://authority:authority@localhost:55433/authority_test';
 
@@ -157,7 +157,7 @@ beforeAll(async () => {
       throw new Error('importTrace failed');
     }
   }
-  const replay: ReplayModule = createReplayModule({
+  const replay: ReplayModule = createQueuedReplayModule({
     database,
     reader: trace.reader,
     policy: makePolicyReader(repository),
@@ -554,7 +554,7 @@ test('a failed replay fails the review, returns the candidate to draft, and free
   const logger = createMemoryLogger();
   const failingReview = createReviewModule({
     database,
-    replay: createReplayModule({
+    replay: createQueuedReplayModule({
       database,
       reader: duplicateActionReader(),
       policy: makePolicyReader(repository),
@@ -605,7 +605,7 @@ function gate(): { promise: Promise<void>; open: () => void } {
 }
 
 test('a stale repeated sync does not withdraw a candidate a new review has claimed', async () => {
-  const failingReplay = createReplayModule({
+  const failingReplay = createQueuedReplayModule({
     database,
     reader: duplicateActionReader(),
     policy: makePolicyReader(repository),

@@ -1,5 +1,14 @@
-import { err, ok } from '@authority/kernel';
-import type { AppError, Clock, IdGenerator, IsoTimestamp, Logger, Result } from '@authority/kernel';
+import { z } from 'zod';
+import { assertNever, err, ok } from '@authority/kernel';
+import type {
+  AppError,
+  Clock,
+  IdGenerator,
+  IsoTimestamp,
+  JobQueue,
+  Logger,
+  Result,
+} from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import { createEvaluator } from '@authority/policy/evaluate';
 import type { Decision, PolicyDocument, PolicyVersionId } from '@authority/policy/schema';
@@ -44,6 +53,18 @@ function decidingRationales(decision: Decision, document: PolicyDocument): Recor
 }
 const STALE_RUN_MS = 60_000;
 
+export const REPLAY_RUN_JOB = 'replay.run';
+
+const ReplayRunJobPayloadSchema = z.object({ replayRunId: ReplayRunIdSchema });
+
+type Completion = Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>;
+
+/** A request's validated inputs: its inputsHash and the computation over the Actions it read. */
+interface Plan {
+  readonly inputsHash: string;
+  readonly compute: (run: ReplayRun) => Completion;
+}
+
 export interface RequestReplayInput {
   readonly baselineVersionId: PolicyVersionId;
   readonly candidateVersionId: PolicyVersionId;
@@ -55,8 +76,6 @@ export interface RequestReplayOutput {
   readonly run: ReplayRun;
   /** True when a completed run with the same inputsHash already existed (HTTP 200). */
   readonly reused: boolean;
-  /** The in-process execution, for tests to await; null when a run was reused. */
-  readonly execution: Promise<void> | null;
 }
 
 export interface RequestConformanceReplayInput {
@@ -179,13 +198,26 @@ export interface ReplayModule {
     groupKey: string,
   ): Promise<Result<readonly AdoptionGroupSample[], AppError>>;
   getAuthorityMap(): Promise<AuthorityMapView>;
+  /**
+   * Fails runs left running past 60 s and sends every queued run's job again,
+   * so a run whose job was lost still executes; a duplicate job is a no-op.
+   */
   recoverInterruptedRuns(): Promise<void>;
+  /**
+   * The `replay.run` job handler. Executes a `queued` run; any other status is
+   * a redelivered job and is left as is. A run whose recomputed inputsHash no
+   * longer matches fails with `replay.inputs_changed`.
+   */
+  runReplay(id: ReplayRunId): Promise<void>;
+  /** `runReplay` over a `replay.run` payload; an invalid payload is logged and dropped. */
+  readonly runReplayJob: (payload: unknown) => Promise<void>;
 }
 
 export interface AssembleReplayModuleDeps {
   readonly store: ReplayStore;
   readonly reader: ActionReader;
   readonly policy: PolicyReader;
+  readonly jobQueue: JobQueue;
   readonly clock: Clock;
   readonly idGenerator: IdGenerator;
   readonly logger: Logger;
@@ -292,15 +324,40 @@ async function collectActions(
 }
 
 export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModule {
-  const { store, reader, policy, clock, idGenerator, logger, classifierVersion } = deps;
+  const { store, reader, policy, jobQueue, clock, idGenerator, logger, classifierVersion } = deps;
 
-  const execute = async (
+  const persistFailure = async (
     run: ReplayRun,
-    compute: () => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
+    errorCode: string,
+    cause: unknown,
+    mark: () => Promise<void>,
   ): Promise<void> => {
+    // The failure is durable state, not a thrown error: the run is marked
+    // failed in the DB and the job completes.
+    logger.error('replay run failed', { runId: run.id, errorCode, cause });
+    await mark().catch((markCause: unknown) => {
+      logger.error('replay run could not be marked failed', {
+        runId: run.id,
+        errorCode,
+        cause: markCause,
+      });
+    });
+  };
+
+  const fail = (run: ReplayRun, errorCode: string, cause: unknown): Promise<void> =>
+    persistFailure(run, errorCode, cause, () => store.markFailed(run.id, errorCode, clock.now()));
+
+  const failQueued = (run: ReplayRun, errorCode: string, cause: unknown): Promise<void> =>
+    persistFailure(run, errorCode, cause, () =>
+      store.failQueuedRun(run.id, errorCode, clock.now()),
+    );
+
+  const execute = async (run: ReplayRun, compute: () => Completion): Promise<void> => {
     let errorCode = 'replay.execution_failed';
     try {
-      await store.markRunning(run.id, clock.now());
+      if (!(await store.markRunning(run.id, clock.now()))) {
+        return;
+      }
       const completion = compute();
       errorCode = 'replay.persist_failed';
       await store.recordCompletion({
@@ -309,16 +366,7 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         completedAt: clock.now(),
       });
     } catch (cause) {
-      // The failure is durable state, not a thrown error: the run is marked
-      // failed in the DB and the fire-and-forget promise always resolves.
-      logger.error('replay run failed', { runId: run.id, errorCode, cause });
-      await store.markFailed(run.id, errorCode, clock.now()).catch((markCause: unknown) => {
-        logger.error('replay run could not be marked failed', {
-          runId: run.id,
-          errorCode,
-          cause: markCause,
-        });
-      });
+      await fail(run, errorCode, cause);
     }
   };
 
@@ -333,70 +381,34 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
     return ok(await collectActions(reader, window));
   };
 
-  const start = async (
-    identity: ReplayRunIdentity,
-    inputsHash: string,
-    compute: (run: ReplayRun) => Omit<RecordCompletionInput, 'replayRunId' | 'completedAt'>,
-  ): Promise<RequestReplayOutput> => {
-    const existing = await store.findCompletedByInputsHash(inputsHash);
-    if (existing !== null) {
-      return { run: existing, reused: true, execution: null };
+  const planVersionDiff = async (input: RequestReplayInput): Promise<Result<Plan, AppError>> => {
+    const baseline = await policy.getVersion(input.baselineVersionId);
+    if (baseline === null) {
+      return err(sourceInvalid(input.baselineVersionId));
     }
-    const run: ReplayRun = {
-      ...identity,
-      id: ReplayRunIdSchema.parse(idGenerator.next('rpl')),
-      status: 'queued',
-      classifierVersion,
+    const candidate = await policy.getVersion(input.candidateVersionId);
+    if (candidate === null) {
+      return err(sourceInvalid(input.candidateVersionId));
+    }
+    const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+    if (!prepared.ok) {
+      return prepared;
+    }
+    const actions = prepared.value;
+    const inputsHash = sha256Hex(
+      canonicalJson([
+        baseline.contentHash,
+        candidate.contentHash,
+        input.windowFrom,
+        input.windowTo,
+        classifierVersion,
+        actions.length,
+        lastActionKeyOf(actions),
+      ]),
+    );
+    return ok({
       inputsHash,
-      resultHash: null,
-      stats: null,
-      errorCode: null,
-      createdAt: clock.now(),
-      startedAt: null,
-      completedAt: null,
-    };
-    await store.insertQueuedRun(run);
-    return { run, reused: false, execution: execute(run, () => compute(run)) };
-  };
-
-  const samplesOf = async (
-    sampleActionKeys: readonly string[],
-  ): Promise<readonly StoredAgentAction[]> => {
-    const actions = await reader.getActions(sampleActionKeys);
-    const byKey = new Map(actions.map((action) => [action.actionKey, action]));
-    return sampleActionKeys.flatMap((key) => {
-      const action = byKey.get(key);
-      return action === undefined ? [] : [action];
-    });
-  };
-
-  return {
-    async requestReplay(input) {
-      const baseline = await policy.getVersion(input.baselineVersionId);
-      if (baseline === null) {
-        return err(sourceInvalid(input.baselineVersionId));
-      }
-      const candidate = await policy.getVersion(input.candidateVersionId);
-      if (candidate === null) {
-        return err(sourceInvalid(input.candidateVersionId));
-      }
-      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
-      if (!prepared.ok) {
-        return prepared;
-      }
-      const actions = prepared.value;
-      const inputsHash = sha256Hex(
-        canonicalJson([
-          baseline.contentHash,
-          candidate.contentHash,
-          input.windowFrom,
-          input.windowTo,
-          classifierVersion,
-          actions.length,
-          lastActionKeyOf(actions),
-        ]),
-      );
-      const output = await start({ ...input, kind: 'version_diff' }, inputsHash, (run) => {
+      compute: (run) => {
         const evaluateCandidate = createEvaluator(candidate.document);
         const diff = computeDiffWith(
           createEvaluator(baseline.document),
@@ -419,114 +431,216 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
           adoptionGroups: [],
           adoptionAssignments: [],
         };
-      });
-      return ok(output);
+      },
+    });
+  };
+
+  const planConformance = async (
+    input: RequestConformanceReplayInput,
+  ): Promise<Result<Plan, AppError>> => {
+    const candidate = await policy.getVersion(input.candidateVersionId);
+    if (candidate === null) {
+      return err(sourceInvalid(input.candidateVersionId));
+    }
+    const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+    if (!prepared.ok) {
+      return prepared;
+    }
+    const actions = prepared.value;
+    const observations = await collectObservations(reader, actions, {
+      from: input.windowFrom,
+      to: input.windowTo,
+    });
+    const inputsHash = sha256Hex(
+      canonicalJson([
+        'observed_runtime',
+        candidate.contentHash,
+        input.windowFrom,
+        input.windowTo,
+        classifierVersion,
+        actions.length,
+        lastActionKeyOf(actions),
+        observations.length,
+      ]),
+    );
+    return ok({
+      inputsHash,
+      compute: (run) => {
+        const evaluateCandidate = createEvaluator(candidate.document);
+        const result = computeConformanceWith(evaluateCandidate, actions, observations, {
+          from: input.windowFrom,
+          to: input.windowTo,
+        });
+        return {
+          resultHash: result.resultHash,
+          stats: {
+            ...result.stats,
+            matrix: buildMatrix(actions, evaluateCandidate),
+            analyzability: buildAnalyzabilityCounts(actions, evaluateCandidate),
+            unpairedPermissionRequests: result.unpairedPermissionRequests,
+          },
+          groups: [],
+          changedActions: [],
+          findings: result.findings.map((finding) => ({
+            ...finding,
+            replayRunId: run.id,
+            status: 'open' as const,
+            note: '',
+          })),
+          adoptionGroups: [],
+          adoptionAssignments: [],
+        };
+      },
+    });
+  };
+
+  const planAdoption = async (
+    input: RequestAdoptionReplayInput,
+  ): Promise<Result<Plan, AppError>> => {
+    const candidate = await policy.getVersion(input.candidateVersionId);
+    if (candidate === null) {
+      return err(sourceInvalid(input.candidateVersionId));
+    }
+    const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
+    if (!prepared.ok) {
+      return prepared;
+    }
+    const actions = prepared.value;
+    const inputsHash = sha256Hex(
+      canonicalJson([
+        'adoption',
+        candidate.contentHash,
+        input.windowFrom,
+        input.windowTo,
+        classifierVersion,
+        actions.length,
+        lastActionKeyOf(actions),
+      ]),
+    );
+    return ok({
+      inputsHash,
+      compute: (run) => {
+        const result = computeAdoptionWith(createEvaluator(candidate.document), actions);
+        return {
+          resultHash: result.resultHash,
+          stats: result.stats,
+          groups: [],
+          changedActions: [],
+          findings: [],
+          adoptionGroups: result.groups.map((group, position): StoredAdoptionGroup => ({
+            ...group,
+            replayRunId: run.id,
+            position,
+          })),
+          adoptionAssignments: result.assignments.map((assignment): StoredAdoptionAssignment => ({
+            ...assignment,
+            replayRunId: run.id,
+          })),
+        };
+      },
+    });
+  };
+
+  const planFor = (run: ReplayRun): Promise<Result<Plan, AppError>> => {
+    switch (run.kind) {
+      case 'version_diff':
+        return planVersionDiff(run);
+      case 'conformance':
+        return planConformance(run);
+      case 'adoption':
+        return planAdoption(run);
+      default:
+        return assertNever(run);
+    }
+  };
+
+  const start = async (
+    identity: ReplayRunIdentity,
+    planned: Result<Plan, AppError>,
+  ): Promise<Result<RequestReplayOutput, AppError>> => {
+    if (!planned.ok) {
+      return planned;
+    }
+    const { inputsHash } = planned.value;
+    const existing = await store.findCompletedByInputsHash(inputsHash);
+    if (existing !== null) {
+      return ok({ run: existing, reused: true });
+    }
+    const run: ReplayRun = {
+      ...identity,
+      id: ReplayRunIdSchema.parse(idGenerator.next('rpl')),
+      status: 'queued',
+      classifierVersion,
+      inputsHash,
+      resultHash: null,
+      stats: null,
+      errorCode: null,
+      createdAt: clock.now(),
+      startedAt: null,
+      completedAt: null,
+    };
+    await store.insertQueuedRun(run);
+    await jobQueue.send(REPLAY_RUN_JOB, { replayRunId: run.id });
+    return ok({ run, reused: false });
+  };
+
+  const samplesOf = async (
+    sampleActionKeys: readonly string[],
+  ): Promise<readonly StoredAgentAction[]> => {
+    const actions = await reader.getActions(sampleActionKeys);
+    const byKey = new Map(actions.map((action) => [action.actionKey, action]));
+    return sampleActionKeys.flatMap((key) => {
+      const action = byKey.get(key);
+      return action === undefined ? [] : [action];
+    });
+  };
+
+  const runReplay = async (id: ReplayRunId): Promise<void> => {
+    const run = await store.getRun(id);
+    if (run?.status !== 'queued') {
+      return;
+    }
+    const planned = await planFor(run);
+    if (!planned.ok) {
+      await failQueued(run, planned.error.code, null);
+      return;
+    }
+    if (planned.value.inputsHash !== run.inputsHash) {
+      await failQueued(run, 'replay.inputs_changed', null);
+      return;
+    }
+    const { compute } = planned.value;
+    await execute(run, () => compute(run));
+  };
+
+  return {
+    async requestReplay(input) {
+      return start({ ...input, kind: 'version_diff' }, await planVersionDiff(input));
     },
 
     async requestConformanceReplay(input) {
-      const candidate = await policy.getVersion(input.candidateVersionId);
-      if (candidate === null) {
-        return err(sourceInvalid(input.candidateVersionId));
-      }
-      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
-      if (!prepared.ok) {
-        return prepared;
-      }
-      const actions = prepared.value;
-      const observations = await collectObservations(reader, actions, {
-        from: input.windowFrom,
-        to: input.windowTo,
-      });
-      const inputsHash = sha256Hex(
-        canonicalJson([
-          'observed_runtime',
-          candidate.contentHash,
-          input.windowFrom,
-          input.windowTo,
-          classifierVersion,
-          actions.length,
-          lastActionKeyOf(actions),
-          observations.length,
-        ]),
-      );
-      const output = await start(
+      return start(
         { ...input, kind: 'conformance', baselineVersionId: null },
-        inputsHash,
-        (run) => {
-          const evaluateCandidate = createEvaluator(candidate.document);
-          const result = computeConformanceWith(evaluateCandidate, actions, observations, {
-            from: input.windowFrom,
-            to: input.windowTo,
-          });
-          return {
-            resultHash: result.resultHash,
-            stats: {
-              ...result.stats,
-              matrix: buildMatrix(actions, evaluateCandidate),
-              analyzability: buildAnalyzabilityCounts(actions, evaluateCandidate),
-              unpairedPermissionRequests: result.unpairedPermissionRequests,
-            },
-            groups: [],
-            changedActions: [],
-            findings: result.findings.map((finding) => ({
-              ...finding,
-              replayRunId: run.id,
-              status: 'open' as const,
-              note: '',
-            })),
-            adoptionGroups: [],
-            adoptionAssignments: [],
-          };
-        },
+        await planConformance(input),
       );
-      return ok(output);
     },
 
     async requestAdoptionReplay(input) {
-      const candidate = await policy.getVersion(input.candidateVersionId);
-      if (candidate === null) {
-        return err(sourceInvalid(input.candidateVersionId));
-      }
-      const prepared = await prepare({ from: input.windowFrom, to: input.windowTo });
-      if (!prepared.ok) {
-        return prepared;
-      }
-      const actions = prepared.value;
-      const inputsHash = sha256Hex(
-        canonicalJson([
-          'adoption',
-          candidate.contentHash,
-          input.windowFrom,
-          input.windowTo,
-          classifierVersion,
-          actions.length,
-          lastActionKeyOf(actions),
-        ]),
-      );
-      const output = await start(
+      return start(
         { ...input, kind: 'adoption', baselineVersionId: null },
-        inputsHash,
-        (run) => {
-          const result = computeAdoptionWith(createEvaluator(candidate.document), actions);
-          return {
-            resultHash: result.resultHash,
-            stats: result.stats,
-            groups: [],
-            changedActions: [],
-            findings: [],
-            adoptionGroups: result.groups.map((group, position): StoredAdoptionGroup => ({
-              ...group,
-              replayRunId: run.id,
-              position,
-            })),
-            adoptionAssignments: result.assignments.map((assignment): StoredAdoptionAssignment => ({
-              ...assignment,
-              replayRunId: run.id,
-            })),
-          };
-        },
+        await planAdoption(input),
       );
-      return ok(output);
+    },
+
+    runReplay,
+
+    async runReplayJob(payload) {
+      const parsed = ReplayRunJobPayloadSchema.safeParse(payload);
+      if (!parsed.success) {
+        logger.error('replay job payload invalid', { issues: parsed.error.issues });
+        return;
+      }
+      await runReplay(parsed.data.replayRunId);
     },
 
     async listConformanceFindings() {
@@ -694,6 +808,9 @@ export function assembleReplayModule(deps: AssembleReplayModuleDeps): ReplayModu
         staleMs: STALE_RUN_MS,
         errorCode: 'replay.interrupted',
       });
+      for (const replayRunId of await store.listQueuedRunIds()) {
+        await jobQueue.send(REPLAY_RUN_JOB, { replayRunId });
+      }
     },
   };
 }

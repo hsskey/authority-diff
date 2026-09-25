@@ -22,3 +22,18 @@ export interface Transaction {
 export interface TransactionRunner {
   run<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
 }
+
+export type JobPayload = Readonly<Record<string, unknown>>;
+
+/** A handler receives the payload as sent and validates it; a thrown error lets the queue retry. */
+export type JobHandler = (payload: unknown) => Promise<void>;
+
+export interface JobQueue {
+  send(name: string, payload: JobPayload): Promise<void>;
+  work(name: string, handler: JobHandler): Promise<void>;
+  /**
+   * Sends `name` with an empty payload on each UTC `cron` occurrence; occurrences
+   * missed while no process ran are sent once.
+   */
+  schedule(name: string, cron: string): Promise<void>;
+}

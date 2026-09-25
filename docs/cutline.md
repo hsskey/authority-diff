@@ -69,7 +69,7 @@ Judgement: if the demo still answers "if we apply this policy, which permissions
 | local pipeline tools (`measure`, `replay-local`). Run in memory with no DB and no server | 1 (new) | Run measurement and diff verification with no plumbing. Direct gain of a pure-function design |
 | Policy document, immutable version, `contentHash`, validation, default template | 1 | Replay input |
 | `evaluateAction`, Zone (R2 applied), Reversibility | 1 | Core |
-| `version_diff` replay, `inputsHash`, `resultHash`, async execution inside the process | 1 | Core |
+| `version_diff` replay, `inputsHash`, `resultHash` | 1 | Core |
 | Diff Group: signature (R1), severity, target summary, one plain-language sentence | 1 | The device that shrinks review load. The object of diff-review verification |
 | Change Review: Verdict, gate, accept and reject | 1 | Required journey step 7 |
 | Evidence report (Markdown) and immutable decision record (including hash) | 1 | Required journey step 8. The artifact an engineering lead reads |
@@ -89,7 +89,7 @@ Judgement: if the demo still answers "if we apply this policy, which permissions
 | Activation, rollback, `policy_activations`, `stale` | 3 | So accept is not read as deploy |
 | All of calibration (golden set 200, Wilson threshold, ECE, Brier, provider state, weekly schedule), LLM baseline adapter | 3 | A model-evaluation task |
 | Scenario and Precedent screens, `precedent_conflict` blocker | 3 | After probe has shown value |
-| pg-boss, `JobQueue`, `api_tokens` and role, `idempotency_keys`, OpenAPI generation, Prometheus metric | 3 | No invariant they protect |
+| `api_tokens` and role, `idempotency_keys`, OpenAPI generation, Prometheus metric | 3 | No invariant they protect |
 | Synthetic org S1, 3 workloads, RAR, fidelity | 3 | Synthetic figures without real use |
 | Codex adapter, runtime port | 3 | One adapter is not a seam |
 
@@ -164,7 +164,7 @@ flowchart LR
         TR --> LP["tools/local-pipeline: measure, replay-local"]
     end
     subgraph SRV["local server (docker compose)"]
-        WEB["apps/web: Activity Overview, Policy Version, Change Review, Conformance"] --> HTTP["apps/server: HTTP + in-process replay"]
+        WEB["apps/web: Activity Overview, Policy Version, Change Review, Conformance"] --> HTTP["apps/server: HTTP + pg-boss jobs"]
         HTTP --> PKG["packages: trace, policy, replay, review"]
         PKG --> PG[("PostgreSQL 16")]
     end
@@ -200,7 +200,6 @@ Changes to foundation decisions versus the design:
 
 | item | design | V1 | why |
 | --- | --- | --- | --- |
-| replay execution | pg-boss job | Async function in the same process. Status is `replay_runs.status`. On restart a run that has been `running` for more than 60 s is set to `failed` and requested again with the same `inputsHash` | 1.2 s on 1 ten-thousand 2 thousand Actions |
 | pure entry points | `trace/client.ts` alone | `action/index.ts`, `trace/client.ts`, `policy/evaluate.ts`, `replay/diff.ts` | A local pipeline that runs the full computation with no DB is the tool for measurement and diff verification |
 | Action identifier | `act_` ULID + `actionKey` | `actionKey` (sha256) is the primary key | The same identifier must appear on reimport and on both local/server so `resultHash` can be compared |
 | auth | token table, 2 roles | 1 token in an environment variable. Reviewer name is entered at decision time | Single user |
@@ -282,7 +281,7 @@ flowchart BT
     hooks["apps/cli: hook, install-hooks"] -.-> trace
     conf["replay: conformance, findings"] -.-> replay
     exp["policy: export, activation, rollback"] -.-> policy
-    jobs["platform: JobQueue, schedule, token table"] -.-> platform
+    jobs["platform: token table"] -.-> platform
     classDef deferred stroke-dasharray: 5 5
     class probe,audit,hooks,conf,exp,jobs deferred
 ```
@@ -294,7 +293,6 @@ flowchart BT
 | audit chain | new package `audit`, `EventSink` port on `kernel` | one use case is one transaction, so there is one place per use case to put the record call |
 | activation, rollback | `policy_activations` on `policy`, add a status value | append a status after `accepted`. Existing transitions stay |
 | settings export | `policy/export-claude-code.ts` entry | none |
-| job queue | `JobQueue` on `platform`, wrap the replay-run function as a handler | keep the `runReplay(runId)` signature |
 | multi-person org | `principal_id` column already exists | add a count to group aggregation |
 | Codex adapter | add a parser on `trace/client.ts` | introduce a port when adapters become 2 |
 
@@ -305,8 +303,8 @@ ADRs and this table reserve the seats.
 
 | module | V1 | change versus the design | invariant kept apart |
 | --- | --- | --- | --- |
-| `kernel` | implement | drop `EventSink`, `JobQueue` ports | shared types do not refer to a business package |
-| `platform` | implement (reduced) | config, db, logger, clock, id only. no pg-boss, http client, token table, idempotency key | `process.env` and the DB driver are touched in one place |
+| `kernel` | implement | drop `EventSink` port | shared types do not refer to a business package |
+| `platform` | implement (reduced) | config, db, logger, clock, id, job queue. no http client, token table, idempotency key | `process.env` and the DB driver are touched in one place |
 | `contracts` | implement (reduced) | ingest, policy, replay, review endpoints only | the three clients server, web, CLI share the same contract at compile time |
 | `action` | implement (all) | none | the classifier is a pure function. Verifiable with corpus and property tests |
 | `trace` | implement (reduced) | no observation, hook, `mandates`. add reclassify | a string before redaction does not leave the workstation |
@@ -454,7 +452,7 @@ If an agent starts making code on this list, stop it.
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event name system.
 - [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
 - [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`. The append-only `policy_activations` table and `POST /policy-versions/{id}/activations` were implemented in reduced, declaration-only form (recorded in ACR-0014): an accepted version records that an operator applied it outside Authority Diff, changing no status. rollback, `superseded`, and `stale` are still not built.
-- [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs.
+- [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs. The `JobQueue` port, its pg-boss and in-memory adapters, Replay Run execution as a `replay.run` job, and one periodic job (a daily conformance run for the declared Policy Version) were implemented (ACR-0015). Other periodic jobs are still not built.
 - [ ] `api_tokens` table and role, `idempotency_keys` and `Idempotency-Key` handling.
 - [ ] `@hono/zod-openapi`, `openapi.json` generation, `GET /metrics`, Prometheus metric.
 - [ ] Testcontainers.
@@ -524,7 +522,7 @@ dependency-cruiser (all `error`):
 | `web-only-contracts`, `cli-narrow`, `tools-narrow` | `apps/web` is only `contracts` and `kernel/index.ts`. `apps/cli` adds `trace/client.ts` there. `tools/local-pipeline` is only pure entries and `schema.ts` |
 | `contracts-schema-only` | `packages/contracts/**` imports only `<pkg>/schema.ts` and `@authority/kernel` from other packages |
 
-Oxlint (`error`, type-aware rules with `--type-aware`): forbid `any`, forbid `as T` and unnecessary assertion, forbid `!`, `no-floating-promises`, `no-misused-promises`, `require-await`, `switch-exhaustiveness-check`, `no-unsafe-assignment`, `no-unsafe-call`, `no-unsafe-member-access`, `no-unsafe-return`, `no-unsafe-argument`, forbid default export, forbid `console` (exception `apps/cli/src/output.ts`, `tools/*`), forbid `process.env` (`node/no-process-env`, exception two config files), `drizzle-orm` and `postgres` only in `lib/infra` and `platform` (`no-restricted-imports`), forbid Date use in `lib/domain` and `lib/app` (`no-restricted-globals: Date`, design chapter 23 "Date only inside infra") and forbid `Math.random()` (`no-restricted-properties`). Oxlint has no `no-restricted-syntax`, so those three checks are expressed with the native rules above.
+Oxlint (`error`, type-aware rules with `--type-aware`): forbid `any`, forbid `as T` and unnecessary assertion, forbid `!`, `no-floating-promises`, `no-misused-promises`, `require-await`, `switch-exhaustiveness-check`, `no-unsafe-assignment`, `no-unsafe-call`, `no-unsafe-member-access`, `no-unsafe-return`, `no-unsafe-argument`, forbid default export, forbid `console` (exception `apps/cli/src/output.ts`, `tools/*`), forbid `process.env` (`node/no-process-env`, exception two config files), `drizzle-orm` and `postgres` only in `lib/infra` and `platform`, `pg-boss` only in `platform` (`no-restricted-imports`), forbid Date use in `lib/domain` and `lib/app` (`no-restricted-globals: Date`, design chapter 23 "Date only inside infra") and forbid `Math.random()` (`no-restricted-properties`). Oxlint has no `no-restricted-syntax`, so those three checks are expressed with the native rules above.
 
 Web styles (`apps/web`): Tailwind v4 utilities are used only in JSX. The only allowed CSS file is `apps/web/src/styles/app.css` and that file holds only `@import`, `@theme`, `@layer base` (`pnpm lint:css`). `.css` import is only from `main.tsx`. Preflight is on via `@import "tailwindcss"` (ACR-0012). If `app.css` has a class selector whose name is not used as a source string literal, `pnpm lint:css` fails. Do not use `@apply` or new CSS classes. Extract a React component when the same utility combination appears three times. Color and spacing use only `@theme` tokens (`bg-surface`, `text-muted`); do not use arbitrary color. Dark mode has `prefers-color-scheme` override those tokens on `:root`. A PR that changes the screen needs a screenshot diff.
 

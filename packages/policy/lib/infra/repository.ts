@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, gt, max } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lte, max } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { err, invariant, ok } from '@authority/kernel';
-import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
+import type { AppError, Clock, IdGenerator, IsoTimestamp, Result } from '@authority/kernel';
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import {
   PolicyActivationSchema,
@@ -89,6 +89,13 @@ export interface PolicyRepository {
     id: PolicyVersionId,
     input: DeclareActivationInput,
   ): Promise<Result<PolicyActivation, AppError>>;
+  /** The most recent Policy Activation declared at or before `asOf`, or null when none was. */
+  findLatestActivation(asOf: IsoTimestamp): Promise<Result<PolicyActivation | null, AppError>>;
+  /** Policy Activations declared after `from` and at or before `to`, oldest first. */
+  listActivationsBetween(
+    from: IsoTimestamp,
+    to: IsoTimestamp,
+  ): Promise<Result<readonly PolicyActivation[], AppError>>;
   /**
    * Legacy, test-only path: inserts an accepted version 1 without a Change
    * Review. Product code creates a draft version 1 with `createPolicy` and
@@ -472,6 +479,33 @@ export function createPolicyRepository(deps: PolicyRepositoryDeps): PolicyReposi
           .returning();
         invariant(row !== undefined, 'insert returned no row');
         return ok(toActivation(row));
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    async findLatestActivation(asOf) {
+      try {
+        const [row] = await db
+          .select()
+          .from(policyActivations)
+          .where(lte(policyActivations.createdAt, asOf))
+          .orderBy(desc(policyActivations.createdAt), desc(policyActivations.id))
+          .limit(1);
+        return ok(row === undefined ? null : toActivation(row));
+      } catch (cause) {
+        return err(internal(cause));
+      }
+    },
+
+    async listActivationsBetween(from, to) {
+      try {
+        const rows = await db
+          .select()
+          .from(policyActivations)
+          .where(and(gt(policyActivations.createdAt, from), lte(policyActivations.createdAt, to)))
+          .orderBy(asc(policyActivations.createdAt), asc(policyActivations.id));
+        return ok(rows.map(toActivation));
       } catch (cause) {
         return err(internal(cause));
       }

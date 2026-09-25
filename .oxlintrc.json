@@ -30,6 +30,10 @@
           {
             "name": "postgres",
             "message": "postgres may be imported only from lib/infra and platform."
+          },
+          {
+            "name": "pg-boss",
+            "message": "pg-boss may be imported only from platform; depend on the JobQueue port."
           }
         ]
       }

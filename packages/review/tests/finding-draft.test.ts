@@ -100,6 +100,8 @@ function unusedReplay(overrides: Partial<ReplayModule> = {}): ReplayModule {
     getAuthorityMap: () =>
       Promise.resolve({ run: null, cells: [], analyzability: { full: 0, partial: 0, none: 0 } }),
     recoverInterruptedRuns: () => Promise.resolve(),
+    runReplay: () => Promise.resolve(),
+    runReplayJob: () => Promise.resolve(),
     ...overrides,
   };
 }

@@ -13,6 +13,9 @@ export type { AppError } from './lib/domain/errors.ts';
 export type {
   Clock,
   IdGenerator,
+  JobHandler,
+  JobPayload,
+  JobQueue,
   Logger,
   Transaction,
   TransactionRunner,
