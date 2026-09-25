@@ -1,4 +1,4 @@
-corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-24; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `099321d3…0215` (server), `099321d3…0215` (local pipeline)
+corpus snapshot: transcripts-2026-09-23-1036 (2026-09-23, 1,036 files, 34,940 Actions); classifier 0.2.6; measured 2026-09-25; candidate policy A contentHash `f96ed41d…beb8`; adoption resultHash `099321d3…0215` (server), `099321d3…0215` (local pipeline)
 <!-- evidence-numbers
 snapshot.sessions: 1,036
 snapshot.actions: 34,940
@@ -23,7 +23,7 @@ conformance.resultHash: 42318e75…1863
 
 The adoption preview applies one candidate Policy Version to the recorded Actions with no baseline and asks which Effect each Action would receive (ADR-0010).
 <!-- remeasure:adoption-intro -->
-Every number in the main sections below is labelled **classifier 0.2.6, policy A** (measured 2026-09-24).
+Every number in the main sections below is labelled **classifier 0.2.6, policy A** (measured 2026-09-25).
 <!-- /remeasure:adoption-intro -->
 No repository names, host paths, or raw command text appear below; non-standard programs are masked as `<local-tool-NN>` and MCP tools as `<mcp-tool-NN>`.
 
@@ -50,7 +50,7 @@ Actions are built the same way the server builds them for a replay (transcript p
 | Adoption Groups (ask / deny) | 24 (22 / 2) |
 | ask + deny Actions assigned to a group | 16,232 |
 | Sessions with at least one ask or deny Action | 492 |
-| `computeAdoption` wall time | 438 ms |
+| `computeAdoption` wall time | 452 ms |
 
 The four figures the adoption review shows on screen and that this file locks: **evaluated 34,033, ask 47.6%, deny 20 (0.06%), 24 Adoption Groups**.
 The web renders shares with one decimal, so the deny tile reads `0.1%`; the count 20 is the exact figure.
@@ -117,7 +117,7 @@ Programs are masked as in the previous rounds: non-standard programs as `<local-
 ## Determinism and consistency with the Change Review baseline
 
 <!-- remeasure:adoption-determinism -->
-- Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `099321d3c553a666c5de9cbdf68414bac2e940e853a202eb808401e705d80215` (438 ms and 413 ms).
+- Two `computeAdoption` runs over the same snapshot gave the same `resultHash` `099321d3c553a666c5de9cbdf68414bac2e940e853a202eb808401e705d80215` (452 ms and 442 ms).
 - Two server runs over the imported Actions gave the same `resultHash` `099321d3c553a666c5de9cbdf68414bac2e940e853a202eb808401e705d80215`, equal to the local value.
 - The preview agrees with the Gate 2 A vs B replay on the same classifier: allow→allow 17,801 = allow; ask→allow 169 + ask→ask 16,043 = 16,212 = ask; deny→deny 20 = deny; evaluated 34,033 and excluded 907 in both (`docs/evidence/gate2-replay.md`).
 <!-- /remeasure:adoption-determinism -->
@@ -149,9 +149,21 @@ It reads what the server returns, not what the screens render; the screen checks
 ## Fresh-volume journey re-run
 
 The scripted API journey above is the re-run on this classifier. The twelve-screen browser pass was not repeated; its recorded table is under Previous version.
+The journey was run again on 2026-09-25, after the server default language became English, and gave the same figures and hashes as the 2026-09-24 run.
 
 The four figures match the measurement above: evaluated 34,033, ask 47.6%, deny 20 (rendered 0.1%), 24 Adoption Groups.
 Server and local agreement: the adoption run on the server gave the local `resultHash` `099321d3…0215`.
+
+Server-produced text from the 2026-09-25 run, quoted as the server returned it:
+
+- Step 5 Headlines: "This policy gives 'deny' to 13 read Actions in the credentials Zone." and "This policy gives 'ask' to 6618 read Actions in the host Zone."
+- Step 8 adoption Evidence Report, section by section: Policy Versions (candidate contentHash `f96ed41d…beb8`, Replay inputsHash, Replay resultHash `099321d3…0215`); Review window; Analysis size ("Analyzed Actions: 34033 (total 34940, excluded 907)", "Of those, analyzability none: 6009 (17.7%)"); Effects under the policy (allow 17801 52.3%, ask 16212 47.6%, deny 20 0.1%); 'ask' Adoption Groups and Verdicts (22 rows) and 'deny' Adoption Groups and Verdicts (2 rows), each row named by its Headline with the Verdict "Intended restriction"; Decision ("First policy adopted", Decision Record sequence 1 and hash); Audit chain; Notice.
+  The report carries 0 ruleId and 0 home path.
+- The Notice reads:
+
+  > This record states that the policy change was reviewed against the past records above.
+  > Authority Diff did not deploy or enforce the policy and did not measure whether the runtime behaves as the policy says.
+  > These figures apply the policy to past behavior; they do not reconstruct what the runtime approved at the time.
 
 Findings from this run (none blocks the journey):
 
@@ -522,10 +534,9 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
-> These captures were taken while the server default language was Korean.
-> The server now renders the Headline and the Evidence Report sections in English.
+> These captures were taken while the server default language was Korean and are kept as the record of that run.
 > Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
-> A fresh English capture is a follow-up.
+> English Headline and Evidence Report captures, from the classifier 0.2.6 run, are under "Fresh-volume journey re-run" in the main sections.
 
 | step | screen | result |
 | --- | --- | --- |
@@ -726,10 +737,9 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
-> These captures were taken while the server default language was Korean.
-> The server now renders the Headline and the Evidence Report sections in English.
+> These captures were taken while the server default language was Korean and are kept as the record of that run.
 > Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
-> A fresh English capture is a follow-up.
+> English Headline and Evidence Report captures, from the classifier 0.2.6 run, are under "Fresh-volume journey re-run" in the main sections.
 
 | step | screen | result |
 | --- | --- | --- |
@@ -890,10 +900,9 @@ Run on 2026-09-24 on a compose project of its own with an empty volume, server i
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop times are Agent tool latency, not a person's reading time.
 
-> These captures were taken while the server default language was Korean.
-> The server now renders the Headline and the Evidence Report sections in English.
+> These captures were taken while the server default language was Korean and are kept as the record of that run.
 > Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
-> A fresh English capture is a follow-up.
+> English Headline and Evidence Report captures, from the classifier 0.2.6 run, are under "Fresh-volume journey re-run" in the main sections.
 
 | step | screen | result |
 | --- | --- | --- |
