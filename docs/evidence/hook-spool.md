@@ -79,3 +79,4 @@ Homebrew Cellar rules are in `docs/evidence/hook-bundle-startup.md`.
 `authority spool-flush --from <dir>` sends a spool directory copied from another machine instead of the local spool.
 Sent files are renamed to `.sent` inside that directory; the local spool is not touched.
 If `<dir>` cannot be read, it ends with exit 1.
+`docs/evidence/spool-ingestion.md` records a `--from` load of one device's spool copy and the conformance run over it; spools from more than one device have not been loaded together yet.
