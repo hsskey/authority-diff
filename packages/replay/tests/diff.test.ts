@@ -634,9 +634,8 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      'example.invalid/synthetic/project 1곳으로의 push 1건이 ' +
-        "'확인 필요'에서 '허용'으로 바뀝니다. " +
-        '기준 정책에서는 신뢰 목록에 없는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다.',
+      "example.invalid/synthetic/project only: 1 push Action changes from 'ask' to 'allow'. " +
+        'The Zone changes from unknown remote in the baseline to trusted remote in the candidate.',
     );
   });
 
@@ -652,7 +651,7 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      "workspace 1곳으로의 쓰기 1건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+      "workspace only: 1 write Action changes from 'ask' to 'allow'.",
     );
   });
 
@@ -670,11 +669,11 @@ describe('headline', () => {
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.targetSummary).toHaveLength(5);
     expect(result.groups[0]?.headline).toBe(
-      "a.invalid 등 7곳으로의 가져오기 7건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+      "a.invalid and 6 other Targets: 7 fetch Actions change from 'ask' to 'allow'.",
     );
   });
 
-  test('uses 으로 after 차단', () => {
+  test('names the narrowing transition', () => {
     const { actions, evaluateBaseline, evaluateCandidate } = scenario([
       {
         action: action(hex('a'), '2026-01-02T03:04:05.000Z', [
@@ -686,11 +685,11 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      "workspace 1곳으로의 쓰기 1건이 '허용'에서 '차단'으로 바뀝니다.",
+      "workspace only: 1 write Action changes from 'allow' to 'deny'.",
     );
   });
 
-  test('uses 로 after 호스트 when the Zone changes to host', () => {
+  test('names both Zones when the Zone changes to host', () => {
     const { actions, evaluateBaseline, evaluateCandidate } = scenario([
       {
         action: action(hex('a'), '2026-01-02T03:04:05.000Z', [
@@ -702,8 +701,8 @@ describe('headline', () => {
     ]);
     const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
     expect(result.groups[0]?.headline).toBe(
-      "example.invalid 1곳으로의 가져오기 1건이 '확인 필요'에서 '허용'으로 바뀝니다. " +
-        '기준 정책에서는 자격 증명이었고 변경안에서는 호스트로 분류됩니다.',
+      "example.invalid only: 1 fetch Action changes from 'ask' to 'allow'. " +
+        'The Zone changes from credentials in the baseline to host in the candidate.',
     );
   });
 
@@ -797,6 +796,21 @@ describe('sorting and determinism (I6)', () => {
       }),
     );
     expect(withHeadline).not.toBe(result.resultHash);
+  });
+
+  test('resultHash and groupKeys are pinned to fixed values', () => {
+    const { actions, evaluateBaseline, evaluateCandidate } = scenario(baseCases());
+    const result = computeDiffWith(evaluateBaseline, evaluateCandidate, actions);
+    expect({
+      resultHash: result.resultHash,
+      groupKeys: result.groups.map((group) => group.groupKey),
+    }).toEqual({
+      resultHash: '155aad7f7b7ef98b6ca363dcb6ca5ac33794446e6c6901d3053e64b817fa2483',
+      groupKeys: [
+        '4038bb474ee0433c9b701ad88f055bc46856d932efab1da9affd691fce2de9dc',
+        '7453bad87d4707bd181e921f3b40cf392d35cce103e4008e2e1fc8f041d18b47',
+      ],
+    });
   });
 });
 

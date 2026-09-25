@@ -226,7 +226,7 @@ Contract changes (versus design chapters 24, 25):
 - `ReplayRun`: drop the `DecisionSource` union. `kind` is a discriminated union of `version_diff`, `conformance`, `adoption` (ADR-0010); `adoption` has null `baselineVersionId` and stats `AdoptionStats` (totalActions, evaluatedActions, excludedActions, effectCounts, analyzability, cells).
   The store contract is owned by `replay/schema.ts`: `ReplayRun`, `StoredDiffGroup` (`DiffGroup` + `replayRunId`), `StoredChangedAction` (`replayRunId`, `actionKey`, `groupKey`, `fromEffect`, `toEffect`), `StoredAdoptionGroup`, `StoredAdoptionAssignment` (`replayRunId`, `actionKey`, `groupKey`, `effect`).
 - `AdoptionGroup` (ADR-0010): signature `[effect, capability, zone]`, `groupKey` is that signature's sha256. `program` is always null and `programSummary` (top 10) and `distinctProgramCount` are evidence inside the group. No severity. `allow` Actions have no group. Sort is deny → ask → `actionCount` descending → `sessionCount` descending → `groupKey`.
-  Headline template is <!-- ko-product-output -->`<zone>에서의 <capability> N건이 이 정책에서 '확인 필요' 대상이 됩니다.` / `… '차단' 대상이 됩니다.`
+  Headline template is `This policy gives 'ask' to N <capability> Actions in the <zone> Zone.` / `This policy gives 'deny' to …`
 - `ActivityOverview` (`GET /activity-overview?windowDays`, trace module): `sessionCount`, `actionCount` (deduped), `evaluableActionCount`, `capabilityCounts` and `targetKindCounts` (Operation basis), `analyzability` (Action basis), `topPrograms`, `topRemoteKeys` (web shows host only). No Effect or Zone.
 - `PolicyVersionStatus`: `draft`, `in_review`, `accepted`, `rejected`. `createPolicy` makes version 1 as `draft` and `getBaseline` is `policy.no_accepted_version` when there is no accepted. `POST /policies` returns `201 CreatePolicyResponse { policy, initialVersion }`.
 - `PolicyRule.mandateException`: removed from schemaVersion 1.
@@ -250,8 +250,8 @@ critical = widening and one of
   - reversibility on the baseline is irreversible
   - analyzability of the deciding Operation is none
 headline example:
-  <!-- ko-product-output -->"github.com/acme-oss/toolkit 등 2곳으로의 push 15건이 '확인 필요'에서 '허용'으로 바뀝니다.
-   기준 정책에서는 신뢰하지 않는 원격이었고 변경안에서는 신뢰하는 원격으로 분류됩니다."
+  "github.com/acme-oss/toolkit and 1 other Target: 15 push Actions change from 'ask' to 'allow'.
+   The Zone changes from unknown remote in the baseline to trusted remote in the candidate."
 ```
 
 `headline` is made from a fixed template on (Capability, Zone change, Effect change, target summary).

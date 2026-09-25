@@ -522,6 +522,11 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
+
 | step | screen | result |
 | --- | --- | --- |
 | 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
@@ -721,6 +726,11 @@ Run on 2026-09-24 on a compose project of its own with an empty volume and its o
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop time is Agent tool latency, not a person's reading time.
 
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
+
 | step | screen | result |
 | --- | --- | --- |
 | 1 import | CLI | 1,036 sessions, 34,940 accepted, 196 duplicates, 0 failed |
@@ -879,6 +889,11 @@ It reads what the server returns, not what the screens render; the screen checks
 Run on 2026-09-24 on a compose project of its own with an empty volume, server image built from the commit that carries classifier 0.2.2 and the chunked replay inserts, and the web app served from `apps/web` against that server.
 The maintainer's stack was not used.
 Judge: Agent; every Verdict below was given by an Agent through the web controls, and the loop times are Agent tool latency, not a person's reading time.
+
+> These captures were taken while the server default language was Korean.
+> The server now renders the Headline and the Evidence Report sections in English.
+> Headline and report wording are not hash inputs, so the stamped resultHash stays valid.
+> A fresh English capture is a follow-up.
 
 | step | screen | result |
 | --- | --- | --- |

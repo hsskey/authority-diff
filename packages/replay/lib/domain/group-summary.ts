@@ -44,43 +44,41 @@ export const deriveTargetKey: DeriveTargetKey = (target: Target): string => {
   }
 };
 
-/** Plain Korean words for the fixed Headline templates. Never model output. */
+/** Plain English words for the fixed Headline templates. Never model output. */
 export const CAPABILITY_WORD: Record<Capability, string> = {
-  read: '읽기',
-  write: '쓰기',
-  delete: '삭제',
-  execute: '실행',
-  install: '설치',
-  fetch: '가져오기',
-  send: '전송',
+  read: 'read',
+  write: 'write',
+  delete: 'delete',
+  execute: 'execute',
+  install: 'install',
+  fetch: 'fetch',
+  send: 'send',
   commit: 'commit',
   push: 'push',
-  rewrite: '이력 재작성',
-  deploy: '배포',
+  rewrite: 'history rewrite',
+  deploy: 'deploy',
 };
 
 export const ZONE_WORD: Record<Zone, string> = {
-  workspace: '작업 공간',
-  host: '호스트',
-  credentials: '자격 증명',
-  agent_config: 'agent 설정',
-  trusted_remote: '신뢰하는 원격',
-  public_remote: '공개 원격',
-  unknown_remote: '신뢰 목록에 없는 원격',
-  protected: '보호 대상',
+  workspace: 'workspace',
+  host: 'host',
+  credentials: 'credentials',
+  agent_config: 'agent config',
+  trusted_remote: 'trusted remote',
+  public_remote: 'public remote',
+  unknown_remote: 'unknown remote',
+  protected: 'protected',
 };
 
 export const EFFECT_WORD: Record<Effect, string> = {
-  allow: '허용',
-  ask: '확인 필요',
-  deny: '차단',
+  allow: 'allow',
+  ask: 'ask',
+  deny: 'deny',
 };
 
-/** "으로" after a batchim-final syllable, "로" otherwise (e.g. 허용으로, 차단으로, 필요로). */
-export function directionalParticle(word: string): '으로' | '로' {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
-  return hasBatchim ? '으로' : '로';
+/** `count` followed by `noun`, with an "s" unless `count` is 1. */
+export function countOf(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 export function sortedUniqueRuleIds(ids: readonly (string | null)[]): string[] {
