@@ -80,6 +80,8 @@ Stop and write an ACR in `docs/acr/NNNN-<slug>.md` (what, why, alternatives, aff
 - change `schema.ts`, `events.ts`, `packages/contracts`, `CONTEXT.md`, or another package's tables;
 - relax a lint, boundary, or test rule.
 
+Proceed only after a person has approved.
+
 Before making or changing a hard-to-reverse decision, read `docs/adr/`.
 Add `docs/adr/NNNN-<slug>.md` when the decision is hard to reverse, surprising without context, and had a real alternative.
 
