@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "import", "node"],
+  "jsPlugins": ["./scripts/oxlint-import-depth.ts"],
   "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", ".omc/**", "**/*.gen.ts"],
   "rules": {
     "typescript/no-floating-promises": "error",
@@ -13,7 +14,12 @@
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-return": "error",
     "typescript/no-unsafe-argument": "error",
-    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/consistent-type-assertions": [
+      "error",
+      {
+        "assertionStyle": "never"
+      }
+    ],
     "typescript/no-non-null-assertion": "error",
     "typescript/switch-exhaustiveness-check": "error",
     "import/no-default-export": "error",
@@ -37,7 +43,8 @@
           }
         ]
       }
-    ]
+    ],
+    "authority/no-deep-relative-import": "error"
   },
   "overrides": [
     {
@@ -67,15 +74,21 @@
     },
     {
       "files": ["packages/*/lib/infra/**/*.ts", "packages/platform/**/*.ts"],
-      "rules": { "no-restricted-imports": "off" }
+      "rules": {
+        "no-restricted-imports": "off"
+      }
     },
     {
       "files": ["packages/platform/lib/infra/config.ts", "apps/cli/src/config.ts"],
-      "rules": { "node/no-process-env": "off" }
+      "rules": {
+        "node/no-process-env": "off"
+      }
     },
     {
       "files": ["apps/cli/src/output.ts", "tools/**/*.ts"],
-      "rules": { "no-console": "off" }
+      "rules": {
+        "no-console": "off"
+      }
     },
     {
       "files": ["**/*.config.ts", "scripts/**/*.ts"],

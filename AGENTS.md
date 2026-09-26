@@ -67,6 +67,7 @@ Before you decide structure, names, or contracts, or add a package or import ano
 - `apps/web` imports only `@authority/contracts` and `@authority/kernel`.
   `apps/cli` also imports `@authority/trace/client`.
   `tools/local-pipeline` imports only pure entries and `schema.ts`.
+- Inside one package, a target two or more levels up is imported through the package's subpath aliases (`#lib/*`, `#schema`, `#src/*` in its `package.json` `imports`, ACR-0020), never `../../`; `pnpm lint` enforces it.
 - `schema.ts` imports only `zod`, `@authority/kernel`, other packages' `schema.ts`, and its own `lib/`.
 - `lib/domain` is pure; `lib/app` holds use cases and ports; `lib/infra` implements ports.
 - Table definitions live in the owning package's `lib/infra/tables.ts`.

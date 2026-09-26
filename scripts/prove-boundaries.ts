@@ -34,8 +34,14 @@ const SCAFFOLD: ReadonlyArray<{ readonly path: string; readonly content: string 
 ];
 
 // Config files copied from the repo into each synthetic tree so the proof cruises the
-// exact rules and TypeScript resolution the enforced check uses.
-const COPIED_CONFIG = ['.dependency-cruiser.cjs', 'tsconfig.base.json'] as const;
+// exact rules and TypeScript resolution the enforced check uses. The package manifests
+// carry the live subpath-import aliases ("#lib/*") the alias proofs resolve through.
+const COPIED_CONFIG = [
+  '.dependency-cruiser.cjs',
+  'tsconfig.base.json',
+  'packages/kernel/package.json',
+  'packages/trace/package.json',
+] as const;
 
 const PROOFS: readonly Proof[] = [
   {
@@ -131,6 +137,28 @@ const PROOFS: readonly Proof[] = [
         path: 'packages/contracts/schema.ts',
         content: "import { h } from '../policy/evaluate.ts';\nexport const hh = h;\n",
       },
+    ],
+  },
+  {
+    id: '(i) kernel lib/domain reaches lib/infra through #lib -> domain-is-pure-no-infra',
+    expected: ['domain-is-pure-no-infra'],
+    files: [
+      { path: 'packages/kernel/lib/infra/zz_db.ts', content: 'export const db = 1;\n' },
+      {
+        path: 'packages/kernel/lib/domain/zz_prove_i.ts',
+        content: "import { db } from '#lib/infra/zz_db.ts';\nexport const i = db;\n",
+      },
+    ],
+  },
+  {
+    id: '(j) pure entry reaches lib/infra through #lib -> pure-entry-points',
+    expected: ['pure-entry-points'],
+    files: [
+      {
+        path: 'packages/trace/client.ts',
+        content: "import { db } from '#lib/infra/db.ts';\nexport const j = db;\n",
+      },
+      { path: 'packages/trace/lib/infra/db.ts', content: 'export const db = 1;\n' },
     ],
   },
 ];
