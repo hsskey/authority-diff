@@ -24,25 +24,12 @@ type RuleMapping =
   | { readonly kind: 'mapped'; readonly effect: Effect; readonly entries: readonly string[] }
   | { readonly kind: 'unmapped'; readonly ruleId: string; readonly reason: UnmappedRuleReason };
 
-function hasUntranslatableDoubleStar(pattern: string): boolean {
-  const segments = pattern.split('/');
-  return segments.some((segment, index) => {
-    if (!segment.includes('**')) {
-      return false;
-    }
-    if (segment !== '**') {
-      return true;
-    }
-    return index !== 0 && index !== segments.length - 1;
-  });
-}
-
 function toGitignorePattern(pattern: string): string | null {
   if (
     GITIGNORE_SPECIAL.test(pattern) ||
     pattern.trim() !== pattern ||
     pattern.includes('//') ||
-    hasUntranslatableDoubleStar(pattern)
+    pattern.includes('**')
   ) {
     return null;
   }
@@ -51,9 +38,6 @@ function toGitignorePattern(pattern: string): string | null {
   }
   if (pattern.startsWith('/')) {
     return `/${pattern}`;
-  }
-  if (pattern === '**' || pattern.startsWith('**/')) {
-    return `//${pattern}`;
   }
   return null;
 }

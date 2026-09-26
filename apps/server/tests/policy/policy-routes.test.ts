@@ -264,7 +264,7 @@ describe('POST /api/v1/policy-versions/:id/validations', () => {
 describe('GET /api/v1/policy-versions/:id/exports/claude-code', () => {
   const document = {
     ...DEFAULT_POLICY_DOCUMENT,
-    environment: { ...DEFAULT_POLICY_DOCUMENT.environment, credentialPaths: ['~/.ssh/**'] },
+    environment: { ...DEFAULT_POLICY_DOCUMENT.environment, credentialPaths: ['~/.ssh/id_ed25519'] },
     rules: [
       {
         ruleId: 'deny_credential_read',
@@ -298,7 +298,7 @@ describe('GET /api/v1/policy-versions/:id/exports/claude-code', () => {
       body: {
         notice:
           'Reference fragment only. Authority Diff does not deploy these settings and does not enforce them.',
-        settings: { permissions: { allow: [], ask: [], deny: ['Read(~/.ssh/**)'] } },
+        settings: { permissions: { allow: [], ask: [], deny: ['Read(~/.ssh/id_ed25519)'] } },
         unmappedRules: [
           { ruleId: 'deny_credentials_access', reason: 'capability_not_expressible' },
           { ruleId: 'deny_shared_history_rewrite', reason: 'zone_not_expressible' },

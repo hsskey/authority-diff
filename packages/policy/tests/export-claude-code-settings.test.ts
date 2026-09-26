@@ -24,7 +24,7 @@ const CREDENTIAL_RULE: PolicyRuleV2 = {
 
 function documentWith(
   rules: readonly PolicyRuleV2[],
-  credentialPaths: readonly string[] = ['~/.ssh/**', '/etc/secrets/*.key', '**/.env'],
+  credentialPaths: readonly string[] = ['~/.ssh/id_ed25519', '/etc/secrets/*.key'],
 ): PolicyDocumentV2 {
   return {
     schemaVersion: 2,
@@ -63,14 +63,12 @@ describe('exportClaudeCodeSettings', () => {
     expect(result.settings).toEqual({
       permissions: {
         allow: [],
-        ask: ['Read(//**/.env)', 'Read(//etc/secrets/*.key)', 'Read(~/.ssh/**)'],
+        ask: ['Read(//etc/secrets/*.key)', 'Read(~/.ssh/id_ed25519)'],
         deny: [
-          'Edit(//**/.env)',
           'Edit(//etc/secrets/*.key)',
-          'Edit(~/.ssh/**)',
-          'Read(//**/.env)',
+          'Edit(~/.ssh/id_ed25519)',
           'Read(//etc/secrets/*.key)',
-          'Read(~/.ssh/**)',
+          'Read(~/.ssh/id_ed25519)',
         ],
       },
     });
@@ -142,12 +140,9 @@ describe('exportClaudeCodeSettings', () => {
 
   test.each([
     ['~/.aws/credentials', 'Read(~/.aws/credentials)'],
-    ['/var/run/secrets/**', 'Read(//var/run/secrets/**)'],
-    ['~/x/**', 'Read(~/x/**)'],
-    ['/x/**', 'Read(//x/**)'],
-    ['**/*.pem', 'Read(//**/*.pem)'],
-    ['**/.config/secret', 'Read(//**/.config/secret)'],
-    ['**', 'Read(//**)'],
+    ['~/.ssh/id_ed25519', 'Read(~/.ssh/id_ed25519)'],
+    ['/etc/secrets/*.key', 'Read(//etc/secrets/*.key)'],
+    ['/var/run/token.?', 'Read(//var/run/token.?)'],
   ])('translates the credential pattern %s to %s', (pattern, entry) => {
     const rule = {
       ...CREDENTIAL_RULE,
@@ -164,6 +159,13 @@ describe('exportClaudeCodeSettings', () => {
     'secrets/**',
     '~',
     '~/.config/**.json',
+    '**',
+    '**/.env',
+    '**/*.pem',
+    '~/.ssh/**',
+    '~/x/**',
+    '/x/**',
+    '/var/run/secrets/**',
     '~/**/.env',
     '/home/**/.aws/credentials',
     '/**/.env',
@@ -176,7 +178,7 @@ describe('exportClaudeCodeSettings', () => {
     'lists the Rule as path_pattern_not_expressible when a credential pattern is %j',
     (pattern) => {
       const result = exportClaudeCodeSettings(
-        documentWith([CREDENTIAL_RULE], ['~/.ssh/**', pattern]),
+        documentWith([CREDENTIAL_RULE], ['~/.ssh/id_ed25519', pattern]),
       );
 
       expect(result).toMatchObject({
@@ -238,41 +240,31 @@ describe('exportClaudeCodeSettings keeps the meaning of every mapped credential 
     ) === 'credentials';
 
   test.each<{ pattern: string; mapped: boolean; paths: readonly string[] }>([
-    { pattern: '~/.ssh/**', mapped: true, paths: ['~/.ssh/id_rsa', '~/.ssh/a/b', '~/.ssh'] },
+    {
+      pattern: '~/.ssh/id_ed25519',
+      mapped: true,
+      paths: ['~/.ssh/id_ed25519', '~/.ssh/id_rsa'],
+    },
     {
       pattern: '/etc/secrets/*.key',
       mapped: true,
       paths: ['/etc/secrets/db.key', '/etc/secrets/sub/db.key'],
     },
-    { pattern: '~/x/**', mapped: true, paths: ['~/x/y', '~/x'] },
-    { pattern: '/x/**', mapped: true, paths: ['/x/y', '/x'] },
-    {
-      pattern: '/var/run/secrets/**',
-      mapped: true,
-      paths: ['/var/run/secrets/token', '/var/run/secrets/a/b'],
-    },
-    {
-      pattern: '/etc/secrets/db.key',
-      mapped: true,
-      paths: ['/etc/secrets/db.key', '/etc/secrets/db.keyx'],
-    },
-    { pattern: '~/**/.env', mapped: false, paths: ['~/.env', '~/a/.env', '~/a/b/.env'] },
+    { pattern: '~/.aws/credentials', mapped: true, paths: ['~/.aws/credentials', '~/.aws/other'] },
+    { pattern: '/var/run/token.?', mapped: true, paths: ['/var/run/token.1', '/var/run/token.ab'] },
+    { pattern: '**', mapped: false, paths: ['.env', 'a/b'] },
+    { pattern: '**/.env', mapped: false, paths: ['.env', 'a/.env'] },
+    { pattern: '**/*.pem', mapped: false, paths: ['x.pem', 'a/x.pem'] },
+    { pattern: '~/.ssh/**', mapped: false, paths: ['~/.ssh/id_rsa', '~/.ssh'] },
+    { pattern: '/x/**', mapped: false, paths: ['/x/y', '/x'] },
+    { pattern: '~/**/.env', mapped: false, paths: ['~/.env', '~/a/.env'] },
+    { pattern: '/**/.env', mapped: false, paths: ['/.env', '/a/.env'] },
     {
       pattern: '/home/**/.aws/credentials',
       mapped: false,
       paths: ['/home/.aws/credentials', '/home/u/.aws/credentials'],
     },
-    { pattern: '/**/.env', mapped: false, paths: ['/.env', '/a/.env', '/a/b/.env'] },
-    {
-      pattern: '/**/.aws/credentials',
-      mapped: false,
-      paths: ['/.aws/credentials', '/u/.aws/credentials'],
-    },
-  ])('$pattern is mapped only when its gitignore translation matches the same paths', ({
-    pattern,
-    mapped,
-    paths,
-  }) => {
+  ])('$pattern maps only when it has no ** and preserves meaning', ({ pattern, mapped, paths }) => {
     const result = exportClaudeCodeSettings(documentWith([CREDENTIAL_RULE], [pattern]));
     const isMapped = result.unmappedRules.length === 0;
     const meaningDiffers = paths.some(
@@ -280,7 +272,9 @@ describe('exportClaudeCodeSettings keeps the meaning of every mapped credential 
     );
 
     expect(isMapped).toBe(mapped);
-    expect(isMapped).toBe(!meaningDiffers);
+    if (isMapped) {
+      expect(meaningDiffers).toBe(false);
+    }
   });
 });
 
@@ -346,12 +340,10 @@ describe('PolicyModule.exportClaudeCodeSettings', () => {
             allow: [],
             ask: [],
             deny: [
-              'Edit(//**/.env)',
               'Edit(//etc/secrets/*.key)',
-              'Edit(~/.ssh/**)',
-              'Read(//**/.env)',
+              'Edit(~/.ssh/id_ed25519)',
               'Read(//etc/secrets/*.key)',
-              'Read(~/.ssh/**)',
+              'Read(~/.ssh/id_ed25519)',
             ],
           },
         },

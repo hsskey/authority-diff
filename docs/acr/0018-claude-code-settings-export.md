@@ -38,8 +38,9 @@ Deny, ask, and allow are evaluated deny first, then ask, then allow, independent
   - `analyzability` is null (`analyzability_condition`);
   - every `credentialPaths` pattern has a gitignore form (`path_pattern_not_expressible`).
 - A mapped Rule adds `Read(<pattern>)` for `read` and `Edit(<pattern>)` for `write` to the list named by its Effect, once per `credentialPaths` pattern.
-  A pattern starting with `/` becomes `//<rest>`, one starting with `~/` is kept, and one starting with `**/` or equal to `**` becomes `//` followed by the pattern.
-  A pattern is not translated when it starts any other way, when a `**` is not a whole first or last path segment, or when it contains `[`, `]`, `\`, `!`, `#`, or leading or trailing white space, because gitignore reads those differently from the whole-value glob.
+  A pattern starting with `/` becomes `//<rest>` and one starting with `~/` is kept.
+  A pattern is not translated when it starts any other way, when it contains `**`, or when it contains `[`, `]`, `\`, `!`, `#`, or leading or trailing white space, because gitignore reads those differently from the whole-value glob.
+  `**` in any position is unmapped; safe subset-position proofs can reopen this narrowly in the future.
 - Each of `allow`, `ask`, and `deny` is sorted in UTF-16 code-unit order without duplicates, so the same document always gives the same fragment.
   `unmappedRules` keeps document order.
 - The response is `{ notice, settings: { permissions: { allow, ask, deny } }, unmappedRules: [{ ruleId, reason }] }`.
