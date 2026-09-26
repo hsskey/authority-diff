@@ -45,6 +45,10 @@ export function previousUtcDay(now: IsoTimestamp): {
  * Requests a conformance Replay Run over the previous UTC day for the Policy
  * Version declared at the start of that day. A day on which a different version
  * was declared is skipped, since one version cannot stand for the whole day.
+ * So is a day whose starting version is ambiguous: declarations share a
+ * millisecond timestamp and their ids are not ordered by time, so a different
+ * version declared in the same millisecond as the starting one cannot be ordered
+ * before or after it.
  * It only requests the run; the run is the same one `POST /replay-runs` would
  * create for that version and window.
  */
@@ -62,7 +66,12 @@ export function createConformanceDailyJob(deps: ConformanceDailyDeps): JobHandle
       return;
     }
     const policyVersionId = declared.value.policyVersionId;
-    const during = await activations.listActivationsBetween(window.windowFrom, window.windowTo);
+    // The listing excludes its start, so starting one millisecond before the
+    // starting declaration also returns declarations made in its millisecond.
+    const listFrom = IsoTimestampSchema.parse(
+      new Date(Date.parse(declared.value.createdAt) - 1).toISOString(),
+    );
+    const during = await activations.listActivationsBetween(listFrom, window.windowTo);
     if (!during.ok) {
       logger.error('conformance_daily_failed', { errorCode: during.error.code });
       return;
