@@ -85,7 +85,7 @@ Judgement: if the demo still answers "if we apply this policy, which permissions
 | Replay-performance measurement on 10× replicated data | 2 | Measurement of the design chapter 17 estimate |
 | hook, `runtime_observations`, Disposition, conformance replay, finding, screen | 3 | Downstream of the core. Correct wording with R3 |
 | audit hash chain, `EventSink`, domain event, verify command | 3 | Replaced by the immutable decision record |
-| Claude Code settings export | 3 | Compiler direction. Unverified vendor semantics |
+| Claude Code settings export | 3 | Compiler direction. Unverified vendor semantics. Note: a reduced reference-only export was later implemented under ACR-0018 (permission lists always empty, every Rule listed as unmapped); deployment remains out of scope |
 | Activation, rollback, `policy_activations`, `stale` | 3 | So accept is not read as deploy |
 | All of calibration (golden set 200, Wilson threshold, ECE, Brier, provider state, weekly schedule), LLM baseline adapter | 3 | A model-evaluation task |
 | Scenario and Precedent screens, `precedent_conflict` blocker | 3 | After probe has shown value |
@@ -293,7 +293,7 @@ flowchart BT
 | semantic probe | new package `probe`, `policy/prose.ts` entry, add a blocker on the `review` gate | PolicyDocument schemaVersion 2 migration (add `mandateException`, restore `Decision.isMandateDependent`) |
 | audit chain | new package `audit`, `EventSink` port on `kernel` | one use case is one transaction, so there is one place per use case to put the record call |
 | activation, rollback | `policy_activations` on `policy`, add a status value | append a status after `accepted`. Existing transitions stay |
-| settings export | `policy/export-claude-code.ts` entry | none |
+| settings export | `policy/export-claude-code.ts` entry. Note: a reduced reference-only export was later implemented under ACR-0018 through `PolicyModule`, without this entry (permission lists always empty, every Rule listed as unmapped); deployment remains out of scope | none |
 | multi-person org | `principal_id` column already exists | add a count to group aggregation |
 | Codex adapter | add a parser on `trace/client.ts` | introduce a port when adapters become 2 |
 
@@ -650,8 +650,8 @@ Basis documents are docs/design.md chapters 19–23 and docs/cutline.md chapters
 
 7b. scripts/prove-lint.ts and `pnpm lint:prove`. The same way, prove each of the 19 lint rules above fails as the expected Oxlint rule.
 
-8. root scripts: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, check:evidence, check:doc-invariance, test,
-   check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + check:evidence + check:doc-invariance + test).
+8. root scripts: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, check:evidence, check:doc-invariance, check:i18n, check:korean, test,
+   check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + check:evidence + check:doc-invariance + check:i18n + check:korean + test).
 
 9. CI: pnpm install --frozen-lockfile, pnpm check, pnpm lint:boundaries:prove.
 
@@ -694,7 +694,7 @@ Tier 2 (start after Wednesday Gate 2 passes):
 - conformance replay (reduced): `observed_runtime` Decision Source, 3 finding kinds, finding screen. Add `hook_approved` (plugin hook approved) to Disposition.
 - audit hash chain (prev_hash/hash on `review_decisions`, verify command).
 
-Keep Tier 3 (after Sunday or permanently): calibration platform, LLM baseline, activation and rollback lifecycle, settings export, job queue, SSO and multi tenant, Codex adapter, synthetic org S1, RAR, publish-direction split (`docs/evidence/zone-limitations.md`).
+Keep Tier 3 (after Sunday or permanently): calibration platform, LLM baseline, activation and rollback lifecycle, settings export (note: a reduced reference-only export was later implemented under ACR-0018, with permission lists always empty and every Rule listed as unmapped; deployment remains out of scope), job queue, SSO and multi tenant, Codex adapter, synthetic org S1, RAR, publish-direction split (`docs/evidence/zone-limitations.md`).
 
 The meaning of Accept stays as in chapter 5. Collecting observations does not mean V1 claims to predict runtime behavior (chapter 1 R3).
 ````
