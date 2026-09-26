@@ -1,6 +1,6 @@
 # ACR-0015 Job queue and daily conformance run
 
-Status: proposed (2026-09-25).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 20, 21, 26, 27; docs/cutline.md 6, 7, 8, 13; ADR-0006.
 

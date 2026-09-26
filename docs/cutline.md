@@ -121,7 +121,7 @@ The basis of first-adoption review is ADR-0010; measurement is `docs/evidence/ad
    The Evidence report includes the policy `contentHash`, the window, analysis scale, allow / needs-confirmation / deny counts and shares, the group tables and Verdicts, the Decision Record sequence and hash, and the fixed wording below.
 8. [Outside Authority Diff] apply managed settings.
    `accepted` is a review record, not deploy or enforcement.
-   Applying it to runtime settings happens outside Authority Diff, and Authority Diff does not store whether it was applied.
+   Applying it to runtime settings happens outside Authority Diff, and Authority Diff stores only the record of an operator declaring that they applied a Policy Version; it does not verify or store whether the policy was actually applied.
 9. From accepted version 1 make draft version 2 and edit the JSON.
    Example: `push` + `trusted_remote` from `ask` to `allow`, add an organization-repository pattern to `trustedRemotes`.
 10. Press <!-- ko-product-output -->"변경 검토 만들기".

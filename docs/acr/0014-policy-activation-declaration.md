@@ -1,6 +1,6 @@
 # ACR-0014 Policy Activation declaration
 
-Status: proposed (2026-09-25).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 25, 26.2, 27; docs/cutline.md 13.
 

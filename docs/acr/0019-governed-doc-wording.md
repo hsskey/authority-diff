@@ -1,6 +1,6 @@
 # ACR-0019 Governed document wording
 
-Status: proposed (2026-09-26).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: CONTEXT.md, Verdict; docs/design.md 16.3.
 
@@ -25,6 +25,7 @@ A person approved the exact wording of both edits before they were made.
 
 - Leave both sentences as they are: the glossary and the Target Architecture would contradict the shipped catalogs and ACR-0014.
 - Also change the similar sentence in docs/cutline.md 5: the approved scope is these two edits only.
+  A later follow-up extended the same wording to docs/cutline.md 5 and added a dated amendment note to ADR-0010.
 
 ## Consequences
 
