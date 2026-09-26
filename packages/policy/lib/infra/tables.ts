@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
-import type { PolicyDocument } from '../../schema.ts';
+import type { PolicyDocument } from '#schema';
 
 // Store IsoTimestamp as text: timestamptz rewrites the brand format; ISO-Z UTC sorts as time (docs/design.md chapter 25).
 export const policies = pgTable(

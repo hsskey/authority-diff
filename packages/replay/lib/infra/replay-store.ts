@@ -16,7 +16,7 @@ import {
   type StoredAdoptionGroup,
   type StoredConformanceFinding,
   type StoredDiffGroup,
-} from '../../schema.ts';
+} from '#schema';
 import type {
   AdoptionGroupsPage,
   AuthorityMapRunView,

@@ -7,7 +7,7 @@
  * classifier; and add a `write` Operation for each output redirection.
  */
 import type { ShellCommand, ShellParse, ShellWord } from '../shell/ast.ts';
-import type { ToolCall } from '../../schema.ts';
+import type { ToolCall } from '#schema';
 import { isCommandLookup, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
 import { classifyGit } from './git.ts';

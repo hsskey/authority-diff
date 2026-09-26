@@ -1,6 +1,6 @@
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { ClassifyToolCall, ToolCall } from '@authority/action/schema';
-import type { ActionForReplay, DeriveActionKey, ParsedSession } from '../../schema.ts';
+import type { ActionForReplay, DeriveActionKey, ParsedSession } from '#schema';
 
 /**
  * Derives a stable Action Key from the runtime tool use identifier, or from the

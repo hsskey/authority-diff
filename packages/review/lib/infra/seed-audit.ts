@@ -1,5 +1,5 @@
 import { narrowTransaction, type Database } from '@authority/platform';
-import type { ChangeReviewId } from '../../schema.ts';
+import type { ChangeReviewId } from '#schema';
 import { appendReviewDecision } from './audit-chain.ts';
 
 /** Recorded on review_decisions when demo seeding accepts version 1 without Change Review. */

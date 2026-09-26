@@ -12,7 +12,7 @@
  * repository operand that is a local path (`/`, `./`, `../`, `~`, `file://`)
  * targets that `path` instead of a remote.
  */
-import type { Capability, Target } from '../../schema.ts';
+import type { Capability, Target } from '#schema';
 import { hasFlag, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, unlessNoEffect, type OperationDraft } from './draft.ts';
 import { dirOutsideWorkspace, normalizeRemote, pathTarget, resolvePath } from './targets.ts';

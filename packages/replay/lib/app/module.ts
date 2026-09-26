@@ -18,7 +18,7 @@ import type {
   ObservationForReplay,
   StoredAgentAction,
 } from '@authority/trace/schema';
-import { ReplayRunIdSchema } from '../../schema.ts';
+import { ReplayRunIdSchema } from '#schema';
 import type {
   AdoptionEffect,
   AdoptionGroup,
@@ -34,7 +34,7 @@ import type {
   StoredAdoptionGroup,
   StoredChangedAction,
   StoredDiffGroup,
-} from '../../schema.ts';
+} from '#schema';
 import { buildAnalyzabilityCounts, buildMatrix } from '../domain/build-matrix.ts';
 import { computeAdoptionWith } from '../domain/compute-adoption.ts';
 import { computeConformanceWith } from '../domain/compute-conformance.ts';

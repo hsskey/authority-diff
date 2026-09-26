@@ -13,7 +13,7 @@ import {
   type PolicyId,
   type PolicyVersion,
   type PolicyVersionId,
-} from '../../schema.ts';
+} from '#schema';
 import { DEFAULT_POLICY_DOCUMENT } from '../domain/default-policy-document.ts';
 import { EMPTY_POLICY_DOCUMENT } from '../domain/empty-policy-document.ts';
 import { nextStatus, type PolicyTransition } from '../domain/transition.ts';

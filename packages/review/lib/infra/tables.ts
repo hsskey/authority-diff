@@ -9,12 +9,7 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import type {
-  ChangeReviewStatus,
-  ReviewKind,
-  Verdict,
-  VerdictSnapshotEntry,
-} from '../../schema.ts';
+import type { ChangeReviewStatus, ReviewKind, Verdict, VerdictSnapshotEntry } from '#schema';
 
 // Store IsoTimestamp as text: timestamptz rewrites the brand format; ISO-Z UTC sorts as time (docs/design.md chapter 25).
 export const changeReviews = pgTable(

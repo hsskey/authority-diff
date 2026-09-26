@@ -4,14 +4,14 @@ import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision } from '@authority/policy/schema';
 import type { ActionForReplay, ObservationForReplay } from '@authority/trace/schema';
-import { UNKNOWN_PERMISSION_MODE } from '../../schema.ts';
+import { UNKNOWN_PERMISSION_MODE } from '#schema';
 import type {
   ConformanceFinding,
   ConformanceFindingKind,
   Disposition,
   PermissionModeCount,
   ReplayStats,
-} from '../../schema.ts';
+} from '#schema';
 import { EFFECT_ORDER, sampleActionKeys } from './group-summary.ts';
 import { deriveDisposition } from './derive-disposition.ts';
 import { pairPermissionRequests } from './pair-permission-requests.ts';

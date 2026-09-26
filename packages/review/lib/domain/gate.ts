@@ -1,4 +1,4 @@
-import type { Gate, GateBlocker, GateBlockerCode, ReviewKind, Verdict } from '../../schema.ts';
+import type { Gate, GateBlocker, GateBlockerCode, ReviewKind, Verdict } from '#schema';
 
 export interface GateInput {
   readonly kind: ReviewKind;

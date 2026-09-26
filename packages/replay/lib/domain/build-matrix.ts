@@ -2,7 +2,7 @@ import type { Effect } from '@authority/kernel';
 import type { Analyzability, Capability, Operation } from '@authority/action/schema';
 import type { Decision, Zone } from '@authority/policy/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import type { AnalyzabilityCounts, AuthorityMapCell } from '../../schema.ts';
+import type { AnalyzabilityCounts, AuthorityMapCell } from '#schema';
 
 type EvaluateAction = (operations: readonly Operation[]) => Decision | null;
 

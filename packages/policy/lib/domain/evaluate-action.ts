@@ -8,7 +8,7 @@ import type {
   PolicyRule,
   Reversibility,
   Zone,
-} from '../../schema.ts';
+} from '#schema';
 import { type CompiledEnvironment, compileEnvironment, resolveZoneWith } from './resolve-zone.ts';
 import { reversibilityFor } from './reversibility.ts';
 

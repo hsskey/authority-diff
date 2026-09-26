@@ -1,6 +1,6 @@
 import { err, ok } from '@authority/kernel';
 import type { Effect, Result } from '@authority/kernel';
-import type { Scenario } from '../../schema.ts';
+import type { Scenario } from '#schema';
 import type {
   BoundedJudgment,
   BoundedQuestion,

@@ -1,8 +1,8 @@
 import { assertNever } from '@authority/kernel';
 import { AnalyzabilitySchema, CapabilitySchema } from '@authority/action/schema';
 import type { Analyzability, Operation, Target } from '@authority/action/schema';
-import { ActivityOverviewSchema, TargetKindSchema } from '../../schema.ts';
-import type { BuildActivityOverview, TargetKind } from '../../schema.ts';
+import { ActivityOverviewSchema, TargetKindSchema } from '#schema';
+import type { BuildActivityOverview, TargetKind } from '#schema';
 
 const TOP_LIMIT = 20;
 

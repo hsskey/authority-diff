@@ -4,7 +4,7 @@ import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Capability, Operation } from '@authority/action/schema';
 import type { Decision, OperationDecision, Zone } from '@authority/policy/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import type { DiffGroup, DiffResult, ReplayStats } from '../../schema.ts';
+import type { DiffGroup, DiffResult, ReplayStats } from '#schema';
 import {
   CAPABILITY_WORD,
   countOf,

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ChangeReviewResponse, ReviewDiffGroupResponse } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
-import { callRoute, describeApiError } from '../../shared/api-client.ts';
-import { useT } from '../../shared/i18n/use-t.ts';
+import { callRoute, describeApiError } from '#src/shared/api-client.ts';
+import { useT } from '#src/shared/i18n/use-t.ts';
 import { VERDICT_OPTIONS, verdictLabel } from './format.ts';
 
 type Verdict = ReviewDiffGroupResponse['verdict'];

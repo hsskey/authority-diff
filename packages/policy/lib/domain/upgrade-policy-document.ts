@@ -1,4 +1,4 @@
-import type { PolicyDocument, PolicyDocumentV2 } from '../../schema.ts';
+import type { PolicyDocument, PolicyDocumentV2 } from '#schema';
 
 /** Raises a document to schemaVersion 2 by giving every Rule a null Mandate Exception; a schemaVersion 2 document is returned unchanged. */
 export function upgradePolicyDocument(document: PolicyDocument): PolicyDocumentV2 {

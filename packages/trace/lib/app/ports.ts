@@ -7,7 +7,7 @@ import type {
   StoredAgentAction,
   TraceImport,
   TraceSourceCounts,
-} from '../../schema.ts';
+} from '#schema';
 
 export interface WindowQuery {
   readonly from: IsoTimestamp;

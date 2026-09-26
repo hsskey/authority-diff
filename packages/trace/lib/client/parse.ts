@@ -1,6 +1,6 @@
 import { homeToTilde } from '@authority/kernel';
 import { canonicalJson } from '@authority/kernel/hash';
-import { ParsedSessionSchema, type ObservedOutcome, type ParseTranscript } from '../../schema.ts';
+import { ParsedSessionSchema, type ObservedOutcome, type ParseTranscript } from '#schema';
 import { redactStructuredInput, redactText } from './redact.ts';
 import { stripNul, stripNulDeep } from './strip-nul.ts';
 

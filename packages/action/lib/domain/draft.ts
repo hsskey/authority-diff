@@ -5,7 +5,7 @@
  * assigns sequential indices and enforces the 2,000-character fragment cap
  * (adding the `fragment_truncated` signal) from the frozen Operation contract.
  */
-import type { Analyzability, Capability, Operation, Target } from '../../schema.ts';
+import type { Analyzability, Capability, Operation, Target } from '#schema';
 import type { ShellWord } from '../shell/ast.ts';
 import { hasFlag } from './command.ts';
 

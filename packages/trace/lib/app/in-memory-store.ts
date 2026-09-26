@@ -7,7 +7,7 @@ import type {
   TraceImport,
   TraceSource,
   TraceSourceCounts,
-} from '../../schema.ts';
+} from '#schema';
 import type {
   ClassificationUpdate,
   StreamActionsQuery,

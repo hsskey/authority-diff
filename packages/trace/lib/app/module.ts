@@ -1,11 +1,6 @@
 import type { AppError, Clock, IdGenerator, Result } from '@authority/kernel';
 import type { ClassifyToolCall } from '@authority/action/schema';
-import type {
-  ActionForReplay,
-  ActivityOverview,
-  ParsedSession,
-  TraceSourceCounts,
-} from '../../schema.ts';
+import type { ActionForReplay, ActivityOverview, ParsedSession, TraceSourceCounts } from '#schema';
 import { buildActivityOverview } from '../domain/activity-overview.ts';
 import { importTrace } from './import-trace.ts';
 import type { ImportTraceResult } from './import-trace.ts';

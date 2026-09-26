@@ -1,5 +1,5 @@
 import type { ObservationForReplay, ObservedOutcome } from '@authority/trace/schema';
-import type { Disposition } from '../../schema.ts';
+import type { Disposition } from '#schema';
 
 type ObservationEvidence = Pick<ObservationForReplay, 'event' | 'hookDecision'>;
 

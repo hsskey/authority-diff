@@ -10,10 +10,10 @@ import {
   PolicyVersionSchema,
 } from '@authority/policy/schema';
 import type { Policy, PolicyActivation, PolicyVersion } from '@authority/policy/schema';
-import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
-import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
-import { registerPolicyRoutes } from '../../src/modules/policy.wiring.ts';
-import type { AppEnv } from '../../src/http/env.ts';
+import { createAuthMiddleware } from '#src/http/middleware/auth.ts';
+import { createRequestIdMiddleware } from '#src/http/middleware/request-id.ts';
+import { registerPolicyRoutes } from '#src/modules/policy.wiring.ts';
+import type { AppEnv } from '#src/http/env.ts';
 import { testConfig } from '../support/harness.ts';
 
 export const TOKEN = 'test-token';

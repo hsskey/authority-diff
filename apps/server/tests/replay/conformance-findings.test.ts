@@ -13,13 +13,13 @@ import { Hono } from 'hono';
 import { createSequentialIdGenerator } from '@authority/platform/testing';
 import type { ReplayModule } from '@authority/replay';
 import type { ReviewModule } from '@authority/review';
-import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
-import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
+import { createAuthMiddleware } from '#src/http/middleware/auth.ts';
+import { createRequestIdMiddleware } from '#src/http/middleware/request-id.ts';
 import {
   registerConformanceFindingDraftRoutes,
   registerConformanceFindingsRoutes,
-} from '../../src/http/routes/conformance-findings.routes.ts';
-import type { AppEnv } from '../../src/http/env.ts';
+} from '#src/http/routes/conformance-findings.routes.ts';
+import type { AppEnv } from '#src/http/env.ts';
 import { testConfig } from '../support/harness.ts';
 import { authed, makeModule } from './support.ts';
 

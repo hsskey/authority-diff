@@ -8,14 +8,14 @@ import {
   ObservationForReplaySchema,
   StoredAgentActionSchema,
   TraceSourceSchema,
-} from '../../schema.ts';
+} from '#schema';
 import type {
   ActionForReplay,
   ObservationForReplay,
   RuntimeObservation,
   StoredAgentAction,
   TraceSourceCounts,
-} from '../../schema.ts';
+} from '#schema';
 import type {
   ClassificationUpdate,
   StreamActionsQuery,

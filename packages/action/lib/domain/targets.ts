@@ -6,7 +6,7 @@
  * `packages/action/schema.ts`.
  */
 import { homeToTilde } from '@authority/kernel';
-import type { Target } from '../../schema.ts';
+import type { Target } from '#schema';
 import type { ShellWord } from '../shell/ast.ts';
 
 /** Resolved path plus whether it lies inside the workspace root. */

@@ -8,21 +8,21 @@ import type {
   ReviewDiffGroupResponse,
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
-import { callRoute, describeApiError } from '../../../shared/api-client.ts';
-import { ErrorState } from '../../../shared/components/ErrorState.tsx';
-import { LoadingState } from '../../../shared/components/LoadingState.tsx';
+import { callRoute, describeApiError } from '#src/shared/api-client.ts';
+import { ErrorState } from '#src/shared/components/ErrorState.tsx';
+import { LoadingState } from '#src/shared/components/LoadingState.tsx';
 import {
   adoptionGroupLabel,
   bySeverityThenImpact,
   diffGroupLabel,
   formatShare,
   formatZoneTransition,
-} from '../../../features/change-review/format.ts';
-import { VerdictSelect } from '../../../features/change-review/VerdictSelect.tsx';
-import { usePageTitle } from '../../../shared/use-page-title.ts';
-import { TextLink } from '../../../shared/components/TextLink.tsx';
-import { EmphasizedText } from '../../../shared/components/EmphasizedText.tsx';
-import { useT } from '../../../shared/i18n/use-t.ts';
+} from '#src/features/change-review/format.ts';
+import { VerdictSelect } from '#src/features/change-review/VerdictSelect.tsx';
+import { usePageTitle } from '#src/shared/use-page-title.ts';
+import { TextLink } from '#src/shared/components/TextLink.tsx';
+import { EmphasizedText } from '#src/shared/components/EmphasizedText.tsx';
+import { useT } from '#src/shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/')({
   component: ChangeReviewPage,

@@ -3,7 +3,7 @@ import type {
   PolicyDocument,
   PolicyRule,
   UnmappedRuleReason,
-} from '../../schema.ts';
+} from '#schema';
 
 // ACR-0018 records why no Rule is mapped: every Claude Code form found in its permissions documentation covers more or less than the Rule.
 

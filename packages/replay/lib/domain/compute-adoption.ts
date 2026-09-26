@@ -9,7 +9,7 @@ import type {
   AdoptionGroup,
   AdoptionResult,
   AdoptionStats,
-} from '../../schema.ts';
+} from '#schema';
 import { buildAnalyzabilityCounts, buildMatrix } from './build-matrix.ts';
 import {
   CAPABILITY_WORD,

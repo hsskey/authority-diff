@@ -7,7 +7,7 @@
  * is opaque execution (never a false `read`). A truncated input always adds a
  * `none` Operation in addition to whatever was analyzed.
  */
-import type { Analyzability, Capability, Operation, Target, ToolCall } from '../../schema.ts';
+import type { Analyzability, Capability, Operation, Target, ToolCall } from '#schema';
 import type { BashParser } from '../shell/parser.ts';
 import { classifyBash } from './bash.ts';
 import { isControlTool } from './control-tools.ts';

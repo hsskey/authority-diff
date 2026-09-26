@@ -14,7 +14,7 @@
  * the session workspace; a preceding `cd` outside it leaves the Remote Key
  * unresolved.
  */
-import type { Capability, Target } from '../../schema.ts';
+import type { Capability, Target } from '#schema';
 import { nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, type OperationDraft } from './draft.ts';
 import { dirOutsideWorkspace, normalizeRemote, pathTarget, resolvePath } from './targets.ts';

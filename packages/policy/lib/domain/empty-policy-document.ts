@@ -1,4 +1,4 @@
-import type { PolicyDocumentV2 } from '../../schema.ts';
+import type { PolicyDocumentV2 } from '#schema';
 
 // No environment facts and no rules, so every Action falls through to the default Effect `ask`.
 export const EMPTY_POLICY_DOCUMENT: PolicyDocumentV2 = {
