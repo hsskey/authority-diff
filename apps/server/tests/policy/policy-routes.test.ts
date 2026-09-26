@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { err, ok } from '@authority/kernel';
 import {
+  ClaudeCodeSettingsExportResponseSchema,
   CreatePolicyResponseSchema,
   ErrorEnvelopeSchema,
   ListPoliciesResponseSchema,
@@ -9,7 +10,7 @@ import {
   PolicyVersionResponseSchema,
   ValidatePolicyVersionResponseSchema,
 } from '@authority/contracts/schema';
-import { DEFAULT_POLICY_DOCUMENT } from '@authority/policy';
+import { createPolicyModule, DEFAULT_POLICY_DOCUMENT } from '@authority/policy';
 import {
   authed,
   buildPolicyApp,
@@ -257,6 +258,92 @@ describe('POST /api/v1/policy-versions/:id/validations', () => {
     );
     expect(res.status).toBe(200);
     expect(ValidatePolicyVersionResponseSchema.parse(await res.json()).isValid).toBe(true);
+  });
+});
+
+describe('GET /api/v1/policy-versions/:id/exports/claude-code', () => {
+  const document = {
+    ...DEFAULT_POLICY_DOCUMENT,
+    environment: { ...DEFAULT_POLICY_DOCUMENT.environment, credentialPaths: ['~/.ssh/id_ed25519'] },
+    rules: [
+      {
+        ruleId: 'deny_credential_read',
+        match: {
+          capabilities: ['read' as const],
+          zones: ['credentials' as const],
+          reversibility: null,
+          analyzability: null,
+        },
+        effect: 'deny' as const,
+        mandateException: null,
+        rationale: 'Credentials are never read by an Agent.',
+      },
+      ...DEFAULT_POLICY_DOCUMENT.rules.slice(0, 2),
+    ],
+  };
+
+  test('returns empty permission lists and every Rule of the stored version as unmapped', async () => {
+    const policy = createPolicyModule(
+      makeModule({ getVersion: () => Promise.resolve(ok(sampleVersion({ document }))) }),
+    );
+    const app = buildPolicyApp(policy);
+
+    const res = await app.request(
+      `/api/v1/policy-versions/${VERSION_ID}/exports/claude-code`,
+      authed(),
+    );
+
+    expect({ status: res.status, body: await res.json() }).toEqual({
+      status: 200,
+      body: {
+        notice:
+          'Reference fragment only. Authority Diff does not deploy these settings and does not enforce them.',
+        settings: { permissions: { allow: [], ask: [], deny: [] } },
+        unmappedRules: [
+          { ruleId: 'deny_credential_read', reason: 'vendor_semantics_differ' },
+          { ruleId: 'deny_credentials_access', reason: 'capability_not_expressible' },
+          { ruleId: 'deny_shared_history_rewrite', reason: 'zone_not_expressible' },
+        ],
+      },
+    });
+  });
+
+  test('answers with a body the contract accepts', async () => {
+    const policy = createPolicyModule(
+      makeModule({ getVersion: () => Promise.resolve(ok(sampleVersion())) }),
+    );
+    const res = await buildPolicyApp(policy).request(
+      `/api/v1/policy-versions/${VERSION_ID}/exports/claude-code`,
+      authed(),
+    );
+
+    expect(ClaudeCodeSettingsExportResponseSchema.safeParse(await res.json()).success).toBe(true);
+  });
+
+  test('maps policy.version_not_found to 404', async () => {
+    const app = buildPolicyApp(
+      makeModule({
+        exportClaudeCodeSettings: () => Promise.resolve(policyError('policy.version_not_found')),
+      }),
+    );
+    const res = await app.request(
+      `/api/v1/policy-versions/${VERSION_ID}/exports/claude-code`,
+      authed(),
+    );
+    expect(res.status).toBe(404);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('policy.version_not_found');
+  });
+
+  test('rejects an invalid version id with 422', async () => {
+    const app = buildPolicyApp(makeModule());
+    const res = await app.request(
+      '/api/v1/policy-versions/not-an-id/exports/claude-code',
+      authed(),
+    );
+    expect(res.status).toBe(422);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe(
+      'validation.invalid_request',
+    );
   });
 });
 

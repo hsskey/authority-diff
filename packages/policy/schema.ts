@@ -218,3 +218,31 @@ export const PolicyActivationSchema = z.object({
   createdAt: IsoTimestampSchema,
 });
 export type PolicyActivation = z.infer<typeof PolicyActivationSchema>;
+
+export const UnmappedRuleReasonSchema = z.enum([
+  'mandate_exception',
+  'zone_not_expressible',
+  'capability_not_expressible',
+  'reversibility_condition',
+  'analyzability_condition',
+  'vendor_semantics_differ',
+]);
+export type UnmappedRuleReason = z.infer<typeof UnmappedRuleReasonSchema>;
+
+/**
+ * A Claude Code settings fragment for reference: Authority Diff does not deploy
+ * or enforce it. The permission lists are always empty and every Rule is in
+ * `unmappedRules`, because no Claude Code form has the same meaning (ACR-0018).
+ */
+export const ClaudeCodeSettingsExportSchema = z.object({
+  notice: z.string(),
+  settings: z.object({
+    permissions: z.object({
+      allow: z.array(z.string()),
+      ask: z.array(z.string()),
+      deny: z.array(z.string()),
+    }),
+  }),
+  unmappedRules: z.array(z.object({ ruleId: z.string(), reason: UnmappedRuleReasonSchema })),
+});
+export type ClaudeCodeSettingsExport = z.infer<typeof ClaudeCodeSettingsExportSchema>;

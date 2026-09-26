@@ -7,6 +7,7 @@ import {
   AuthorityMapResponseSchema,
   ChangeReviewReportResponseSchema,
   ChangeReviewResponseSchema,
+  ClaudeCodeSettingsExportResponseSchema,
   ConformanceFindingResponseSchema,
   CreateChangeReviewRequestSchema,
   CreateDecisionRequestSchema,
@@ -125,6 +126,10 @@ export const routes = {
     `${API}/policy-versions/:id/activations`,
     CreatePolicyActivationRequestSchema,
     PolicyActivationResponseSchema,
+  ),
+  exportClaudeCodeSettings: get(
+    `${API}/policy-versions/:id/exports/claude-code`,
+    ClaudeCodeSettingsExportResponseSchema,
   ),
 
   createReplayRun: post(

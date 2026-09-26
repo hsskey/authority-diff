@@ -1,6 +1,7 @@
 import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
-import type { PolicyIssue, PolicyVersionId } from '../../schema.ts';
+import type { ClaudeCodeSettingsExport, PolicyIssue, PolicyVersionId } from '../../schema.ts';
+import { exportClaudeCodeSettings } from '../domain/export-claude-code-settings.ts';
 import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
 import type { PolicyRepository } from './repository.ts';
 
@@ -11,6 +12,10 @@ export interface PolicyValidation {
 
 export interface PolicyModule extends PolicyRepository {
   validateVersion(id: PolicyVersionId): Promise<Result<PolicyValidation, AppError>>;
+  /** A read of the stored version: it writes nothing (ACR-0018). */
+  exportClaudeCodeSettings(
+    id: PolicyVersionId,
+  ): Promise<Result<ClaudeCodeSettingsExport, AppError>>;
 }
 
 /**
@@ -46,6 +51,13 @@ export function createPolicyModule(repository: PolicyRepository): PolicyModule {
       }
       const issues = validatePolicyDocument(version.value.document);
       return ok({ isValid: issues.length === 0, issues });
+    },
+    async exportClaudeCodeSettings(id) {
+      const version = await repository.getVersion(id);
+      if (!version.ok) {
+        return version;
+      }
+      return ok(exportClaudeCodeSettings(version.value.document));
     },
   };
 }

@@ -673,7 +673,8 @@ test('a run persists more assignments and changed actions than one statement can
   expect(await countRowsByRun(database.db, 'replay_changed_actions', diff.value.run.id)).toBe(
     changed,
   );
-});
+  // Persists >16k assignments and >16k changed actions in chunked inserts, so the default 5s timeout is too tight on slower CI runners.
+}, 30_000);
 
 test('two deliveries of one replay.run job execute the run once', async () => {
   const clock = createSystemClock();

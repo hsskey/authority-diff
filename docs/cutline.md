@@ -451,7 +451,7 @@ If an agent starts making code on this list, stop it.
 - [ ] conformance replay, `conformance_findings`, `/conformance` screen. Reduced conformance (`observed_runtime` Decision Source, Disposition derivation, 3 finding kinds, list-only screen) was implemented in ACR-0007 (chapter 17).
 - [ ] `packages/audit`, `audit_events` table, `/audit` screen. Audit hash chain, trigger, `verify-audit` command were implemented on `review_decisions` (chapter 17).
 - [ ] `EventSink` port, event envelope, `events.ts` entry point, event name system.
-- [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`.
+- [ ] `exportClaudeCodeSettings`, `GET /policy-versions/{id}/exports/claude-code`. Implemented as a read-only reference fragment (recorded in ACR-0018): its permission lists are always empty, every Rule is listed in `unmappedRules` with a reason, and Authority Diff does not deploy or enforce the fragment.
 - [ ] `policy_activations`, `POST /policy-versions/{id}/activations`, rollback, `superseded`, `stale`. The append-only `policy_activations` table and `POST /policy-versions/{id}/activations` were implemented in reduced, declaration-only form (recorded in ACR-0014): an accepted version records that an operator applied it outside Authority Diff, changing no status. rollback, `superseded`, and `stale` are still not built.
 - [ ] pg-boss, `JobQueue` port, in-memory queue adapter, periodic jobs. The `JobQueue` port, its pg-boss and in-memory adapters, Replay Run execution as a `replay.run` job, and one periodic job (a daily conformance run for the declared Policy Version) were implemented (ACR-0015). Other periodic jobs are still not built.
 - [ ] `api_tokens` table and role, `idempotency_keys` and `Idempotency-Key` handling.
