@@ -1,6 +1,6 @@
 # ACR-0016 PolicyDocument schemaVersion 2 with Mandate Exception
 
-Status: proposed (2026-09-25).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 13.5, 24.4, and Appendix A rows ask_production_deploy (now carries a Mandate Exception) and ask_irreversible_local (deploy dropped); docs/cutline.md 6, 12; ADR-0009, ADR-0011.
 

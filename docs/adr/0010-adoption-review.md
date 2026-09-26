@@ -25,6 +25,7 @@ Status: accepted (V1). Source: docs/cutline.md chapters 5, 6, and 18 and the Ini
   This invariant lives in the application layer (policy module). The store (`createPolicyRepository`) allows several Policy rows because integration tests isolate each test to one Policy on a shared database. Put the database constraint after that isolation method changes.
   `seedAcceptedPolicy` is legacy/test only. An accepted version 1 row seeded on that path remains valid.
   `accepted` is a review result, not a deployment or enforcement status. Lifecycle is drawn `draft → in_review → accepted → [outside Authority Diff] apply managed settings → runtime observation → conformance`. Application is done by the organization's settings-deployment tooling; Authority Diff does not store whether it was applied. Do not use accepted as active, applied, or enforced.
+  Amendment (2026-09-26): ACR-0014 later introduced declaration-only Policy Activation, so Authority Diff now stores an operator's declaration that they applied a Policy Version, and it still does not verify or store whether the policy was actually applied.
 - Decision (adoption review):
   Store `kind` (`change` | `adoption`) on Change Review; `baselineVersionId` is null only for `adoption` (migration 0009 CHECK).
   The request does not receive kind. The server derives it: `adoption` (adoption run) when there is no accepted version, `change` (version_diff run) when there is. If the candidate is the accepted version itself, reject the transition with 409.

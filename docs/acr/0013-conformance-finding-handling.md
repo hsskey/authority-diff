@@ -1,6 +1,6 @@
 # ACR-0013 Conformance Finding acknowledgement and draft from a finding
 
-Status: proposed (2026-09-24).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 24.5, 25, 26.2, 27; ACR-0007.
 
