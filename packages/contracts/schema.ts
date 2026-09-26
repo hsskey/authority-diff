@@ -220,7 +220,7 @@ export type CreatePolicyActivationRequest = z.infer<typeof CreatePolicyActivatio
 export const PolicyActivationResponseSchema = PolicyActivationSchema;
 export type PolicyActivationResponse = z.infer<typeof PolicyActivationResponseSchema>;
 
-/** A reference Claude Code settings fragment: Authority Diff does not deploy or enforce it. Rules without a deterministic Claude Code form are listed in `unmappedRules` instead of the fragment. */
+/** A reference Claude Code settings fragment: Authority Diff does not deploy or enforce it. Its permission lists are always empty; every Rule is listed in `unmappedRules` with the reason it has no Claude Code form of the same meaning. */
 export const ClaudeCodeSettingsExportResponseSchema = ClaudeCodeSettingsExportSchema;
 export type ClaudeCodeSettingsExportResponse = z.infer<
   typeof ClaudeCodeSettingsExportResponseSchema

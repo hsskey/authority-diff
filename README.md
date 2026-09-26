@@ -58,8 +58,8 @@ import → activity overview → first Policy (draft) → adoption preview → r
    Changing runtime settings to match the Policy, for example through managed settings, happens outside Authority Diff.
    An operator can record through the API that this change happened.
    Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
-   `GET /api/v1/policy-versions/{id}/exports/claude-code` returns a Claude Code settings fragment as a reference: only Rules with a deterministic Claude Code form are in it, every other Rule is listed under `unmappedRules` with a reason, and Authority Diff does not deploy or enforce the fragment (ACR-0018).
-   The default template has no such Rule, so its fragment is empty.
+   `GET /api/v1/policy-versions/{id}/exports/claude-code` returns a Claude Code settings fragment as a reference, and Authority Diff does not deploy or enforce it (ACR-0018).
+   Its permission lists are always empty: no Claude Code rule form has the same meaning as a Rule, so every Rule is listed under `unmappedRules` with a reason.
 7. **Change review.** A draft made from the accepted version gets a Change Review.
    It evaluates the same Actions under both versions, shows Widening and Narrowing groups, takes Verdicts, and ends in accept or reject with an Evidence Report.
 8. **Conformance.** Observation hooks report what the runtime did.

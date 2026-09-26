@@ -225,14 +225,14 @@ export const UnmappedRuleReasonSchema = z.enum([
   'capability_not_expressible',
   'reversibility_condition',
   'analyzability_condition',
-  'path_pattern_not_expressible',
+  'vendor_semantics_differ',
 ]);
 export type UnmappedRuleReason = z.infer<typeof UnmappedRuleReasonSchema>;
 
 /**
  * A Claude Code settings fragment for reference: Authority Diff does not deploy
- * or enforce it. Only Rules with a deterministic Claude Code form are in
- * `settings`; every other Rule is in `unmappedRules` (ACR-0018).
+ * or enforce it. The permission lists are always empty and every Rule is in
+ * `unmappedRules`, because no Claude Code form has the same meaning (ACR-0018).
  */
 export const ClaudeCodeSettingsExportSchema = z.object({
   notice: z.string(),

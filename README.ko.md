@@ -61,8 +61,8 @@ import → 활동 개요 → 첫 Policy(draft) → 최초 도입 미리보기 �
    운영자는 이 변경을 했다는 사실을 API로 기록할 수 있습니다.
    Authority Diff는 그 선언을 확인하지 않고 저장만 하며, Policy Version status, replay, conformance, 평가, 화면 어디에서도 그 선언을 읽지 않습니다.
    `GET /api/v1/policy-versions/{id}/exports/claude-code`는 Claude Code 설정 fragment를 참고용으로 반환합니다.
-   Claude Code 형태로 결정적으로 옮길 수 있는 Rule만 담기고, 나머지 Rule은 사유와 함께 `unmappedRules`에 나열되며, Authority Diff는 이 fragment를 배포하거나 강제하지 않습니다(ACR-0018).
-   기본 template에는 그런 Rule이 없어서 fragment가 비어 있습니다.
+   Authority Diff는 이 fragment를 배포하거나 강제하지 않습니다(ACR-0018).
+   Rule과 같은 의미를 갖는 Claude Code rule 형태가 없으므로 permission 목록은 항상 비어 있고, 모든 Rule이 사유와 함께 `unmappedRules`에 나열됩니다.
 7. **Change review.** accepted version에서 만든 draft는 Change Review를 받습니다.
    같은 Action을 두 version으로 평가하고, Widening과 Narrowing group을 보여 주고, Verdict를 받은 뒤, Evidence Report와 함께 accept나 reject로 끝납니다.
 8. **Conformance.** observation hook이 runtime이 실제로 한 일을 보고합니다.

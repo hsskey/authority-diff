@@ -3,10 +3,8 @@ import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
 import { createPolicyModule, DEFAULT_POLICY_DOCUMENT, exportClaudeCodeSettings } from '../index.ts';
 import type { PolicyRepository } from '../index.ts';
-import { resolveZone } from '../evaluate.ts';
 import { ClaudeCodeSettingsExportSchema, PolicyVersionSchema } from '../schema.ts';
-import type { EnvironmentProfile, PolicyDocumentV2, PolicyRuleV2 } from '../schema.ts';
-import { makeOperation, pathTarget } from './support/factories.ts';
+import type { PolicyDocumentV2, PolicyRuleV2 } from '../schema.ts';
 import { expectErr } from './support/result.ts';
 
 const CREDENTIAL_RULE: PolicyRuleV2 = {
@@ -22,13 +20,15 @@ const CREDENTIAL_RULE: PolicyRuleV2 = {
   rationale: 'Credentials are never read or changed by an Agent.',
 };
 
-function documentWith(
-  rules: readonly PolicyRuleV2[],
-  credentialPaths: readonly string[] = ['~/.ssh/id_ed25519', '/etc/secrets/*.key'],
-): PolicyDocumentV2 {
+const EMPTY_SETTINGS = { permissions: { allow: [], ask: [], deny: [] } };
+
+function documentWith(rules: readonly PolicyRuleV2[]): PolicyDocumentV2 {
   return {
     schemaVersion: 2,
-    environment: { ...DEFAULT_POLICY_DOCUMENT.environment, credentialPaths: [...credentialPaths] },
+    environment: {
+      ...DEFAULT_POLICY_DOCUMENT.environment,
+      credentialPaths: ['~/.ssh/id_ed25519', '/etc/secrets/*.key'],
+    },
     rules: [...rules],
   };
 }
@@ -42,45 +42,13 @@ function deepFreeze<T>(value: T): T {
 }
 
 describe('exportClaudeCodeSettings', () => {
-  test('maps read and write in credentials to Read and Edit rules under the Rule Effect, sorted and without duplicates', () => {
-    const document = documentWith([
-      CREDENTIAL_RULE,
-      {
-        ...CREDENTIAL_RULE,
-        ruleId: 'deny_credential_write',
-        match: { ...CREDENTIAL_RULE.match, capabilities: ['write'] },
-      },
-      {
-        ...CREDENTIAL_RULE,
-        ruleId: 'ask_credential_read',
-        effect: 'ask',
-        match: { ...CREDENTIAL_RULE.match, capabilities: ['read'] },
-      },
-    ]);
-
-    const result = exportClaudeCodeSettings(document);
-
-    expect(result.settings).toEqual({
-      permissions: {
-        allow: [],
-        ask: ['Read(//etc/secrets/*.key)', 'Read(~/.ssh/id_ed25519)'],
-        deny: [
-          'Edit(//etc/secrets/*.key)',
-          'Edit(~/.ssh/id_ed25519)',
-          'Read(//etc/secrets/*.key)',
-          'Read(~/.ssh/id_ed25519)',
-        ],
-      },
-    });
-  });
-
-  test('lists every default template Rule as unmapped with its first failing reason, and exports no permission rule', () => {
+  test('lists every default template Rule as unmapped with its first reason, and exports no permission rule', () => {
     const result = exportClaudeCodeSettings(DEFAULT_POLICY_DOCUMENT);
 
     expect(result).toEqual({
       notice:
         'Reference fragment only. Authority Diff does not deploy these settings and does not enforce them.',
-      settings: { permissions: { allow: [], ask: [], deny: [] } },
+      settings: EMPTY_SETTINGS,
       unmappedRules: [
         { ruleId: 'deny_credentials_access', reason: 'capability_not_expressible' },
         { ruleId: 'deny_shared_history_rewrite', reason: 'zone_not_expressible' },
@@ -95,6 +63,30 @@ describe('exportClaudeCodeSettings', () => {
       ],
     });
   });
+
+  test.each<[string, PolicyRuleV2['effect'], PolicyRuleV2['match']['capabilities']]>([
+    ['deny read', 'deny', ['read']],
+    ['deny write', 'deny', ['write']],
+    ['deny read and write', 'deny', ['read', 'write']],
+    ['ask read', 'ask', ['read']],
+    ['allow write', 'allow', ['write']],
+  ])(
+    'lists %s on credentials as vendor_semantics_differ and exports no permission rule',
+    (_label, effect, capabilities) => {
+      const rule: PolicyRuleV2 = {
+        ...CREDENTIAL_RULE,
+        effect,
+        match: { ...CREDENTIAL_RULE.match, capabilities },
+      };
+
+      const result = exportClaudeCodeSettings(documentWith([rule]));
+
+      expect(result).toMatchObject({
+        settings: EMPTY_SETTINGS,
+        unmappedRules: [{ ruleId: CREDENTIAL_RULE.ruleId, reason: 'vendor_semantics_differ' }],
+      });
+    },
+  );
 
   test.each<[string, PolicyRuleV2]>([
     [
@@ -115,7 +107,10 @@ describe('exportClaudeCodeSettings', () => {
     ],
     [
       'capability_not_expressible',
-      { ...CREDENTIAL_RULE, match: { ...CREDENTIAL_RULE.match, capabilities: ['read', 'delete'] } },
+      {
+        ...CREDENTIAL_RULE,
+        match: { ...CREDENTIAL_RULE.match, capabilities: ['read', 'delete'] },
+      },
     ],
     [
       'capability_not_expressible',
@@ -129,64 +124,14 @@ describe('exportClaudeCodeSettings', () => {
       'analyzability_condition',
       { ...CREDENTIAL_RULE, match: { ...CREDENTIAL_RULE.match, analyzability: ['full'] } },
     ],
-  ])('lists a Rule as unmapped with %s and keeps it out of the fragment', (reason, rule) => {
+  ])('lists a Rule as unmapped with %s', (reason, rule) => {
     const result = exportClaudeCodeSettings(documentWith([rule]));
 
     expect(result).toMatchObject({
-      settings: { permissions: { allow: [], ask: [], deny: [] } },
+      settings: EMPTY_SETTINGS,
       unmappedRules: [{ ruleId: CREDENTIAL_RULE.ruleId, reason }],
     });
   });
-
-  test.each([
-    ['~/.aws/credentials', 'Read(~/.aws/credentials)'],
-    ['~/.ssh/id_ed25519', 'Read(~/.ssh/id_ed25519)'],
-    ['/etc/secrets/*.key', 'Read(//etc/secrets/*.key)'],
-    ['/var/run/token.?', 'Read(//var/run/token.?)'],
-  ])('translates the credential pattern %s to %s', (pattern, entry) => {
-    const rule = {
-      ...CREDENTIAL_RULE,
-      match: { ...CREDENTIAL_RULE.match, capabilities: ['read' as const] },
-    };
-
-    const result = exportClaudeCodeSettings(documentWith([rule], [pattern]));
-
-    expect(result.settings.permissions.deny).toEqual([entry]);
-  });
-
-  test.each([
-    '.env',
-    'secrets/**',
-    '~',
-    '~/.config/**.json',
-    '**',
-    '**/.env',
-    '**/*.pem',
-    '~/.ssh/**',
-    '~/x/**',
-    '/x/**',
-    '/var/run/secrets/**',
-    '~/**/.env',
-    '/home/**/.aws/credentials',
-    '/**/.env',
-    '/**/.aws/credentials',
-    '/etc/[ab].key',
-    '**/!keep',
-    '/etc//key',
-    ' ~/.netrc',
-  ])(
-    'lists the Rule as path_pattern_not_expressible when a credential pattern is %j',
-    (pattern) => {
-      const result = exportClaudeCodeSettings(
-        documentWith([CREDENTIAL_RULE], ['~/.ssh/id_ed25519', pattern]),
-      );
-
-      expect(result).toMatchObject({
-        settings: { permissions: { allow: [], ask: [], deny: [] } },
-        unmappedRules: [{ ruleId: CREDENTIAL_RULE.ruleId, reason: 'path_pattern_not_expressible' }],
-      });
-    },
-  );
 
   test('leaves the document unchanged and gives the same export on every call', () => {
     const document = deepFreeze(documentWith([CREDENTIAL_RULE, ...DEFAULT_POLICY_DOCUMENT.rules]));
@@ -204,77 +149,6 @@ describe('exportClaudeCodeSettings', () => {
     const result = exportClaudeCodeSettings(documentWith([CREDENTIAL_RULE]));
 
     expect(ClaudeCodeSettingsExportSchema.parse(result)).toEqual(result);
-  });
-});
-
-describe('exportClaudeCodeSettings keeps the meaning of every mapped credential pattern', () => {
-  // A gitignore-style matcher for anchored ~/ and //-rooted patterns: a whole ** segment
-  // matches zero or more directories (globstar), which the whole-value glob's literal slashes do not.
-  const gitignoreMatches = (pattern: string, path: string): boolean => {
-    const source = pattern
-      .replace(/\/\*\*\//g, '\u0001')
-      .replace(/\/\*\*$/g, '\u0002')
-      .replace(/^\*\*\//g, '\u0003')
-      .replace(/^\*\*$/g, '\u0004')
-      .replace(/\*/g, '\u0005')
-      .replace(/\?/g, '\u0006')
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\u0001/g, '/(?:[^/]+/)*')
-      .replace(/\u0002/g, '/.*')
-      .replace(/\u0003/g, '(?:[^/]+/)*')
-      .replace(/\u0004/g, '.*')
-      .replace(/\u0005/g, '[^/]*')
-      .replace(/\u0006/g, '[^/]');
-    return new RegExp(`^${source}$`).test(path);
-  };
-
-  const credentialEnvironment = (pattern: string): EnvironmentProfile => ({
-    ...DEFAULT_POLICY_DOCUMENT.environment,
-    credentialPaths: [pattern],
-  });
-
-  const matchesAsCredential = (pattern: string, path: string): boolean =>
-    resolveZone(
-      makeOperation({ capability: 'read', target: pathTarget(path, false) }),
-      credentialEnvironment(pattern),
-    ) === 'credentials';
-
-  test.each<{ pattern: string; mapped: boolean; paths: readonly string[] }>([
-    {
-      pattern: '~/.ssh/id_ed25519',
-      mapped: true,
-      paths: ['~/.ssh/id_ed25519', '~/.ssh/id_rsa'],
-    },
-    {
-      pattern: '/etc/secrets/*.key',
-      mapped: true,
-      paths: ['/etc/secrets/db.key', '/etc/secrets/sub/db.key'],
-    },
-    { pattern: '~/.aws/credentials', mapped: true, paths: ['~/.aws/credentials', '~/.aws/other'] },
-    { pattern: '/var/run/token.?', mapped: true, paths: ['/var/run/token.1', '/var/run/token.ab'] },
-    { pattern: '**', mapped: false, paths: ['.env', 'a/b'] },
-    { pattern: '**/.env', mapped: false, paths: ['.env', 'a/.env'] },
-    { pattern: '**/*.pem', mapped: false, paths: ['x.pem', 'a/x.pem'] },
-    { pattern: '~/.ssh/**', mapped: false, paths: ['~/.ssh/id_rsa', '~/.ssh'] },
-    { pattern: '/x/**', mapped: false, paths: ['/x/y', '/x'] },
-    { pattern: '~/**/.env', mapped: false, paths: ['~/.env', '~/a/.env'] },
-    { pattern: '/**/.env', mapped: false, paths: ['/.env', '/a/.env'] },
-    {
-      pattern: '/home/**/.aws/credentials',
-      mapped: false,
-      paths: ['/home/.aws/credentials', '/home/u/.aws/credentials'],
-    },
-  ])('$pattern maps only when it has no ** and preserves meaning', ({ pattern, mapped, paths }) => {
-    const result = exportClaudeCodeSettings(documentWith([CREDENTIAL_RULE], [pattern]));
-    const isMapped = result.unmappedRules.length === 0;
-    const meaningDiffers = paths.some(
-      (path) => matchesAsCredential(pattern, path) !== gitignoreMatches(pattern, path),
-    );
-
-    expect(isMapped).toBe(mapped);
-    if (isMapped) {
-      expect(meaningDiffers).toBe(false);
-    }
   });
 });
 
@@ -335,19 +209,10 @@ describe('PolicyModule.exportClaudeCodeSettings', () => {
 
     expect(result).toMatchObject(
       ok({
-        settings: {
-          permissions: {
-            allow: [],
-            ask: [],
-            deny: [
-              'Edit(//etc/secrets/*.key)',
-              'Edit(~/.ssh/id_ed25519)',
-              'Read(//etc/secrets/*.key)',
-              'Read(~/.ssh/id_ed25519)',
-            ],
-          },
-        },
-        unmappedRules: [],
+        settings: { permissions: { allow: [], ask: [], deny: [] } },
+        unmappedRules: [
+          { ruleId: 'deny_credential_read_write', reason: 'vendor_semantics_differ' },
+        ],
       }),
     );
   });

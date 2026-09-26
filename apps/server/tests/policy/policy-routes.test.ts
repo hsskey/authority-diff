@@ -282,7 +282,7 @@ describe('GET /api/v1/policy-versions/:id/exports/claude-code', () => {
     ],
   };
 
-  test('returns the reference fragment and the unmapped Rules of the stored version', async () => {
+  test('returns empty permission lists and every Rule of the stored version as unmapped', async () => {
     const policy = createPolicyModule(
       makeModule({ getVersion: () => Promise.resolve(ok(sampleVersion({ document }))) }),
     );
@@ -298,8 +298,9 @@ describe('GET /api/v1/policy-versions/:id/exports/claude-code', () => {
       body: {
         notice:
           'Reference fragment only. Authority Diff does not deploy these settings and does not enforce them.',
-        settings: { permissions: { allow: [], ask: [], deny: ['Read(~/.ssh/id_ed25519)'] } },
+        settings: { permissions: { allow: [], ask: [], deny: [] } },
         unmappedRules: [
+          { ruleId: 'deny_credential_read', reason: 'vendor_semantics_differ' },
           { ruleId: 'deny_credentials_access', reason: 'capability_not_expressible' },
           { ruleId: 'deny_shared_history_rewrite', reason: 'zone_not_expressible' },
         ],

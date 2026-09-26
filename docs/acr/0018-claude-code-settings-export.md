@@ -24,28 +24,30 @@ Most Capability and Zone pairs have no documented Claude Code form:
 - `agent_config` excludes paths that also match `credentialPaths`.
 - Remote Zones, `protected`, Reversibility, Analyzability, and a Mandate Exception have no Claude Code rule form.
 
-`credentials` is the first Zone in resolution order and is decided by the path alone.
-A `Read(path)` rule covers the file-reading tools and the Bash file commands and redirections Claude Code recognizes; an `Edit(path)` rule covers every built-in tool that edits a file.
-Deny, ask, and allow are evaluated deny first, then ask, then allow, independent of rule order, which is the same Effect order as a Decision.
+`credentials` is the first Zone in resolution order and is decided by the path alone, so `read` and `write` on `credentials` are the closest candidates: `Read(path)` and `Edit(path)` rules on each `credentialPaths` pattern.
+The documentation shows that even these cover more or less than the Rule:
+
+- A `Read` deny rule also blocks the Edit and Write tools on the same path (https://code.claude.com/docs/en/errors, "File is covered by a Read deny rule"), so a Rule that denies only `read` would also deny `write`.
+- A deny rule applies when either a symlink path or its target matches, and a deny or ask rule written through a symlinked directory also applies at the directory's real location.
+  An allow rule applies only when both the symlink path and its target match.
+  The classifier matches the path written in the command and does not resolve symlinks, so a deny or ask rule covers more paths than the Rule and an allow rule covers fewer.
+- The documentation does not say whether an ask or allow `Read` rule also affects the Edit and Write tools on the same path.
+- gitignore patterns read `**`, a trailing `/`, and several special characters differently from the whole-value glob of `credentialPaths`.
 
 ## Decision
 
-- A Rule is mapped only when all of these hold; otherwise it is listed in `unmappedRules` with the first reason that applies:
-  - no Mandate Exception (`mandate_exception`);
-  - `zones` is exactly `['credentials']` (`zone_not_expressible`);
-  - `capabilities` lists only `read` and `write` (`capability_not_expressible`);
-  - `reversibility` is null (`reversibility_condition`);
-  - `analyzability` is null (`analyzability_condition`);
-  - every `credentialPaths` pattern has a gitignore form (`path_pattern_not_expressible`).
-- A mapped Rule adds `Read(<pattern>)` for `read` and `Edit(<pattern>)` for `write` to the list named by its Effect, once per `credentialPaths` pattern.
-  A pattern starting with `/` becomes `//<rest>` and one starting with `~/` is kept.
-  A pattern is not translated when it starts any other way, when it contains `**` or `//`, or when it contains `[`, `]`, `\`, `!`, `#`, or leading or trailing white space, because gitignore reads those differently from the whole-value glob.
-  `**` in any position is unmapped; safe subset-position proofs can reopen this narrowly in the future.
-- Each of `allow`, `ask`, and `deny` is sorted in UTF-16 code-unit order without duplicates, so the same document always gives the same fragment.
-  `unmappedRules` keeps document order.
+- No Rule is mapped: `settings.permissions.allow`, `ask`, and `deny` are always present and always empty, and every Rule is listed in `unmappedRules` in document order.
+- Each unmapped Rule carries the first reason that applies, from the most specific to the most general:
+  - it has a Mandate Exception (`mandate_exception`);
+  - `zones` is not exactly `['credentials']` (`zone_not_expressible`);
+  - `capabilities` lists a Capability other than `read` and `write` (`capability_not_expressible`);
+  - `reversibility` is not null (`reversibility_condition`);
+  - `analyzability` is not null (`analyzability_condition`);
+  - otherwise the Rule has a candidate `Read` or `Edit` form whose documented vendor semantics differ from the Rule, as listed in Context (`vendor_semantics_differ`).
+- A mapped subset may be reopened later only with vendor-verified proof that the exported form covers exactly what the Rule covers.
 - The response is `{ notice, settings: { permissions: { allow, ask, deny } }, unmappedRules: [{ ruleId, reason }] }`.
+  The shape keeps the permission lists so a later mapped subset does not change the contract.
   `notice` states that the fragment is a reference, is not deployed, and is not enforced by Authority Diff.
-  The fragment carries no `defaultMode`: tool calls no mapped rule matches follow the runtime's own permission mode, not the Policy's default `ask`.
 - `ClaudeCodeSettingsExportSchema` and `UnmappedRuleReasonSchema` are in `packages/policy/schema.ts`; `PolicyModule.exportClaudeCodeSettings(id)` reads the stored version and calls the pure `exportClaudeCodeSettings(document)` from `@authority/policy`.
   `routes.exportClaudeCodeSettings` is added to the contract table.
   An unknown version is `policy.version_not_found` (404).
@@ -54,6 +56,7 @@ Deny, ask, and allow are evaluated deny first, then ask, then allow, independent
 
 ## Alternatives
 
+- Map `read` and `write` on `credentials` to `Read` and `Edit` rules and list only the other Rules: the documented vendor semantics in Context make those rules wider or narrower than the Rule, which docs/design.md 31.2 forbids.
 - Export the expressible part of a Rule, such as `Read` and `Edit` deny rules for `deny_credentials_access`, and list the rest: docs/design.md 31.2 forbids exporting a Rule whose meaning changed, and a Rule that is both exported and unmapped is ambiguous.
 - `Bash(<program> *)` rules per Capability: the classifier and a command prefix disagree on wrappers, interpreters, and compound commands, so the rule would not mean the same thing.
 - `WebFetch(domain:<host>)` for `fetch` on a remote Zone: `fetch` also covers `git clone`, `curl`, and package installs, which `WebFetch` rules do not match.
@@ -62,8 +65,7 @@ Deny, ask, and allow are evaluated deny first, then ask, then allow, independent
 
 ## Consequences
 
-- The default template maps no Rule: each of its Rules has a Zone, a Capability, or a condition listed above.
-  A Rule such as `deny` on `read` and `write` in `credentials` maps.
+- Every export, including one of the default template, has empty permission lists; `unmappedRules` tells an operator which Rules to write by hand and why none was exported.
 - The fragment is a reference for an operator; Authority Diff does not write it to any settings file or endpoint.
 - `apps/web` and `apps/cli` are unchanged.
 - OpenAPI generation stays out of V1 (docs/cutline.md 13), so the route's contract description is its TSDoc in `packages/contracts`.
