@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 import type { AppError, Clock, IdGenerator, Logger, TransactionRunner } from '@authority/kernel';
 import {
+  ClaudeCodeSettingsExportResponseSchema,
   CreatePolicyActivationRequestSchema,
   CreatePolicyRequestSchema,
   CreatePolicyVersionRequestSchema,
@@ -172,6 +173,18 @@ export function registerPolicyRoutes(app: Hono<AppEnv>, policy: PolicyModule): v
       return respondError(c, result.error);
     }
     return c.json(result.value);
+  });
+
+  app.get(`${API}/policy-versions/:id/exports/claude-code`, async (c) => {
+    const id = PolicyVersionIdSchema.safeParse(c.req.param('id'));
+    if (!id.success) {
+      return respondError(c, invalidRequest('invalid version id', {}));
+    }
+    const result = await policy.exportClaudeCodeSettings(id.data);
+    if (!result.ok) {
+      return respondError(c, result.error);
+    }
+    return c.json(ClaudeCodeSettingsExportResponseSchema.parse(result.value));
   });
 
   app.post(`${API}/policy-versions/:id/activations`, async (c) => {

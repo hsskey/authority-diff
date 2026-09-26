@@ -58,6 +58,8 @@ import → activity overview → first Policy (draft) → adoption preview → r
    Changing runtime settings to match the Policy, for example through managed settings, happens outside Authority Diff.
    An operator can record through the API that this change happened.
    Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
+   `GET /api/v1/policy-versions/{id}/exports/claude-code` returns a Claude Code settings fragment as a reference: only Rules with a deterministic Claude Code form are in it, every other Rule is listed under `unmappedRules` with a reason, and Authority Diff does not deploy or enforce the fragment (ACR-0018).
+   The default template has no such Rule, so its fragment is empty.
 7. **Change review.** A draft made from the accepted version gets a Change Review.
    It evaluates the same Actions under both versions, shows Widening and Narrowing groups, takes Verdicts, and ends in accept or reject with an Evidence Report.
 8. **Conformance.** Observation hooks report what the runtime did.
@@ -180,7 +182,7 @@ The ranking, the lowest-margin Scenarios, the schemaVersion 2 additions, and the
 - Authority Diff makes no claim that the runtime behaves as an evaluation result says; conformance measures that by comparing Runtime Observations with the accepted Policy.
 - Jev is used only for exploratory probes (`authority probe`) and takes no part in replay, review, or conformance.
 
-Rolling back a Policy Version, settings export, API tokens and roles, provider calibration, a Codex parser, and the other work listed in `docs/cutline.md` chapter 13 are out of scope.
+Rolling back a Policy Version, deploying settings, API tokens and roles, provider calibration, a Codex parser, and the other work listed in `docs/cutline.md` chapter 13 are out of scope.
 
 ### Limits
 

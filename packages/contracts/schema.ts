@@ -11,6 +11,7 @@ import {
 } from '@authority/trace/schema';
 import {
   DecisionSchema,
+  ClaudeCodeSettingsExportSchema,
   PolicyActivationSchema,
   PolicyDocumentSchema,
   PolicyIdSchema,
@@ -218,6 +219,12 @@ export type CreatePolicyActivationRequest = z.infer<typeof CreatePolicyActivatio
 
 export const PolicyActivationResponseSchema = PolicyActivationSchema;
 export type PolicyActivationResponse = z.infer<typeof PolicyActivationResponseSchema>;
+
+/** A reference Claude Code settings fragment: Authority Diff does not deploy or enforce it. Rules without a deterministic Claude Code form are listed in `unmappedRules` instead of the fragment. */
+export const ClaudeCodeSettingsExportResponseSchema = ClaudeCodeSettingsExportSchema;
+export type ClaudeCodeSettingsExportResponse = z.infer<
+  typeof ClaudeCodeSettingsExportResponseSchema
+>;
 
 /** Omit `kind` for `version_diff`. `conformance` baselines on observed_runtime; `adoption` applies the candidate with no baseline. */
 export const CreateReplayRunRequestSchema = z.union([

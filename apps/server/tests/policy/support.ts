@@ -84,6 +84,7 @@ export function makeModule(overrides: Partial<PolicyModule> = {}): PolicyModule 
     listActivationsBetween: () => unconfigured(),
     seedAcceptedPolicy: () => unconfigured(),
     validateVersion: () => unconfigured(),
+    exportClaudeCodeSettings: () => unconfigured(),
     ...overrides,
   };
 }
