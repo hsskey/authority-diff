@@ -168,6 +168,7 @@ function main(): void {
   const evidenceDir = join(root, 'docs/evidence');
   const paths = [
     'README.md',
+    'README.ko.md',
     ...readdirSync(evidenceDir)
       .filter((name) => name.endsWith('.md'))
       .sort()
