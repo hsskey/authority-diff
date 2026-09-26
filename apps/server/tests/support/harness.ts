@@ -7,8 +7,8 @@ import {
   createMemoryLogger,
   createSequentialIdGenerator,
 } from '@authority/platform/testing';
-import { createApp } from '../../src/http/app.ts';
-import type { ServerDeps } from '../../src/http/env.ts';
+import { createApp } from '#src/http/app.ts';
+import type { ServerDeps } from '#src/http/env.ts';
 
 export function testConfig(token = 'test-token'): Config {
   const result = parseConfig({

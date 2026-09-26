@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#schema": "./schema.ts"
+  },
   "exports": {
     "./schema": "./schema.ts",
     "./routes": "./routes.ts"

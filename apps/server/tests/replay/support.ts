@@ -5,11 +5,11 @@ import { createSequentialIdGenerator } from '@authority/platform/testing';
 import type { ReplayModule } from '@authority/replay';
 import { AdoptionGroupSchema, ReplayRunSchema } from '@authority/replay/schema';
 import type { AdoptionGroup, ReplayRun } from '@authority/replay/schema';
-import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
-import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
-import { registerAdoptionGroupsRoutes } from '../../src/http/routes/adoption-groups.routes.ts';
-import { registerReplayRunsRoutes } from '../../src/http/routes/replay-runs.routes.ts';
-import type { AppEnv } from '../../src/http/env.ts';
+import { createAuthMiddleware } from '#src/http/middleware/auth.ts';
+import { createRequestIdMiddleware } from '#src/http/middleware/request-id.ts';
+import { registerAdoptionGroupsRoutes } from '#src/http/routes/adoption-groups.routes.ts';
+import { registerReplayRunsRoutes } from '#src/http/routes/replay-runs.routes.ts';
+import type { AppEnv } from '#src/http/env.ts';
 import { testConfig } from '../support/harness.ts';
 
 export const TOKEN = 'test-token';

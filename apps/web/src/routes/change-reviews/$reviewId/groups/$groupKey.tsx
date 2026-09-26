@@ -10,21 +10,21 @@ import type {
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
 import { foldHomePaths } from '@authority/kernel';
-import { callRoute, describeApiError } from '../../../../shared/api-client.ts';
-import { EmptyState } from '../../../../shared/components/EmptyState.tsx';
-import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
-import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
+import { callRoute, describeApiError } from '#src/shared/api-client.ts';
+import { EmptyState } from '#src/shared/components/EmptyState.tsx';
+import { ErrorState } from '#src/shared/components/ErrorState.tsx';
+import { LoadingState } from '#src/shared/components/LoadingState.tsx';
 import {
   adoptionGroupHeadline,
   adoptionGroupLabel,
   diffGroupHeadline,
   diffGroupLabel,
   formatZoneTransition,
-} from '../../../../features/change-review/format.ts';
-import { VerdictSelect } from '../../../../features/change-review/VerdictSelect.tsx';
-import { usePageTitle } from '../../../../shared/use-page-title.ts';
-import { TextLink } from '../../../../shared/components/TextLink.tsx';
-import { useT } from '../../../../shared/i18n/use-t.ts';
+} from '#src/features/change-review/format.ts';
+import { VerdictSelect } from '#src/features/change-review/VerdictSelect.tsx';
+import { usePageTitle } from '#src/shared/use-page-title.ts';
+import { TextLink } from '#src/shared/components/TextLink.tsx';
+import { useT } from '#src/shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/change-reviews/$reviewId/groups/$groupKey')({
   component: DiffGroupPage,

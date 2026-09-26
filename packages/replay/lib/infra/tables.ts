@@ -17,7 +17,7 @@ import type {
   ConformanceFindingKind,
   ReplayRunKind,
   ReplayRunStatus,
-} from '../../schema.ts';
+} from '#schema';
 import type { StoredRunStats } from '../app/ports.ts';
 
 // Store IsoTimestamp as text: timestamptz rewrites the brand format; ISO-Z UTC sorts as time (docs/design.md chapter 25).

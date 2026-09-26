@@ -1,5 +1,5 @@
 import type { Capability } from '@authority/action/schema';
-import type { Reversibility, Zone } from '../../schema.ts';
+import type { Reversibility, Zone } from '#schema';
 
 // Local send/push zones are unreachable through classification, so they default to irreversible; the design table only specifies remote and protected (docs/design.md 13.4).
 

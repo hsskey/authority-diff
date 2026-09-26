@@ -8,7 +8,7 @@ import type {
   PermissionModeCount,
   ReplayStats,
 } from '@authority/replay/schema';
-import type { ChangeReviewStatus, Verdict } from '../../schema.ts';
+import type { ChangeReviewStatus, Verdict } from '#schema';
 
 /**
  * The two headline-wording fixes (R3) live in replay's headline rendering, so

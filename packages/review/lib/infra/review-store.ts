@@ -12,7 +12,7 @@ import {
   type ChangeReviewId,
   type ChangeReviewStatus,
   type ReviewDecision,
-} from '../../schema.ts';
+} from '#schema';
 import type {
   ChainedDecision,
   DecideStoreInput,

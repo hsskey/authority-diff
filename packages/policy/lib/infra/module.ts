@@ -1,6 +1,6 @@
 import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
-import type { ClaudeCodeSettingsExport, PolicyIssue, PolicyVersionId } from '../../schema.ts';
+import type { ClaudeCodeSettingsExport, PolicyIssue, PolicyVersionId } from '#schema';
 import { exportClaudeCodeSettings } from '../domain/export-claude-code-settings.ts';
 import { validatePolicyDocument } from '../domain/validate-policy-document.ts';
 import type { PolicyRepository } from './repository.ts';

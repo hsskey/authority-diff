@@ -1,6 +1,6 @@
 import { canonicalJson, sha256Hex } from '@authority/kernel/hash';
 import type { Runtime } from '@authority/action/schema';
-import type { RuntimeObservation } from '../../schema.ts';
+import type { RuntimeObservation } from '#schema';
 import { deriveActionKey } from '../client/actions.ts';
 import type { TraceStore, WriteCounts } from './ports.ts';
 

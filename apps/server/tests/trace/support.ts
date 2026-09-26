@@ -5,10 +5,10 @@ import { createSequentialIdGenerator } from '@authority/platform/testing';
 import type { TraceModule } from '@authority/trace';
 import { StoredAgentActionSchema } from '@authority/trace/schema';
 import type { ActivityOverview, StoredAgentAction } from '@authority/trace/schema';
-import { createAuthMiddleware } from '../../src/http/middleware/auth.ts';
-import { createRequestIdMiddleware } from '../../src/http/middleware/request-id.ts';
-import { registerTraceRoutes } from '../../src/modules/trace.wiring.ts';
-import type { AppEnv } from '../../src/http/env.ts';
+import { createAuthMiddleware } from '#src/http/middleware/auth.ts';
+import { createRequestIdMiddleware } from '#src/http/middleware/request-id.ts';
+import { registerTraceRoutes } from '#src/modules/trace.wiring.ts';
+import type { AppEnv } from '#src/http/env.ts';
 import { testConfig } from '../support/harness.ts';
 
 export const TOKEN = 'test-token';

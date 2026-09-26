@@ -26,8 +26,8 @@ import {
   CONFORMANCE_DAILY_JOB,
   createConformanceDailyJob,
   previousUtcDay,
-} from '../../src/jobs/conformance-daily.job.ts';
-import { registerJobs } from '../../src/jobs/index.ts';
+} from '#src/jobs/conformance-daily.job.ts';
+import { registerJobs } from '#src/jobs/index.ts';
 import { okProbe } from '../support/harness.ts';
 import actionFixture from '../../../../tests/fixtures/action-for-replay.json' with { type: 'json' };
 import candidateFixture from '../../../../tests/fixtures/candidate-policy.json' with { type: 'json' };

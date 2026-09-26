@@ -8,19 +8,19 @@ import {
   type ValidatePolicyVersionResponse,
 } from '@authority/contracts/schema';
 import { routes } from '@authority/contracts/routes';
-import { callRoute, describeApiError, type ApiClientError } from '../../../../shared/api-client.ts';
-import { ErrorState } from '../../../../shared/components/ErrorState.tsx';
-import { LoadingState } from '../../../../shared/components/LoadingState.tsx';
-import { PageTitle } from '../../../../shared/components/PageTitle.tsx';
-import { DataTable, Td, Th } from '../../../../shared/components/DataTable.tsx';
-import { MetaGrid, MONO } from '../../../../shared/components/MetaGrid.tsx';
-import { PanelStack } from '../../../../shared/components/Panel.tsx';
-import { SectionTitle } from '../../../../shared/components/SectionTitle.tsx';
-import { Stack } from '../../../../shared/components/Stack.tsx';
-import { usePageTitle } from '../../../../shared/use-page-title.ts';
-import { TextLink } from '../../../../shared/components/TextLink.tsx';
-import type { Messages } from '../../../../shared/i18n/en.ts';
-import { useT } from '../../../../shared/i18n/use-t.ts';
+import { callRoute, describeApiError, type ApiClientError } from '#src/shared/api-client.ts';
+import { ErrorState } from '#src/shared/components/ErrorState.tsx';
+import { LoadingState } from '#src/shared/components/LoadingState.tsx';
+import { PageTitle } from '#src/shared/components/PageTitle.tsx';
+import { DataTable, Td, Th } from '#src/shared/components/DataTable.tsx';
+import { MetaGrid, MONO } from '#src/shared/components/MetaGrid.tsx';
+import { PanelStack } from '#src/shared/components/Panel.tsx';
+import { SectionTitle } from '#src/shared/components/SectionTitle.tsx';
+import { Stack } from '#src/shared/components/Stack.tsx';
+import { usePageTitle } from '#src/shared/use-page-title.ts';
+import { TextLink } from '#src/shared/components/TextLink.tsx';
+import type { Messages } from '#src/shared/i18n/en.ts';
+import { useT } from '#src/shared/i18n/use-t.ts';
 
 export const Route = createFileRoute('/policies/$policyId/versions/$versionId')({
   component: PolicyVersionPage,

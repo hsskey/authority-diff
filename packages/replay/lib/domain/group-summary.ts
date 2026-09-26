@@ -3,7 +3,7 @@ import type { Effect } from '@authority/kernel';
 import type { Capability, Target } from '@authority/action/schema';
 import type { Zone } from '@authority/policy/schema';
 import type { ActionForReplay } from '@authority/trace/schema';
-import type { DeriveTargetKey } from '../../schema.ts';
+import type { DeriveTargetKey } from '#schema';
 
 /** Restrictiveness order used everywhere a "most restrictive" Effect is chosen. */
 export const EFFECT_RANK: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };

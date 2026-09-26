@@ -6,7 +6,7 @@ import type {
   ChangeReviewStatus,
   ReviewDecision,
   Verdict,
-} from '../../schema.ts';
+} from '#schema';
 import type { AuditTail, TraceSourceCounts } from '../domain/report.ts';
 
 export interface StoredVerdict {

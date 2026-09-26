@@ -7,8 +7,8 @@ import { redactText } from '../client/redact.ts';
 import { importRejected, redactionMissing } from '../domain/errors.ts';
 import { isContentRejection } from '../domain/import-rejection.ts';
 import { stripNul, stripNulDeep } from '../client/strip-nul.ts';
-import { AgentSessionIdSchema, TraceImportIdSchema } from '../../schema.ts';
-import type { ParsedSession, StoredAgentAction } from '../../schema.ts';
+import { AgentSessionIdSchema, TraceImportIdSchema } from '#schema';
+import type { ParsedSession, StoredAgentAction } from '#schema';
 import type { TraceStore, WriteCounts } from './ports.ts';
 
 export interface ImportTraceDeps {

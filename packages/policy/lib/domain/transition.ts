@@ -1,6 +1,6 @@
 import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
-import type { PolicyVersionStatus } from '../../schema.ts';
+import type { PolicyVersionStatus } from '#schema';
 
 export type PolicyTransition = 'submit' | 'accept' | 'reject' | 'withdraw';
 

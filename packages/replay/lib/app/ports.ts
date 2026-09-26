@@ -20,7 +20,7 @@ import type {
   StoredChangedAction,
   StoredConformanceFinding,
   StoredDiffGroup,
-} from '../../schema.ts';
+} from '#schema';
 
 /**
  * The stored `stats` jsonb of a version_diff or conformance run: the diff

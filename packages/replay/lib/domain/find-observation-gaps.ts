@@ -1,5 +1,5 @@
 import type { IsoTimestamp } from '@authority/kernel';
-import type { ObservationGap } from '../../schema.ts';
+import type { ObservationGap } from '#schema';
 
 const GAP_MIN_MS = 24 * 60 * 60 * 1000;
 

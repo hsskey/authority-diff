@@ -24,7 +24,7 @@ import {
   type ReviewDecision,
   type Verdict,
   type VerdictSnapshotEntry,
-} from '../../schema.ts';
+} from '#schema';
 import { computeGate } from '../domain/gate.ts';
 import {
   isEffectAllowedForFinding,

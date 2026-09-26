@@ -8,7 +8,7 @@
  * given inline code or a heredoc is also `execute` + `none`, with credential and
  * URL literals in the body surfaced as `read`/`send`.
  */
-import type { Analyzability, Capability, Target } from '../../schema.ts';
+import type { Analyzability, Capability, Target } from '#schema';
 import type { ShellWord } from '../shell/ast.ts';
 import { hasFlag, isCommandLookup, nonFlagArgs, type NormalizedCommand } from './command.ts';
 import { draft, unlessNoEffect, type OperationDraft } from './draft.ts';

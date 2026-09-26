@@ -5,8 +5,9 @@ import { dirname, join } from 'node:path';
 // Injects one deliberate violation per preserved lint behavior, confirms Oxlint
 // reports it for the intended rule, then removes the fixture. Exits non-zero if
 // any injected violation did NOT fire (a vacuous pass). This is the lint
-// counterpart of scripts/prove-boundaries.ts. The 19 behaviors are the lint
-// contract carried over from ESLint; source of truth: .oxlintrc.json. 19 rules.
+// counterpart of scripts/prove-boundaries.ts. Behaviors 1-19 are the lint
+// contract carried over from ESLint; 20 is the same-package import-depth rule from
+// scripts/oxlint-import-depth.ts. Source of truth: .oxlintrc.json. 20 rules.
 
 interface Proof {
   readonly id: string;
@@ -155,6 +156,13 @@ const PROOFS: readonly Proof[] = [
     typeAware: true,
     path: `${LIB}/zz_prove_unsafe_argument.ts`,
     content: 'const bad: any = 1;\nexport function run(): void {\n  Math.abs(bad);\n}\n',
+  },
+  {
+    id: '20 relative import two levels up inside the same package',
+    rule: 'no-deep-relative-import',
+    typeAware: false,
+    path: `${DOMAIN}/zz_prove_deep_relative.ts`,
+    content: "import { invariant } from '../../index.ts';\nexport const i = invariant;\n",
   },
 ];
 

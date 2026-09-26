@@ -1,4 +1,4 @@
-import type { PolicyDocumentV2 } from '../../schema.ts';
+import type { PolicyDocumentV2 } from '#schema';
 
 // Default template from docs/design.md Appendix A. Paths are absolute; generic environment facts are placeholders.
 // ask_agent_config_change keeps no Mandate Exception as the control for the two ask Rules that have one.

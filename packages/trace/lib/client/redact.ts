@@ -1,4 +1,4 @@
-import type { RedactText } from '../../schema.ts';
+import type { RedactText } from '#schema';
 
 interface RedactionRule {
   readonly kind: string;

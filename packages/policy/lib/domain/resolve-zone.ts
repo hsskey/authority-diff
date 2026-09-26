@@ -1,5 +1,5 @@
 import type { Capability, Operation, Target } from '@authority/action/schema';
-import type { EnvironmentProfile, ResolveZone, Zone } from '../../schema.ts';
+import type { EnvironmentProfile, ResolveZone, Zone } from '#schema';
 import { compileGlob, matchesAny } from './glob.ts';
 
 const LOCAL_CAPABILITIES: ReadonlySet<Capability> = new Set([

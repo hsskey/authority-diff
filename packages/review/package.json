@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib/*": "./lib/*",
+    "#schema": "./schema.ts"
+  },
   "exports": {
     ".": "./index.ts",
     "./schema": "./schema.ts"

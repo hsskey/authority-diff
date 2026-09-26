@@ -4,7 +4,7 @@ import type {
   ReviewDiffGroupResponse,
 } from '@authority/contracts/schema';
 import { foldHomePaths } from '@authority/kernel';
-import type { Messages } from '../../shared/i18n/en.ts';
+import type { Messages } from '#src/shared/i18n/en.ts';
 
 type Verdict = ReviewDiffGroupResponse['verdict'];
 type NonNullVerdict = Exclude<Verdict, null>;

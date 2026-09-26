@@ -1,4 +1,4 @@
-import type { PolicyIssue, ValidatePolicyDocument } from '../../schema.ts';
+import type { PolicyIssue, ValidatePolicyDocument } from '#schema';
 
 // Empty glob or production-marker strings are invalid_pattern; a non-empty unparseable production marker is invalid_production_marker.
 

@@ -634,10 +634,11 @@ Basis documents are docs/design.md chapters 19–23 and docs/cutline.md chapters
    forbid drizzle-orm and postgres import (no-restricted-imports, exception packages/*/lib/infra/** and packages/platform/**),
    forbid Date use in packages/*/lib/domain/** and packages/*/lib/app/** (no-restricted-globals: Date) and
    forbid Math.random() (no-restricted-properties). Oxlint has no no-restricted-syntax, so those three checks are expressed with native rules.
+   A JS plugin rule under `jsPlugins` (authority/no-deep-relative-import, scripts/oxlint-import-depth.ts) forbids a relative import that climbs two or more levels inside one package; use the package's `#lib/*`, `#schema`, or `#src/*` subpath imports instead (ACR-0020).
 
 7. scripts/prove-boundaries.ts and `pnpm lint:boundaries:prove`.
    Temporarily create a violating file, run depcruise, confirm it fails with the expected rule name, and delete the temporary file.
-   8: (a) kernel's test imports its own lib/ directly -> tests-through-entrypoints
+   10: (a) kernel's test imports its own lib/ directly -> tests-through-entrypoints
         (b) a kernel lib/domain file imports node:fs -> domain-is-pure
         (c) temporary package packages/zz-proof imports packages/kernel/lib/ -> entrypoint-boundary-across-packages
         (d) temporary packages/action/lib/domain/x.ts imports @authority/platform -> package-layering or domain-is-pure
@@ -645,10 +646,12 @@ Basis documents are docs/design.md chapters 19–23 and docs/cutline.md chapters
         (f) temporary packages/trace/client.ts transitively reaches lib/infra via lib/client -> pure-entry-points
         (g) a temporary tools/ file imports packages/kernel/lib/ -> entrypoint-boundary-from-app
         (h) a temporary schema.ts imports a root file of another package that is not schema.ts -> schema-imports-schema-only
+        (i) a kernel lib/domain file reaches lib/infra through the #lib alias -> domain-is-pure-no-infra
+        (j) a pure entry point (trace/client.ts) reaches lib/infra through the #lib alias -> pure-entry-points
    If even one does not fail, the script exits 1. When it ends the work tree must be clean.
    The cruise target list (packages, apps, tools) is defined in one place, scripts/boundary-roots.ts, and shared by lint:boundaries and this script.
 
-7b. scripts/prove-lint.ts and `pnpm lint:prove`. The same way, prove each of the 19 lint rules above fails as the expected Oxlint rule.
+7b. scripts/prove-lint.ts and `pnpm lint:prove`. The same way, prove each of the 20 lint rules above fails as the expected Oxlint rule.
 
 8. root scripts: typecheck, lint, format, format:check, lint:css, lint:prove, lint:boundaries, lint:boundaries:prove, check:evidence, check:doc-invariance, check:i18n, check:korean, test,
    check(= typecheck + lint + format:check + lint:css + lint:boundaries + lint:prove + check:evidence + check:doc-invariance + check:i18n + check:korean + test).
