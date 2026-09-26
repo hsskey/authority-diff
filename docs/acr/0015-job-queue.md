@@ -39,7 +39,8 @@ ADR-0006 already chose pg-boss behind a `JobQueue` port; docs/cutline.md 7 reser
   `conformance.daily` is scheduled with cron `0 1 * * *` (UTC) and `missed: 'once'`.
   Its window is the previous whole UTC day, `windowFrom` through `windowTo`.
   It checks the Policy Version of the latest Policy Activation declared at or before `windowFrom`, the declaration in effect when the day began, and requests a conformance Replay Run of that version over the window.
-  When a different Policy Version was declared after `windowFrom` and at or before `windowTo`, it skips the day and logs `conformance_daily_skipped` with reason `policy_activation_changed`, the version in effect at `windowFrom`, and the newly declared version and time; no run is requested and no result is recorded.
+  When a different Policy Version was declared in the same millisecond as that declaration, or after `windowFrom` and at or before `windowTo`, it skips the day and logs `conformance_daily_skipped` with reason `policy_activation_changed`, the version in effect at `windowFrom`, and the conflicting declared version and time; no run is requested and no result is recorded.
+  A declaration timestamp has millisecond resolution and its id is not ordered by time, so a different version declared in the same millisecond as the starting one cannot be ordered against it, and the day is treated as ambiguous instead of checked against a version picked arbitrarily.
   A re-declaration of the same version during the day does not skip it, and a declaration after `windowTo` does not affect it.
   With no declaration at `windowFrom` it logs `conformance_daily_skipped` with reason `no_policy_activation` and does nothing, even if a version was declared later that day.
   A request error is logged, not retried.

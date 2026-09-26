@@ -276,6 +276,22 @@ describe('conformance.daily job', () => {
       ],
       declaredVersionId,
     ],
+    [
+      'a version declared twice in the same millisecond',
+      [
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+      ],
+      declaredVersionId,
+    ],
+    [
+      'a version declared one millisecond after a different one',
+      [
+        declared(otherVersionId, '2026-01-01T11:59:59.999Z'),
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+      ],
+      declaredVersionId,
+    ],
   ])(
     'requests a run over the previous UTC day of %s',
     async (_, declarations, expectedVersionId) => {
@@ -305,6 +321,7 @@ describe('conformance.daily job', () => {
         declared(otherVersionId, '2026-01-02T12:00:00.000Z'),
       ],
       otherVersionId,
+      '2026-01-02T12:00:00.000Z',
     ],
     [
       'an older version is declared again during the day',
@@ -314,8 +331,27 @@ describe('conformance.daily job', () => {
         declared(otherVersionId, '2026-01-02T12:00:00.000Z'),
       ],
       otherVersionId,
+      '2026-01-02T12:00:00.000Z',
     ],
-  ])('skips the day and logs why when %s', async (_, declarations, switchedTo) => {
+    [
+      'a different version is declared in the same millisecond before the day',
+      [
+        declared(otherVersionId, '2026-01-01T12:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-01T12:00:00.000Z'),
+      ],
+      otherVersionId,
+      '2026-01-01T12:00:00.000Z',
+    ],
+    [
+      'a different version is declared in the same millisecond at the start of the day',
+      [
+        declared(otherVersionId, '2026-01-02T00:00:00.000Z'),
+        declared(declaredVersionId, '2026-01-02T00:00:00.000Z'),
+      ],
+      otherVersionId,
+      '2026-01-02T00:00:00.000Z',
+    ],
+  ])('skips the day and logs why when %s', async (_, declarations, switchedTo, declaredAt) => {
     const replay = stubReplay();
     const logger = createMemoryLogger();
     const job = createConformanceDailyJob({
@@ -336,7 +372,7 @@ describe('conformance.daily job', () => {
           reason: 'policy_activation_changed',
           policyVersionId: declaredVersionId,
           declaredPolicyVersionId: switchedTo,
-          declaredAt: '2026-01-02T12:00:00.000Z',
+          declaredAt,
           ...FIXTURE_DAY,
         },
       },
