@@ -17,3 +17,11 @@ Actions imported before this change keep their stored keys until they are import
 
 `scp user@host:/path .` copies from the remote host to the local directory but is classified as a `send` to that `host`; under the default template a `fetch` and a `send` of `unknown_remote` both resolve to `ask`, so the result is the same but the direction is wrong.
 This is resolved in the 0.2.6 classifier code, where a `host:path` source operand of `scp`, `rsync`, or `sftp` is a `fetch` and only a `host:path` destination is a `send`; the measured values in this document predate that remeasure.
+
+## The operator's local tools are left out of the program table
+
+The program table recognizes only the public tool list; the operator's local tools in the measured corpus are intentionally left out of it, so their Operations stay `none` with `program_unrecognized`.
+The three unrecognized programs that leave the most Actions `none` are local tools, `<local-tool-02>`, `<local-tool-08>`, and `<local-tool-04>` in the evidence legend.
+Their measured share of the `none` Actions is in `docs/evidence/classifier-local-tools.md`.
+A table entry for them would mean nothing in another environment and would put names from one operator's environment into the repository.
+A possible direction, not planned work: an Environment Profile mechanism where an organization registers its own table of local program names, each aliased to a Capability and a Target.
