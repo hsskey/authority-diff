@@ -1,6 +1,6 @@
 # ACR-0018 Claude Code settings export
 
-Status: proposed (2026-09-26).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 8, 26.2, 31.2; docs/cutline.md 7, 13.
 

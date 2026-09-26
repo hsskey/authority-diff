@@ -1,6 +1,6 @@
 # ACR-0017 Conformance observation gaps
 
-Status: proposed (2026-09-26).
+Status: accepted (2026-09-26).
 Procedure: docs/design.md 33.3.
 Scope: docs/design.md 12.6, 31.2, 31.3; ACR-0011.
 
