@@ -167,7 +167,7 @@ _Avoid_: top targets
 The judgement a person records on a Diff Group or Adoption Group.
 `expected`, `investigate`, `unexpected`.
 Screen labels differ by Review Kind.
-The Korean screen strings live in the web app (`apps/web`), not in this file.
+The screen strings live in the web app (`apps/web`), not in this file.
 `change` uses expected change / needs investigation / unexpected; `adoption` uses intended restriction / hold / policy needs a fix.
 
 **Change Review**:

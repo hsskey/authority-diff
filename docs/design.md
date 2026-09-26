@@ -998,7 +998,7 @@ flowchart LR
 - The first version is made as `draft`, and if there is no accepted version the Change Review's kind becomes `adoption` (first-adoption review).
   One candidate is applied to past Actions with no baseline, and past runtime approval is not inferred.
 - `accepted` is a review result, not deployment or enforcement.
-  The step that applies it to runtime settings is outside Authority Diff, and Authority Diff does not store whether it was applied.
+  The step that applies it to runtime settings is outside Authority Diff, and Authority Diff stores only the record of an operator declaring that they applied a Policy Version; it does not verify or store whether the policy was actually applied.
   Do not use accepted as active, applied, or enforced.
 - After apply, runtime observation and conformance replay report differences between actual behavior and the accepted version as findings.
 
