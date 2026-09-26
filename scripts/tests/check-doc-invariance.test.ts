@@ -14,17 +14,17 @@ import {
   snapshotPathFor,
 } from '../check-doc-invariance.ts';
 
-const korean = `# Title
+const spanish = `# Title
 
-## 1. 한 줄
+## 1. Una línea
 
-3개 항목과 15,242건.
+3 elementos y 15,242 casos.
 
-| 번호 | 값 |
+| núm | valor |
 | --- | --- |
 | 1 | 10 |
 
-### 1.1 세부
+### 1.1 Detalle
 `;
 
 const english = `# Title
@@ -42,23 +42,23 @@ const english = `# Title
 
 describe('extractDocShape', () => {
   it('keeps numbered heading markers and ignores title prose', () => {
-    expect(extractDocShape(korean).headings).toEqual(['#', '## 1', '### 1.1']);
+    expect(extractDocShape(spanish).headings).toEqual(['#', '## 1', '### 1.1']);
     expect(extractDocShape('## 10. 7 days left\n').headings).toEqual(['## 10']);
   });
 
   it('collects every numeric token including grouped thousands', () => {
-    expect(extractDocShape(korean).numbers).toEqual(['1', '1', '1', '1', '3', '10', '15,242']);
+    expect(extractDocShape(spanish).numbers).toEqual(['1', '1', '1', '1', '3', '10', '15,242']);
   });
 
   it('counts table rows excluding the separator', () => {
-    expect(extractDocShape(korean).tableRowCounts).toEqual([2]);
+    expect(extractDocShape(spanish).tableRowCounts).toEqual([2]);
   });
 });
 
 describe('compareDocShapes', () => {
   it('accepts a translation that keeps headings, numbers, and table rows', () => {
     expect(
-      compareDocShapes(extractDocShape(korean), extractDocShape(english), 'docs/design.md'),
+      compareDocShapes(extractDocShape(spanish), extractDocShape(english), 'docs/design.md'),
     ).toEqual({
       ok: true,
     });
@@ -76,7 +76,7 @@ describe('compareDocShapes', () => {
   it('rejects a missing numbered heading', () => {
     const after = english.replace('### 1.1 Detail\n', '');
     const result = compareDocShapes(
-      extractDocShape(korean),
+      extractDocShape(spanish),
       extractDocShape(after),
       'docs/cutline.md',
     );
@@ -91,7 +91,7 @@ describe('compareDocShapes', () => {
   it('rejects a changed number', () => {
     const after = english.replace('15,242', '15,243');
     const result = compareDocShapes(
-      extractDocShape(korean),
+      extractDocShape(spanish),
       extractDocShape(after),
       'docs/design.md',
     );
@@ -105,7 +105,7 @@ describe('compareDocShapes', () => {
   it('rejects a dropped table data row', () => {
     const after = english.replace('| 1 | 10 |\n', '');
     const result = compareDocShapes(
-      extractDocShape(korean),
+      extractDocShape(spanish),
       extractDocShape(after),
       'docs/cutline.md',
     );
@@ -120,7 +120,7 @@ describe('compareDocShapes', () => {
 
 describe('checkDocInvariance', () => {
   it('reports each document whose shape drifted from its snapshot', () => {
-    const snapshot = extractDocShape(korean);
+    const snapshot = extractDocShape(spanish);
     const result = checkDocInvariance([
       { path: 'docs/design.md', text: english, snapshot },
       { path: 'docs/cutline.md', text: english.replace('## 1.', '## 2.'), snapshot },

@@ -33,7 +33,9 @@ function wideningGroup(): unknown {
     baselineRuleIds: [],
     candidateRuleIds: [],
     targetSummary: [],
-    headline: 'execute가 workspace에서 host로 넓어졌습니다',
+    headline:
+      "1 execute Action changes from 'ask' to 'allow'." +
+      ' The Zone changes from workspace in the baseline to host in the candidate.',
     sampleActionKeys: [],
     verdict: null,
   };

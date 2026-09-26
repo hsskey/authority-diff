@@ -9,14 +9,14 @@ V1 answers two questions on recorded Actions: what this first Policy would ask o
 
 ## Journey
 
-import → activity overview → first Policy (draft) → adoption preview → review and adopt → [Authority Diff 밖] managed settings 반영 → change review → conformance
+import → activity overview → first Policy (draft) → adoption preview → review and adopt → [outside Authority Diff] apply managed settings → change review → conformance
 
 1. **Import.** `authority import` loads Claude Code transcripts, redacts secrets, and classifies each tool call into Operations.
 2. **Activity Overview.** With no Policy, `/` shows the imported activity: Sessions, Actions, Capability and Target Kind distribution, analyzability, top programs. No Effect and no Zone yet, because both need a Policy.
-3. **First Policy (draft).** "첫 조직 정책 만들기" creates draft version 1 from the default template. Edit the JSON (Rules and Environment Profile), save, validate. There is one Policy per organization.
-4. **Adoption preview.** "최초 도입 검토 만들기" evaluates the recorded Actions under the draft alone. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
-5. **Review and adopt.** Every Adoption Group needs a Verdict (의도한 제한 / 보류 / 정책 수정 필요). Only when all of them are 의도한 제한 does "최초 정책 채택" make version 1 `accepted` and write a Decision Record.
-6. **[Authority Diff 밖] managed settings 반영.** `accepted` is a review record. It is not a deployment and not enforcement. Changing runtime settings to match the Policy (for example through managed settings) happens outside Authority Diff. Through the API an operator can record a declaration that it happened; Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
+3. **First Policy (draft).** "Create the first organization policy" creates draft version 1 from the default template. Edit the JSON (Rules and Environment Profile), save, validate. There is one Policy per organization.
+4. **Adoption preview.** "Create initial adoption review" evaluates the recorded Actions under the draft alone. The screen shows how many Actions would be allowed, asked, or denied, and groups the ask and deny Actions into Adoption Groups by Effect, Capability, and Zone. Nothing is compared with a baseline, and no past approval is inferred from the transcripts.
+5. **Review and adopt.** Every Adoption Group needs a Verdict (Intended limit / On hold / Needs policy fix). Only when all of them are Intended limit does "Adopt initial policy" make version 1 `accepted` and write a Decision Record.
+6. **[Outside Authority Diff] apply managed settings.** `accepted` is a review record. It is not a deployment and not enforcement. Changing runtime settings to match the Policy (for example through managed settings) happens outside Authority Diff. Through the API an operator can record a declaration that it happened; Authority Diff stores that declaration without checking it, and no Policy Version status, replay, conformance, evaluation, or screen reads it.
 7. **Change review.** A draft made from the accepted version gets a Change Review: the same Actions under both versions, Widening and Narrowing groups, Verdicts, accept or reject, Evidence Report.
 8. **Conformance.** Observation hooks report what the runtime actually did. Conformance compares those Runtime Observations with the accepted Policy and reports violation, under_asked, and over_asked findings. This is the only screen that says anything about runtime behavior.
 
@@ -60,12 +60,12 @@ That scene is **9 Actions** (5 `git` fetches from one repository, 4 `gh` fetches
 Zone moves `unknown_remote` → `trusted_remote`. Effect moves ask → allow. Severity is critical.
 Named remotes used outside the Action workspace do not resolve a Remote Key, so they stay `unknown_remote` even under that pattern.
 
-Journey grade: **medium** (중). Real-record Adoption Groups and Widening groups were available to review, and they stayed inside the predicted scene.
+Journey grade: **medium**. Real-record Adoption Groups and Widening groups were available to review, and they stayed inside the predicted scene.
 Verdicts in this record were given by an Agent, not a person.
 
 Jev is V2 exploration only (`authority probe`). Replay, Change Review, and conformance do not call it, and a Probe result is not a Gate.
 
-## 탐색적 정책 문장 점검
+## Exploratory policy sentence check
 
 `authority probe --provider jev` asks Jev how it reads each default-template Rule sentence against the Scenarios in `tests/corpus/scenarios.json`, and ranks them by margin.
 The measured set is 35 synthetic schemaVersion 1 entries, 30 of them agent-authored, three per default-template Rule across the explicit, implied, delegated, and absent Mandate phrasings.
@@ -87,7 +87,7 @@ Node 22. The intended local path is compose, seed or import, the web journey, th
    ```
 
    The adoption review, its Verdicts, and the acceptance are left to the web journey. The seed refuses a database that already holds a Policy.
-   To start from the web instead, skip the seed and import only (step 3); `/` then offers "첫 조직 정책 만들기".
+   To start from the web instead, skip the seed and import only (step 3); `/` then offers "Create the first organization policy".
 3. Import Claude Code transcripts:
 
    ```sh

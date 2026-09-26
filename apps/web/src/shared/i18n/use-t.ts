@@ -43,6 +43,11 @@ export function currentMessages(): Messages {
   return CATALOG[current];
 }
 
+/** The catalog for `language`, whatever the current language is. */
+export function messagesFor(language: Language): Messages {
+  return CATALOG[language];
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => {

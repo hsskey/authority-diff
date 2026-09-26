@@ -110,7 +110,7 @@ Named remotes used outside the Action workspace still do not resolve a Remote Ke
 
 ## Journey grade
 
-**Medium** (중): real-record Widening groups were reviewable and all fell within the expected range.
+**Medium**: real-record Widening groups were reviewable and all fell within the expected range.
 No unexpected Widening group appeared.
 The B' trusted-remote scene is real-record, not synthetic.
 Verdicts and timing in the recorded journey were given by an Agent, not a person.
@@ -212,7 +212,7 @@ Named remotes used outside the Action workspace still do not resolve a Remote Ke
 
 ### Journey grade
 
-**Medium** (중): real-record Widening groups were reviewable and all fell within the expected range.
+**Medium**: real-record Widening groups were reviewable and all fell within the expected range.
 No unexpected Widening group appeared.
 The B' trusted-remote scene is real-record, not synthetic.
 Verdicts and timing in the recorded journey were given by an Agent, not a person.

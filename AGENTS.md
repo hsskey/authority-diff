@@ -31,6 +31,7 @@ pnpm lint:boundaries
 pnpm check:evidence
 pnpm check:doc-invariance
 pnpm check:i18n
+pnpm check:korean
 pnpm test:int:db:up
 pnpm test:int
 pnpm test:int:db:down
@@ -39,7 +40,7 @@ pnpm test:e2e
 pnpm db:generate
 ```
 
-- `pnpm check` runs typecheck, lint, format check, CSS policy, boundaries, lint proof, evidence check, doc-invariance check, i18n key check, and unit tests.
+- `pnpm check` runs typecheck, lint, format check, CSS policy, boundaries, lint proof, evidence check, doc-invariance check, i18n key check, Korean text check, and unit tests.
 - `pnpm lint:boundaries:prove` inserts known violations and confirms each boundary rule still fails.
 - `pnpm test:int` needs the test database from `pnpm test:int:db:up`; stop it with `pnpm test:int:db:down`.
 - `pnpm test:e2e` needs the Chromium install above and starts the web dev server itself.
@@ -131,6 +132,7 @@ The ones agents miss most often:
 - `docs/design.md` and `docs/cutline.md` keep the same headings and numbers (`pnpm check:doc-invariance`).
 - Server-produced user-facing text (Headlines, Evidence Report, error messages) is English and never feeds a hash; Korean UI text belongs to the web catalog.
 - Quotations of product output in docs keep the product's own language; Korean ones are marked `<!-- ko-product-output -->`.
+- Korean text outside that marker, `README.ko.md`, the web `ko.ts` catalog and its tests (including the ko-KR `chromium` e2e specs, not `visual.spec.ts`), and parentheses in `CONTEXT.md` `_Avoid_:` lines fails `pnpm check:korean`; the allowlist and marker rules are in `scripts/check-korean-text.ts`.
 
 ## Do not
 

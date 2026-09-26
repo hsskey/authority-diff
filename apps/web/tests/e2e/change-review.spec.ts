@@ -118,7 +118,9 @@ function wideningGroup(store: Store): unknown {
     baselineRuleIds: ['baseline_rule'],
     candidateRuleIds: ['candidate_rule'],
     targetSummary: [{ key: 'Users/e2e-user', count: 3 }],
-    headline: "Users/e2e-user 등 1곳으로의 실행 3건이 '확인 필요'에서 '허용'으로 바뀝니다.",
+    headline:
+      "Users/e2e-user only: 3 execute Actions change from 'ask' to 'allow'." +
+      ' The Zone changes from workspace in the baseline to host in the candidate.',
     sampleActionKeys: [ACTION_KEY],
     verdict: store.verdict,
   };
@@ -143,7 +145,7 @@ function narrowingGroup(): unknown {
     baselineRuleIds: [],
     candidateRuleIds: [],
     targetSummary: [],
-    headline: 'write가 좁아졌습니다',
+    headline: "1 write Action changes from 'allow' to 'ask'.",
     sampleActionKeys: [],
     verdict: null,
   };
@@ -263,9 +265,9 @@ function reportFor(store: Store): string {
     '',
     `Change Review \`${REVIEW_ID}\``,
     '',
-    '## 결정',
+    '## Decision',
     '',
-    store.decision === null ? '아직 결정되지 않았습니다.' : '- Decision Record sequence: 1',
+    store.decision === null ? 'No decision yet.' : '- Decision Record sequence: 1',
     '',
   ].join('\n');
 }

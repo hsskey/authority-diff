@@ -42,7 +42,7 @@ export const en = {
     conformance: 'Conformance',
     login: 'Log in',
     logout: 'Log out',
-    otherLanguage: '한국어',
+    languageName: 'English',
   },
   apiError: {
     tokenMissing: 'Log in first. Enter a token.',
