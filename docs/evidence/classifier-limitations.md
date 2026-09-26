@@ -22,5 +22,6 @@ This is resolved in the 0.2.6 classifier code, where a `host:path` source operan
 
 The program table recognizes only the public tool list; the operator's local tools in the measured corpus are intentionally left out of it, so their Operations stay `none` with `program_unrecognized`.
 The three unrecognized programs that leave the most Actions `none` are local tools, `<local-tool-02>`, `<local-tool-08>`, and `<local-tool-04>` in the evidence legend.
+Their measured share of the `none` Actions is in `docs/evidence/classifier-local-tools.md`.
 A table entry for them would mean nothing in another environment and would put names from one operator's environment into the repository.
 A possible direction, not planned work: an Environment Profile mechanism where an organization registers its own table of local program names, each aliased to a Capability and a Target.
