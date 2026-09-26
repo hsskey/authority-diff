@@ -24,12 +24,27 @@ type RuleMapping =
   | { readonly kind: 'mapped'; readonly effect: Effect; readonly entries: readonly string[] }
   | { readonly kind: 'unmapped'; readonly ruleId: string; readonly reason: UnmappedRuleReason };
 
+function hasUntranslatableDoubleStar(pattern: string): boolean {
+  const segments = pattern.split('/');
+  return segments.some((segment, index) => {
+    if (!segment.includes('**')) {
+      return false;
+    }
+    if (segment !== '**') {
+      return true;
+    }
+    const hasBefore = segments.slice(0, index).some((s) => s !== '');
+    const hasAfter = segments.slice(index + 1).some((s) => s !== '');
+    return hasBefore && hasAfter;
+  });
+}
+
 function toGitignorePattern(pattern: string): string | null {
   if (
     GITIGNORE_SPECIAL.test(pattern) ||
     pattern.trim() !== pattern ||
     pattern.includes('//') ||
-    pattern.split('/').some((segment) => segment.includes('**') && segment !== '**')
+    hasUntranslatableDoubleStar(pattern)
   ) {
     return null;
   }

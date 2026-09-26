@@ -142,6 +142,7 @@ describe('exportClaudeCodeSettings', () => {
     ['~/.aws/credentials', 'Read(~/.aws/credentials)'],
     ['/var/run/secrets/**', 'Read(//var/run/secrets/**)'],
     ['**/*.pem', 'Read(//**/*.pem)'],
+    ['**/.config/secret', 'Read(//**/.config/secret)'],
     ['**', 'Read(//**)'],
   ])('translates the credential pattern %s to %s', (pattern, entry) => {
     const rule = {
@@ -159,6 +160,8 @@ describe('exportClaudeCodeSettings', () => {
     'secrets/**',
     '~',
     '~/.config/**.json',
+    '~/**/.env',
+    '/home/**/.aws/credentials',
     '/etc/[ab].key',
     '**/!keep',
     '/etc//key',
