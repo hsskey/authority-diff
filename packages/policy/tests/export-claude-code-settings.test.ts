@@ -3,8 +3,10 @@ import { err, ok } from '@authority/kernel';
 import type { AppError, Result } from '@authority/kernel';
 import { createPolicyModule, DEFAULT_POLICY_DOCUMENT, exportClaudeCodeSettings } from '../index.ts';
 import type { PolicyRepository } from '../index.ts';
+import { resolveZone } from '../evaluate.ts';
 import { ClaudeCodeSettingsExportSchema, PolicyVersionSchema } from '../schema.ts';
-import type { PolicyDocumentV2, PolicyRuleV2 } from '../schema.ts';
+import type { EnvironmentProfile, PolicyDocumentV2, PolicyRuleV2 } from '../schema.ts';
+import { makeOperation, pathTarget } from './support/factories.ts';
 import { expectErr } from './support/result.ts';
 
 const CREDENTIAL_RULE: PolicyRuleV2 = {
@@ -141,6 +143,8 @@ describe('exportClaudeCodeSettings', () => {
   test.each([
     ['~/.aws/credentials', 'Read(~/.aws/credentials)'],
     ['/var/run/secrets/**', 'Read(//var/run/secrets/**)'],
+    ['~/x/**', 'Read(~/x/**)'],
+    ['/x/**', 'Read(//x/**)'],
     ['**/*.pem', 'Read(//**/*.pem)'],
     ['**/.config/secret', 'Read(//**/.config/secret)'],
     ['**', 'Read(//**)'],
@@ -162,6 +166,8 @@ describe('exportClaudeCodeSettings', () => {
     '~/.config/**.json',
     '~/**/.env',
     '/home/**/.aws/credentials',
+    '/**/.env',
+    '/**/.aws/credentials',
     '/etc/[ab].key',
     '**/!keep',
     '/etc//key',
@@ -196,6 +202,85 @@ describe('exportClaudeCodeSettings', () => {
     const result = exportClaudeCodeSettings(documentWith([CREDENTIAL_RULE]));
 
     expect(ClaudeCodeSettingsExportSchema.parse(result)).toEqual(result);
+  });
+});
+
+describe('exportClaudeCodeSettings keeps the meaning of every mapped credential pattern', () => {
+  // A gitignore-style matcher for anchored ~/ and //-rooted patterns: a whole ** segment
+  // matches zero or more directories (globstar), which the whole-value glob's literal slashes do not.
+  const gitignoreMatches = (pattern: string, path: string): boolean => {
+    const source = pattern
+      .replace(/\/\*\*\//g, '\u0001')
+      .replace(/\/\*\*$/g, '\u0002')
+      .replace(/^\*\*\//g, '\u0003')
+      .replace(/^\*\*$/g, '\u0004')
+      .replace(/\*/g, '\u0005')
+      .replace(/\?/g, '\u0006')
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\u0001/g, '/(?:[^/]+/)*')
+      .replace(/\u0002/g, '/.*')
+      .replace(/\u0003/g, '(?:[^/]+/)*')
+      .replace(/\u0004/g, '.*')
+      .replace(/\u0005/g, '[^/]*')
+      .replace(/\u0006/g, '[^/]');
+    return new RegExp(`^${source}$`).test(path);
+  };
+
+  const credentialEnvironment = (pattern: string): EnvironmentProfile => ({
+    ...DEFAULT_POLICY_DOCUMENT.environment,
+    credentialPaths: [pattern],
+  });
+
+  const matchesAsCredential = (pattern: string, path: string): boolean =>
+    resolveZone(
+      makeOperation({ capability: 'read', target: pathTarget(path, false) }),
+      credentialEnvironment(pattern),
+    ) === 'credentials';
+
+  test.each<{ pattern: string; mapped: boolean; paths: readonly string[] }>([
+    { pattern: '~/.ssh/**', mapped: true, paths: ['~/.ssh/id_rsa', '~/.ssh/a/b', '~/.ssh'] },
+    {
+      pattern: '/etc/secrets/*.key',
+      mapped: true,
+      paths: ['/etc/secrets/db.key', '/etc/secrets/sub/db.key'],
+    },
+    { pattern: '~/x/**', mapped: true, paths: ['~/x/y', '~/x'] },
+    { pattern: '/x/**', mapped: true, paths: ['/x/y', '/x'] },
+    {
+      pattern: '/var/run/secrets/**',
+      mapped: true,
+      paths: ['/var/run/secrets/token', '/var/run/secrets/a/b'],
+    },
+    {
+      pattern: '/etc/secrets/db.key',
+      mapped: true,
+      paths: ['/etc/secrets/db.key', '/etc/secrets/db.keyx'],
+    },
+    { pattern: '~/**/.env', mapped: false, paths: ['~/.env', '~/a/.env', '~/a/b/.env'] },
+    {
+      pattern: '/home/**/.aws/credentials',
+      mapped: false,
+      paths: ['/home/.aws/credentials', '/home/u/.aws/credentials'],
+    },
+    { pattern: '/**/.env', mapped: false, paths: ['/.env', '/a/.env', '/a/b/.env'] },
+    {
+      pattern: '/**/.aws/credentials',
+      mapped: false,
+      paths: ['/.aws/credentials', '/u/.aws/credentials'],
+    },
+  ])('$pattern is mapped only when its gitignore translation matches the same paths', ({
+    pattern,
+    mapped,
+    paths,
+  }) => {
+    const result = exportClaudeCodeSettings(documentWith([CREDENTIAL_RULE], [pattern]));
+    const isMapped = result.unmappedRules.length === 0;
+    const meaningDiffers = paths.some(
+      (path) => matchesAsCredential(pattern, path) !== gitignoreMatches(pattern, path),
+    );
+
+    expect(isMapped).toBe(mapped);
+    expect(isMapped).toBe(!meaningDiffers);
   });
 });
 

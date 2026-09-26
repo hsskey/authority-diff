@@ -33,9 +33,7 @@ function hasUntranslatableDoubleStar(pattern: string): boolean {
     if (segment !== '**') {
       return true;
     }
-    const hasBefore = segments.slice(0, index).some((s) => s !== '');
-    const hasAfter = segments.slice(index + 1).some((s) => s !== '');
-    return hasBefore && hasAfter;
+    return index !== 0 && index !== segments.length - 1;
   });
 }
 
