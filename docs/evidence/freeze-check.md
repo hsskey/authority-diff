@@ -1,4 +1,4 @@
-synthetic fixture: tests/fixtures/journey; classifier 0.2.6; measured 2026-09-27; head `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`
+synthetic fixture: tests/fixtures/journey; classifier 0.2.6; measured 2026-09-27; head `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`; resultHashes: adoption `d9b3a37b…ed6e`, conformance `8cc351df…942f`, change review B' `aa9885ff…bd42`, change review B `88118f6e…9860`
 
 # V1 freeze check
 
