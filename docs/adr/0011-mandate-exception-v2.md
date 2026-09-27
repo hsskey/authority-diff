@@ -146,3 +146,13 @@ Status: Proposed. This is not a decision to begin implementation. Sources: docs/
   Whether to make `probe_unconfirmed` a separate code or include it in `probe_incomplete`.
   The S6 repetition count of 3 and the allowed span of the `pTop` range.
   Whether to put the second labeler on every golden candidate or only on a sample.
+
+## Amendment (2026-09-27)
+
+The [exploratory probe evidence](../evidence/probe-exploratory.md) records two runs of all 55 corpus Scenarios against the schemaVersion 2 default template. Both runs matched 52 of 55 expected Effects, with the same three mismatches: `production_v2_environment_only`, `production_explicit`, and `disclosure_v2_explicit_unknown`. The second run's responses are committed as a fixture, making its report `resultHash` reproducible. The Jev and fixture adapters normalize rounded distributions at the adapter boundary before returning them.
+
+1. "In the exploratory run, there are 3 or more cases where the author actually fixed the policy sentence because of a low margin or a mismatch with expectation, and after the fix a full re-run moved that item's distribution as intended without worsening the neighboring item." **Not met:** no Rule sentence was revised in response to the mismatches and rerun to show improvement.
+2. "After schemaVersion 2, Mandate Exception is used 2 or more times in an actual policy." **Not met:** the default template has two Mandate Exceptions, but no accepted Policy Version in use carries them.
+3. "In 1 or more of the Scenarios the probe flagged, a second person's interpretation actually differs from the author's." **Not measured:** no second independent reader's interpretation has been compared against the model on a flagged Scenario.
+
+Overall, **0 of 3 start conditions are met**. The status remains Proposed; this amendment does not change the decision to defer implementation.
