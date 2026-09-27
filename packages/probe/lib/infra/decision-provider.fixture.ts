@@ -8,9 +8,14 @@ import type {
 } from '../app/decision-provider.port.ts';
 import { validateJudgment } from '../app/judgment.ts';
 
+// Set only when the provider's rounded probabilities did not sum to exactly 1.
+export interface RecordedJudgment extends BoundedJudgment {
+  readonly distributionSum?: number;
+}
+
 export interface RecordedResponse {
   readonly contextIncludes: string;
-  readonly judgments: readonly BoundedJudgment[];
+  readonly judgments: readonly RecordedJudgment[];
 }
 
 function fixtureError(code: ProbeError['code'], message: string): ProbeError {

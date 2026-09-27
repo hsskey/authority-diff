@@ -7,6 +7,7 @@ import type {
   DecisionProvider,
   ProbeError,
 } from './decision-provider.port.ts';
+import { distributionSum } from './judgment.ts';
 
 const EFFECT_QUESTION: BoundedQuestion = {
   questionId: 'effect',
@@ -79,8 +80,10 @@ function topAndMargin(distribution: Readonly<Record<string, number>>): {
   const ranked = Object.entries(distribution).sort(
     ([firstKey, first], [secondKey, second]) => second - first || firstKey.localeCompare(secondKey),
   );
-  const first = ranked[0]?.[1] ?? 0;
-  const second = ranked[1]?.[1] ?? 0;
+  // The provider's two-decimal rounding can leave the sum off 1, so rank on normalized values.
+  const sum = distributionSum(distribution);
+  const first = (ranked[0]?.[1] ?? 0) / sum;
+  const second = (ranked[1]?.[1] ?? 0) / sum;
   return { pTop: first, margin: first - second };
 }
 

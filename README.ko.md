@@ -173,7 +173,9 @@ Journey 등급: **medium**.
 기본 template의 Rule마다 Scenario가 3개씩 있고, explicit, implied, delegated, absent Mandate 표현에 나뉘어 있습니다.
 한 번 실행한 결과 35 / 35가 예상 Effect와 일치했고, 가장 낮은 Effect margin은 0.88이었습니다.
 표본 35개로는 95% 일치율을 주장할 수 없습니다.
-이후 schemaVersion 2 Scenario 20개를 포함한 55개 전체를 2026-09-27에 schemaVersion 2 기본 template에 대해 한 번 실행했고, 52 / 55가 예상 Effect와 일치했으며 불일치 3건은 모두 Mandate Exception이 있는 Rule에서 나왔습니다([docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md)).
+이후 schemaVersion 2 Scenario 20개를 포함한 55개 전체를 2026-09-27에 schemaVersion 2 기본 template에 대해 두 번 실행했습니다.
+두 번 모두 52 / 55가 예상 Effect와 일치했고 불일치 3건도 같았으며, 모두 Mandate Exception이 있는 Rule에서 나왔습니다.
+두 번째 실행의 응답은 기록되어 있어 `--provider fixture`로 그 report를 재현할 수 있습니다([docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md)).
 probe에는 threshold도 gate 연결도 없습니다.
 순위, margin이 가장 낮은 Scenario, schemaVersion 2 추가분, 한계는 [docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md)에 있습니다.
 

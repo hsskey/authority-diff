@@ -127,14 +127,8 @@ providerContract('fixture adapter contract', () =>
 );
 providerContract('Jev adapter contract with a recorded response', () => recordedJevProvider());
 
-// Scenarios added after the last Jev run have no recorded response yet.
-test('the recorded Jev responses replay every recorded corpus Scenario', async () => {
-  const recordedIds = new Set(
-    recordedResponses.map((response) => response.contextIncludes.replace('Scenario id: ', '')),
-  );
-  const scenarios = ScenarioFileSchema.parse(corpusScenarios).filter((scenario) =>
-    recordedIds.has(scenario.id),
-  );
+test('the recorded Jev responses replay all 55 corpus Scenarios', async () => {
+  const scenarios = ScenarioFileSchema.parse(corpusScenarios);
 
   const result = await runProbe(
     createFixtureDecisionProvider(recordedResponses),
@@ -147,7 +141,10 @@ test('the recorded Jev responses replay every recorded corpus Scenario', async (
   if (!result.ok) {
     return;
   }
-  expect(result.value.map((entry) => entry.scenario.id).sort()).toEqual([...recordedIds].sort());
+  expect(result.value).toHaveLength(55);
+  expect(result.value.map((entry) => entry.scenario.id)).toEqual(
+    scenarios.map((scenario) => scenario.id),
+  );
 });
 
 test('the Jev request contains only state, model, and bounded questions', () => {
@@ -189,7 +186,26 @@ test('DecisionProviderInput rejects trace fields at compile time', () => {
   expect(Object.hasOwn(input, 'trace')).toBe(true);
 });
 
-test('rejects a distribution that does not sum to one', async () => {
+test('accepts a distribution whose two-decimal rounding sums to 0.99', async () => {
+  const provider = recordedJevProvider({
+    ...JEV_RESPONSE,
+    answers: {
+      ...JEV_RESPONSE.answers,
+      effect: {
+        ...JEV_RESPONSE.answers.effect,
+        probabilities: { allow: 0.33, ask: 0.33, deny: 0.33 },
+      },
+    },
+  });
+  const result = await provider.judge({
+    context: 'Scenario id: contract',
+    questions: QUESTIONS,
+    signal: new AbortController().signal,
+  });
+  expect(result.ok).toBe(true);
+});
+
+test('rejects a distribution summing to 0.9, beyond two-decimal rounding', async () => {
   const provider = recordedJevProvider({
     ...JEV_RESPONSE,
     answers: {

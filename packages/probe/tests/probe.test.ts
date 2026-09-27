@@ -243,3 +243,42 @@ test('a Scenario id that prefixes another matches only its own recorded response
   expect(secondRelease?.effect).toBe('allow');
   expect(secondRelease?.mandateReading).toBe('explicit');
 });
+
+test('ranks a rounded distribution that sums to 0.99 on its normalized values', async () => {
+  const provider = createFixtureDecisionProvider([
+    {
+      contextIncludes: 'Scenario id: lower_margin',
+      judgments: [
+        {
+          questionId: 'effect',
+          choice: 'ask',
+          distribution: { allow: 0.05, ask: 0.93, deny: 0.01 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+        {
+          questionId: 'mandate_reading',
+          choice: 'not_authorized',
+          distribution: { explicit: 0, implied: 0, not_authorized: 1 },
+          providerModel: 'recorded',
+          latencyMs: 1,
+          inputTokens: null,
+        },
+      ],
+    },
+  ]);
+
+  const result = await runProbe(
+    provider,
+    renderPolicyProse(POLICY),
+    SCENARIOS.slice(0, 1),
+    new AbortController().signal,
+  );
+  expect(result.ok).toBe(true);
+  if (!result.ok) {
+    return;
+  }
+  expect(result.value[0]?.pTop).toBeCloseTo(0.939394, 6);
+  expect(result.value[0]?.margin).toBeCloseTo(0.888889, 6);
+});

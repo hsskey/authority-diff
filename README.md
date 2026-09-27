@@ -170,7 +170,7 @@ The measured set is 35 synthetic schemaVersion 1 Scenarios, 30 of them agent-aut
 Each default-template Rule has three of them, spread across the explicit, implied, delegated, and absent Mandate phrasings.
 On one run, 35 / 35 matched the expected Effect and the lowest Effect margin was 0.88.
 A sample of 35 cannot support a 95% match-rate claim.
-All 55 Scenarios, including the 20 schemaVersion 2 ones, were then run once against the schemaVersion 2 default template on 2026-09-27; 52 / 55 matched the expected Effect, and the three mismatches are on Rules that carry a Mandate Exception ([docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md)).
+All 55 Scenarios, including the 20 schemaVersion 2 ones, were then run twice against the schemaVersion 2 default template on 2026-09-27; both runs matched 52 / 55 with the same three mismatches, all on Rules that carry a Mandate Exception, and the second run's responses are recorded so `--provider fixture` reproduces its report ([docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md)).
 The probe has no threshold and no gate wiring.
 The ranking, the lowest-margin Scenarios, the schemaVersion 2 additions, and the limits are in [docs/evidence/probe-exploratory.md](docs/evidence/probe-exploratory.md).
 
