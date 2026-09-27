@@ -21,7 +21,7 @@ The stated figures are run 2's, whose responses are recorded; run 1's figures ap
 - Run 1's report and provider responses were not kept, so its resultHash can no longer be recomputed; its figures here are the ones first written up from that report.
 - Run 2 matched run 1's result: the same 52 / 55, the same three mismatches, and the same top Effect and top Mandate reading on every one of the 55 Scenarios.
 - The margins moved: 19 of 55 Effect margins differ between the runs, by up to 0.41 (`workspace_execute_absent`, 0.63 to 0.22), and 40 of 55 Mandate margins differ, by up to 0.22.
-- An attempt before run 2 stopped at its 49th Scenario because the probe then rejected a distribution that Jev had rounded to a sum of 0.99; the probe now accepts rounding noise (see Limitations), and none of that attempt's responses are used here.
+- An attempt before run 2 stopped at its 49th Scenario because the probe then rejected a distribution that Jev had rounded to a sum of 0.99; each provider adapter now normalizes such rounding noise (see Limitations), and none of that attempt's responses are used here.
 - Run 2's responses were recorded by a script outside the repository that called the same `runProbe` and `renderProbeReport` as `authority probe` and saved each Scenario's judgments with `latencyMs` set to 0 and `inputTokens` set to null; the fixture replay's report is byte-identical to run 2's live report.
 
 ## Scenario set
@@ -75,7 +75,7 @@ In run 1 the same held with the first four exceptions only.
 ### Margin ranking
 
 Ascending run 2 Effect margin, ties by Scenario id.
-Margin is the top Effect probability minus the second, computed on the distribution divided by its sum.
+Margin is the top Effect probability minus the second.
 Mandate margin is the same measure on the `mandate_reading` question.
 The run 1 columns give the same two measures from run 1; run 1's Effect and mandate reading equal run 2's in every row.
 
@@ -262,6 +262,8 @@ Calibration, a golden set, and a probe gate stay out of scope until these condit
 - n=55 on synthetic text; the author of the Scenarios also chose the expected Effects.
 - Two Jev runs of one template; they agree on every top Effect and Mandate reading, but 19 Effect margins differ by up to 0.41, so a single run's margin is not stable, and two runs do not bound the variation.
 - Jev rounds each probability to two decimals, so a margin has a resolution of about ±0.01; read a margin like 0.88 as somewhere from 0.87 to 0.89.
+  The DecisionProvider port contract is unchanged: it still returns a distribution that sums to 1 within 1e-6.
+  The Jev and fixture adapters normalize a rounded distribution whose sum is within 0.015 of 1 by dividing it by that sum before returning it, and a larger gap is still rejected as an invalid response.
 - The 35 Scenarios from the first set keep expected Effects chosen before the Mandate Exceptions existed; `production_explicit` shows one such expectation disagreeing with Jev's reading of the new clause.
 - The probe sends Capability and Zone but not reversibility or analyzability, so those facts reach Jev only through the Action sentence.
 - A 52 / 55 match does not show that people read the Rules the same way; no second reader was compared.
@@ -278,7 +280,7 @@ TYPESAFE_API_KEY=<key> pnpm authority probe --policy .local/default-policy-v2.js
 Both probe commands read all 55 Scenarios and write `.local/probe/<contentHash>.md`; the stamp's resultHash is the sha256 of that report.
 The first probe command uses the default `--provider fixture`, which replays run 2's responses from `packages/probe/tests/fixtures/recorded-responses.json` and reproduces resultHash `f12dc94f…09df`.
 The second calls Jev live, and its report hash changes whenever a margin moves.
-The fixture keeps each probability exactly as Jev returned it; every distribution in run 2 summed to exactly 1, so none carries the optional `distributionSum` field that records a rounded sum.
+The fixture keeps each probability exactly as Jev returned it, and the fixture adapter normalizes on replay as the Jev adapter does live; every distribution in run 2 summed to exactly 1, so none carries the optional `distributionSum` field that records a rounded sum.
 The schemaVersion 1 answers behind the previous version below were the recorded fixture until run 2 replaced it; they remain in the repository history at commit `34a7729`, and replaying them needs that file, `tests/fixtures/default-policy-v1.json`, and a Scenario file limited to those 35.
 
 ## Previous version

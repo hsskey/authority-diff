@@ -6,7 +6,7 @@ import type {
   DecisionProviderInput,
   ProbeError,
 } from '../app/decision-provider.port.ts';
-import { validateJudgment } from '../app/judgment.ts';
+import { normalizeRoundedJudgment, validateJudgment } from '../app/judgment.ts';
 
 // Set only when the provider's rounded probabilities did not sum to exactly 1.
 export interface RecordedJudgment extends BoundedJudgment {
@@ -42,11 +42,12 @@ function replayResponse(
     );
   }
 
+  const judgments: BoundedJudgment[] = [];
   for (const question of input.questions) {
-    const judgment = response.judgments.find(
+    const recorded = response.judgments.find(
       (candidate) => candidate.questionId === question.questionId,
     );
-    if (judgment === undefined) {
+    if (recorded === undefined) {
       return err(
         fixtureError(
           'probe.invalid_response',
@@ -54,12 +55,14 @@ function replayResponse(
         ),
       );
     }
+    const judgment = normalizeRoundedJudgment(recorded);
     const issue = validateJudgment(question, judgment);
     if (issue !== null) {
       return err(issue);
     }
+    judgments.push(judgment);
   }
-  return ok(response.judgments);
+  return ok(judgments);
 }
 
 export function createFixtureDecisionProvider(
