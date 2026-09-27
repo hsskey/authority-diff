@@ -127,14 +127,8 @@ providerContract('fixture adapter contract', () =>
 );
 providerContract('Jev adapter contract with a recorded response', () => recordedJevProvider());
 
-// Scenarios added after the last Jev run have no recorded response yet.
-test('the recorded Jev responses replay every recorded corpus Scenario', async () => {
-  const recordedIds = new Set(
-    recordedResponses.map((response) => response.contextIncludes.replace('Scenario id: ', '')),
-  );
-  const scenarios = ScenarioFileSchema.parse(corpusScenarios).filter((scenario) =>
-    recordedIds.has(scenario.id),
-  );
+test('the recorded Jev responses replay all 55 corpus Scenarios', async () => {
+  const scenarios = ScenarioFileSchema.parse(corpusScenarios);
 
   const result = await runProbe(
     createFixtureDecisionProvider(recordedResponses),
@@ -147,7 +141,10 @@ test('the recorded Jev responses replay every recorded corpus Scenario', async (
   if (!result.ok) {
     return;
   }
-  expect(result.value.map((entry) => entry.scenario.id).sort()).toEqual([...recordedIds].sort());
+  expect(result.value).toHaveLength(55);
+  expect(result.value.map((entry) => entry.scenario.id)).toEqual(
+    scenarios.map((scenario) => scenario.id),
+  );
 });
 
 test('the Jev request contains only state, model, and bounded questions', () => {
@@ -189,29 +186,80 @@ test('DecisionProviderInput rejects trace fields at compile time', () => {
   expect(Object.hasOwn(input, 'trace')).toBe(true);
 });
 
-test('rejects a distribution that does not sum to one', async () => {
-  const provider = recordedJevProvider({
+function jevProviderWithEffect(probabilities: Readonly<Record<string, number>>): DecisionProvider {
+  return recordedJevProvider({
     ...JEV_RESPONSE,
     answers: {
       ...JEV_RESPONSE.answers,
-      effect: {
-        ...JEV_RESPONSE.answers.effect,
-        probabilities: { allow: 0.1, ask: 0.7, deny: 0.1 },
+      effect: { ...JEV_RESPONSE.answers.effect, probabilities },
+    },
+  });
+}
+
+function fixtureProviderWithEffect(
+  probabilities: Readonly<Record<string, number>>,
+): DecisionProvider {
+  return createFixtureDecisionProvider([
+    {
+      contextIncludes: 'Scenario id: contract',
+      judgments: [
+        {
+          questionId: 'effect',
+          choice: 'ask',
+          distribution: probabilities,
+          providerModel: 'jev-recorded-contract',
+          latencyMs: 0,
+          inputTokens: null,
+        },
+        {
+          questionId: 'mandate_reading',
+          choice: 'implied',
+          distribution: { explicit: 0.2, implied: 0.7, not_authorized: 0.1 },
+          providerModel: 'jev-recorded-contract',
+          latencyMs: 0,
+          inputTokens: null,
+        },
+      ],
+    },
+  ]);
+}
+
+describe.each([
+  ['Jev adapter', jevProviderWithEffect],
+  ['fixture adapter', fixtureProviderWithEffect],
+])('%s rounding tolerance', (_name, providerWithEffect) => {
+  test('returns a two-decimal distribution summing to 0.99 normalized to sum to 1', async () => {
+    const result = await providerWithEffect({ allow: 0.33, ask: 0.33, deny: 0.33 }).judge({
+      context: 'Scenario id: contract',
+      questions: QUESTIONS,
+      signal: new AbortController().signal,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const distribution = result.value[0]?.distribution ?? {};
+    expect(distribution.allow).toBeCloseTo(1 / 3, 9);
+    expect(distribution.ask).toBeCloseTo(1 / 3, 9);
+    expect(distribution.deny).toBeCloseTo(1 / 3, 9);
+  });
+
+  test('rejects a distribution summing to 0.9, beyond two-decimal rounding', async () => {
+    const result = await providerWithEffect({ allow: 0.1, ask: 0.7, deny: 0.1 }).judge({
+      context: 'Scenario id: contract',
+      questions: QUESTIONS,
+      signal: new AbortController().signal,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'probe.invalid_response',
+        message: 'distribution does not sum to 1 for effect',
+        isRetryable: false,
       },
-    },
-  });
-  const result = await provider.judge({
-    context: 'Scenario id: contract',
-    questions: QUESTIONS,
-    signal: new AbortController().signal,
-  });
-  expect(result).toEqual({
-    ok: false,
-    error: {
-      code: 'probe.invalid_response',
-      message: 'distribution does not sum to 1 for effect',
-      isRetryable: false,
-    },
+    });
   });
 });
 

@@ -7,7 +7,7 @@ import type {
   DecisionProviderInput,
   ProbeError,
 } from '../app/decision-provider.port.ts';
-import { validateJudgment } from '../app/judgment.ts';
+import { normalizeRoundedJudgment, validateJudgment } from '../app/judgment.ts';
 
 const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 
@@ -178,14 +178,14 @@ export function createJevDecisionProvider(
             ),
           );
         }
-        const judgment: BoundedJudgment = {
+        const judgment = normalizeRoundedJudgment({
           questionId: question.questionId,
           choice: answer.choice,
           distribution: answer.probabilities,
           providerModel: parsed.data.model,
           latencyMs,
           inputTokens: parsed.data.usage?.input_tokens ?? null,
-        };
+        });
         const issue = validateJudgment(question, judgment);
         if (issue !== null) {
           return err(issue);

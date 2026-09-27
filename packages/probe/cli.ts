@@ -31,6 +31,7 @@ const RecordedResponseSchema = z.object({
       providerModel: z.string(),
       latencyMs: z.number().nonnegative(),
       inputTokens: z.number().int().nonnegative().nullable(),
+      distributionSum: z.number().exactOptional(),
     }),
   ),
 });
