@@ -86,7 +86,8 @@ All 12 screenshots (six screens, light and dark) matched the committed baselines
 
 ## Freeze gate rerun - 2026-09-27
 
-The release-commit check ran on origin/main at `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`, after the probe fixture record and adapter-level normalization merge. The first run above remains the record of `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`.
+The release-commit check ran on origin/main at `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`, after the probe fixture record and adapter-level normalization merge.
+The first run above remains the record of `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`.
 
 | item | value |
 | --- | --- |
@@ -113,6 +114,9 @@ The release-commit check ran on origin/main at `060c6d6cbc6c7279fb410c55fd6433fa
 | probe fixture replay | `pnpm dev:policy-init` then `pnpm authority probe --policy .local/freeze-check/default-policy-v2.json` (default fixture provider) | pass; schemaVersion 2 default template, report sha256/resultHash `f12dc94ff6173d17e2caf2f6116a5beac78d40df978ea06d6c99274d8ae709df` |
 | e2e:visual | `pnpm e2e:visual` with `CI=true` inside `mcr.microsoft.com/playwright:v1.63.0-noble` on linux/amd64, after `pnpm install --frozen-lockfile` | pass, all 12 screenshots matched; no baselines regenerated |
 
-The API journey used its own `authority-remeasure-<time>` compose project and removed its volume with `down -v`. Both browser journeys used `authority-demo`, built the server image, imported the fixture transcripts and served the web app; the project and volume were removed with `down -v` after each language. The fixture replay used the recorded responses, not a live provider. No runtime policy deployment or enforcement was tested.
+The API journey used its own `authority-remeasure-<time>` compose project and removed its volume with `down -v`.
+Both browser journeys used `authority-demo`, built the server image, imported the fixture transcripts and served the web app; the project and volume were removed with `down -v` after each language.
+The fixture replay used the recorded responses, not a live provider.
+No runtime policy deployment or enforcement was tested.
 
 Conclusion: every rerun gate passed on `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`; no freeze finding blocks the V1 release.
