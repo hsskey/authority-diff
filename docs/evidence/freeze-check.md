@@ -1,4 +1,4 @@
-synthetic fixture: tests/fixtures/journey; classifier 0.2.6; measured 2026-09-27; head `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`; resultHashes: adoption `d9b3a37b…ed6e`, conformance `8cc351df…942f`, change review B' `aa9885ff…bd42`, change review B `88118f6e…9860`
+synthetic fixture: tests/fixtures/journey; classifier 0.2.6; measured 2026-09-27; first head `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`, rerun head `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`; resultHashes: adoption `d9b3a37b…ed6e`, conformance `8cc351df…942f`, change review B' `aa9885ff…bd42`, change review B `88118f6e…9860`
 
 # V1 freeze check
 
@@ -83,3 +83,36 @@ The browser console logged no errors in either run.
 
 The suite ran in a clean export of the commit inside the pinned image on linux/amd64, with `CI=true`, `pnpm install --frozen-lockfile`, and `pnpm e2e:visual`.
 All 12 screenshots (six screens, light and dark) matched the committed baselines; no baseline was regenerated.
+
+## Freeze gate rerun — 2026-09-27
+
+The release-commit check ran on origin/main at `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`, after the probe fixture record and adapter-level normalization merge. The first run above remains the record of `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`.
+
+| item | value |
+| --- | --- |
+| date | 2026-09-27 |
+| commit | `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3` (origin/main) |
+| fixture | `tests/fixtures/journey`, classifier 0.2.6 |
+| host | macOS 15.5, arm64 |
+| Node (host) | 22.23.3 (`.nvmrc` 22) |
+| pnpm | 12.5.1 |
+| Docker Engine | 29.4.0, linux/arm64 |
+| Docker Compose | 5.1.2 |
+| server image | `apps/server/Dockerfile` (`node:22`), built for each fresh-volume compose project |
+| visual image | `mcr.microsoft.com/playwright:v1.63.0-noble`, linux/amd64, `CI=true` |
+
+| gate | command | result |
+| --- | --- | --- |
+| API journey, fresh volume | `pnpm tsx tools/local-pipeline/journey-check.ts --out .local/freeze-check/api-journey` | pass; all 12 steps match `expected.md`; printed `2026-09-27 060c6d6cbc6c7279fb410c55fd6433fa1f9774c3 pass; intact, 3 decision records` |
+| browser journey, English | seed procedure in `docs/demo.md` with the synthetic fixture, then the steps in `docs/evidence/adoption-preview.md` | pass, 12 of 12 steps; initial review evaluated 18 Actions, allow / ask / deny 6 / 9 / 3, with 6 ask and 1 deny groups; change review B' widened 4 Actions in 3 groups, and B widened 4 in 2 groups |
+| browser journey, Korean | same procedure, on a second fresh volume after `docker compose -p authority-demo down -v` | pass, 12 of 12 steps with the same counts; no browser console errors |
+| verify-audit | `pnpm authority verify-audit` at step 12 of the API journey and of each browser journey | pass; `isIntact` true, `checkedCount` 3 on all three volumes |
+| check:evidence | `pnpm check:evidence` | pass, exit 0 |
+| check:doc-invariance | `pnpm check:doc-invariance` | pass, exit 0 |
+| probe fixture contract | `pnpm exec vitest run packages/probe/tests/decision-provider.test.ts packages/probe/tests/probe.test.ts` | pass, 15 passed and 1 skipped in 2 files |
+| probe fixture replay | `pnpm dev:policy-init` then `pnpm authority probe --policy .local/freeze-check/default-policy-v2.json` (default fixture provider) | pass; schemaVersion 2 default template, report sha256/resultHash `f12dc94ff6173d17e2caf2f6116a5beac78d40df978ea06d6c99274d8ae709df` |
+| e2e:visual | `pnpm e2e:visual` with `CI=true` inside `mcr.microsoft.com/playwright:v1.63.0-noble` on linux/amd64, after `pnpm install --frozen-lockfile` | pass, all 12 screenshots matched; no baselines regenerated |
+
+The API journey used its own `authority-remeasure-<time>` compose project and removed its volume with `down -v`. Both browser journeys used `authority-demo`, built the server image, imported the fixture transcripts and served the web app; the project and volume were removed with `down -v` after each language. The fixture replay used the recorded responses, not a live provider. No runtime policy deployment or enforcement was tested.
+
+Conclusion: every rerun gate passed on `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`; no freeze finding blocks the V1 release.
