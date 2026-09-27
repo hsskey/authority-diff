@@ -84,7 +84,7 @@ The browser console logged no errors in either run.
 The suite ran in a clean export of the commit inside the pinned image on linux/amd64, with `CI=true`, `pnpm install --frozen-lockfile`, and `pnpm e2e:visual`.
 All 12 screenshots (six screens, light and dark) matched the committed baselines; no baseline was regenerated.
 
-## Freeze gate rerun — 2026-09-27
+## Freeze gate rerun - 2026-09-27
 
 The release-commit check ran on origin/main at `060c6d6cbc6c7279fb410c55fd6433fa1f9774c3`, after the probe fixture record and adapter-level normalization merge. The first run above remains the record of `55f973a572fa6b4d91a8c1d49d7fc59f3dd2043f`.
 
